@@ -135,8 +135,14 @@ namespace PerfGraphVSIX
                 //this.Height = 600;
                 //this.Width = 1000;
                 var sp = new StackPanel() { Orientation = Orientation.Vertical };
+                var expander = new Expander()
+                {
+                    IsExpanded = false,
+                    Header = "Expand for options"
+                };
                 var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
-                sp.Children.Add(spControls);
+                expander.Content = spControls;
+                sp.Children.Add(expander);
 
                 spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in MilliSeconds" });
                 var txtUpdateInterval = new TextBox() { Width = 50, Height = 20, VerticalAlignment = VerticalAlignment.Top };
@@ -152,10 +158,64 @@ namespace PerfGraphVSIX
                 txtNumDataPoints.SetBinding(TextBox.TextProperty, nameof(NumDataPoints));
                 spControls.Children.Add(txtNumDataPoints);
 
+                var chkSetMaxGraphTo100 = new CheckBox()
+                {
+                    Content = "SetMaxGraphTo100",
+                    ToolTip = "Set Max Y axis to 100. Else will dynamically rescale Y axis",
+                    Height = 20,
+                    VerticalAlignment = VerticalAlignment.Top,
+                };
+                chkSetMaxGraphTo100.SetBinding(CheckBox.IsCheckedProperty, nameof(SetMaxGraphTo100));
+                spControls.Children.Add(chkSetMaxGraphTo100);
+
+                var chkScaleByteCtrs = new CheckBox()
+                {
+                    Content = "Scale 'Byte' counters (but not BytePerSec)",
+                    ToolTip = "for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs",
+                    Height = 20,
+                    VerticalAlignment = VerticalAlignment.Top
+                };
+                chkScaleByteCtrs.SetBinding(CheckBox.IsCheckedProperty, nameof(ScaleByteCounters));
+                spControls.Children.Add(chkScaleByteCtrs);
+
+                var chkShowStatusHistory = new CheckBox()
+                {
+                    Content = "Show Status History",
+                    ToolTip = "Show a textbox which accumulates history of samples",
+                    Height = 20,
+                    VerticalAlignment = VerticalAlignment.Top
+                };
+                chkShowStatusHistory.Checked += (o, e) =>
+                {
+                    if (_txtStatus != null)
+                    {
+                        sp.Children.Remove(_txtStatus); // remove prior one
+                    }
+                    _txtStatus = new TextBox()
+                    {
+                        IsReadOnly = true,
+                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                        IsUndoEnabled = false,
+                        FontFamily = new FontFamily("Courier New"),
+                        FontSize = 10,
+                        Height = 200,
+                        MaxHeight = 200,
+                        HorizontalContentAlignment = HorizontalAlignment.Left
+                    };
+                    sp.Children.Add(_txtStatus);
+                };
+                chkShowStatusHistory.Unchecked += (o, e) =>
+                {
+                    sp.Children.Remove(_txtStatus);
+                    _txtStatus.Text = string.Empty; // keep around so don't have thread contention
+                };
+                spControls.Children.Add(chkShowStatusHistory);
+
                 var lbPCounters = new ListBox()
                 {
                     Width = 140,
-                    Height = 90,
+//                    Height = 90,
                     SelectionMode = SelectionMode.Multiple,
                     Margin = new Thickness(10, 0, 0, 0)
                 };
@@ -204,65 +264,11 @@ namespace PerfGraphVSIX
 #pragma warning restore VSTHRD101 // Avoid unsupported async delegates
                 spControls.Children.Add(lbPCounters);
 
-                var chkSetMaxGraphTo100 = new CheckBox()
-                {
-                    Content = "SetMaxGraphTo100",
-                    ToolTip = "Set Max Y axis to 100. Else will dynamically rescale Y axis",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top,
-                };
-                chkSetMaxGraphTo100.SetBinding(CheckBox.IsCheckedProperty, nameof(SetMaxGraphTo100));
-                sp.Children.Add(chkSetMaxGraphTo100);
-
-                var chkScaleByteCtrs = new CheckBox()
-                {
-                    Content = "Scale 'Byte' counters (but not BytePerSec)",
-                    ToolTip = "for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top
-                };
-                chkScaleByteCtrs.SetBinding(CheckBox.IsCheckedProperty, nameof(ScaleByteCounters));
-                sp.Children.Add(chkScaleByteCtrs);
-
-                var chkShowStatusHistory = new CheckBox()
-                {
-                    Content = "Show Status History",
-                    ToolTip = "Show a textbox which accumulates history of samples",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top
-                };
-                chkShowStatusHistory.Checked += (o, e) =>
-                {
-                    if (_txtStatus != null)
-                    {
-                        sp.Children.Remove(_txtStatus); // remove prior one
-                    }
-                    _txtStatus = new TextBox()
-                    {
-                        IsReadOnly = true,
-                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                        IsUndoEnabled = false,
-                        FontFamily = new FontFamily("Courier New"),
-                        FontSize = 10,
-                        Height = 200,
-                        MaxHeight = 200,
-                        HorizontalContentAlignment = HorizontalAlignment.Left
-                    };
-                    sp.Children.Add(_txtStatus);
-                };
-                chkShowStatusHistory.Unchecked += (o, e) =>
-                {
-                    sp.Children.Remove(_txtStatus);
-                    _txtStatus.Text = string.Empty; // keep around so don't have thread contention
-                };
-                sp.Children.Add(chkShowStatusHistory);
-
 
                 _chart = new Chart()
                 {
-                    Width = 200,
-                    Height = 400,
+                    //Width = 200,
+                    //Height = 400,
                     Dock = System.Windows.Forms.DockStyle.Fill
                 };
                 var wfh = new WindowsFormsHost()
@@ -275,7 +281,7 @@ namespace PerfGraphVSIX
                 sp.Children.Add(txtLastStatMsg);
 
                 this.Content = sp;
-                
+
                 var t = Task.Run(() =>
                 {
                     ResetPerfCounterMonitor();

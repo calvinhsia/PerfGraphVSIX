@@ -12,10 +12,6 @@
              Name="MyToolWindow">
     <Grid>
         <StackPanel Orientation="Vertical">
-            <!--<StackPanel Orientation="Horizontal">
-                <Label Content="Update Interval"/>
-                <TextBox TextWrapping="Wrap" Width="50" ToolTip="Update graph in msecs"/>
-            </StackPanel>-->
             <local:PerfGraph></local:PerfGraph>
         </StackPanel>
     </Grid>
