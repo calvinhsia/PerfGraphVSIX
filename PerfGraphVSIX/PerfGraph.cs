@@ -215,7 +215,7 @@ namespace PerfGraphVSIX
                 var lbPCounters = new ListBox()
                 {
                     Width = 140,
-//                    Height = 90,
+                    //                    Height = 90,
                     SelectionMode = SelectionMode.Multiple,
                     Margin = new Thickness(10, 0, 0, 0)
                 };
@@ -383,12 +383,14 @@ namespace PerfGraphVSIX
                                 if (ctr.perfCounterType.ToString().Contains("Bytes") && !ctr.perfCounterType.ToString().Contains("PerSec") && this.ScaleByteCounters)
                                 {
                                     pcValue = (uint)(pcValueAsFloat * 100 / uint.MaxValue); // '% of 4G
+                                    sBuilder.Append($"{ctr.PerfCounterName}= {pcValueAsFloat:n0}  {pcValue:n0}%  ");
                                 }
                                 else
                                 {
                                     pcValue = (uint)pcValueAsFloat;
+                                    sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  ");
                                 }
-                                sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  ");
+
                                 lstPCData.Add(pcValue);
                             }
                             AddDataPointsAsync(lstPCData).Forget();
