@@ -27,7 +27,7 @@ namespace PerfGraphVSIX
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
         /// </summary>
-        public int UpdateInterval { get; set; } = 1000;
+        public int UpdateInterval { get; set; } = 1;
         public int NumDataPoints { get; set; } = 100;
 
         public bool ScaleByteCounters { get; set; } = false;
@@ -139,13 +139,13 @@ namespace PerfGraphVSIX
                 {
                     IsExpanded = false,
                     Header = $"Expand for options",
-                    ToolTip=$"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
+                    ToolTip = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
                 };
                 var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
                 expander.Content = spControls;
                 sp.Children.Add(expander);
 
-                spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" });
+                spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in Seconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" });
                 var txtUpdateInterval = new TextBox() { Width = 50, Height = 20, VerticalAlignment = VerticalAlignment.Top };
                 txtUpdateInterval.SetBinding(TextBox.TextProperty, nameof(UpdateInterval));
                 txtUpdateInterval.LostFocus += (o, e) =>
@@ -343,9 +343,9 @@ namespace PerfGraphVSIX
                 _ctsPcounter?.Cancel();
             }
         }
-        async Task AddDataPointsAsync(List<uint> lstNewestSample)
+        async Task AddDataPointsAsync()
         {
-            _dataPoints[_bufferIndex++] = lstNewestSample;
+            _dataPoints[_bufferIndex++] = _lstPCData;
             if (_bufferIndex == _dataPoints.Count)
             {
                 _bufferIndex = 0;
@@ -362,7 +362,7 @@ namespace PerfGraphVSIX
                 _chart.ChartAreas.Add(chartArea);
             }
             int ndxSeries = 0;
-            foreach (var entry in lstNewestSample)
+            foreach (var entry in _lstPCData)
             {
                 var series = new Series
                 {
@@ -396,10 +396,11 @@ namespace PerfGraphVSIX
             {
                 try
                 {
+                    _lstPCData = null;
                     while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
                         DoSample();
-                        await Task.Delay(UpdateInterval, _ctsPcounter.Token);
+                        await Task.Delay(TimeSpan.FromSeconds(UpdateInterval), _ctsPcounter.Token);
                     }
                 }
                 catch (TaskCanceledException)
@@ -409,30 +410,47 @@ namespace PerfGraphVSIX
             });
         }
 
+        List<uint> _lstPCData;
         void DoSample()
         {
             var sBuilder = new StringBuilder();
+            if (_lstPCData == null || _lstPCData.Count == 0)
+            {
+                var cnt = _lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled).Count();
+                _lstPCData = new List<uint>();
+            }
             lock (_lstPerfCounterDefinitions)
             {
-                var lstPCData = new List<uint>();
+                int idx = 0;
                 foreach (var ctr in _lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
                 {
                     var pcValueAsFloat = ctr.ReadNextValue();
                     uint pcValue = 0;
+                    uint priorValue = 0;
+                    if (idx < _lstPCData.Count)
+                    {
+                        priorValue = _lstPCData[idx];
+                    }
+                    else
+                    {
+                        _lstPCData.Add(0);
+                    }
                     if (ctr.perfCounterType.ToString().Contains("Bytes") && !ctr.perfCounterType.ToString().Contains("PerSec") && this.ScaleByteCounters)
                     {
                         pcValue = (uint)(pcValueAsFloat * 100 / uint.MaxValue); // '% of 4G
-                        sBuilder.Append($"{ctr.PerfCounterName}= {pcValueAsFloat:n0}  {pcValue:n0}%  ");
+                        int delta = (int)pcValue - (int)priorValue;
+                        sBuilder.Append($"{ctr.PerfCounterName}= {pcValueAsFloat:n0}  {pcValue:n0}%  Δ = {delta:n0} ");
                     }
                     else
                     {
                         pcValue = (uint)pcValueAsFloat;
-                        sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  ");
+                        int delta = (int)pcValue - (int)priorValue;
+                        sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
                     }
-
-                    lstPCData.Add(pcValue);
+                    _lstPCData[idx] = pcValue;
+                    idx++;
                 }
-                AddDataPointsAsync(lstPCData).Forget();
+                AddDataPointsAsync().Forget();
             }
             AddStatusMsgAsync($"Sampling {sBuilder.ToString()}").Forget();
         }
