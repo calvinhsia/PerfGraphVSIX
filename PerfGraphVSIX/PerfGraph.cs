@@ -138,7 +138,8 @@ namespace PerfGraphVSIX
                 var expander = new Expander()
                 {
                     IsExpanded = false,
-                    Header = "Expand for options"
+                    Header = $"Expand for options",
+                    ToolTip=$"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
                 };
                 var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
                 expander.Content = spControls;
@@ -339,10 +340,7 @@ namespace PerfGraphVSIX
             else
             {
                 AddStatusMsgAsync($"UpdateInterval = 0 auto sampling turned off").Forget();
-                if (_ctsPcounter !=null)
-                {
-                    _ctsPcounter.Cancel();
-                }
+                _ctsPcounter?.Cancel();
             }
         }
         async Task AddDataPointsAsync(List<uint> lstNewestSample)
@@ -398,7 +396,7 @@ namespace PerfGraphVSIX
             {
                 try
                 {
-                    while (!_ctsPcounter.Token.IsCancellationRequested)
+                    while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
                         DoSample();
                         await Task.Delay(UpdateInterval, _ctsPcounter.Token);
@@ -446,6 +444,8 @@ namespace PerfGraphVSIX
             dte.ExecuteCommand("Tools.ForceGC");
         }
 
+        const int statusTextLenThresh = 100000;
+        int nTruncated = 0;
         async public Task AddStatusMsgAsync(string msg, params object[] args)
         {
             // we want to read the threadid 
@@ -460,7 +460,14 @@ namespace PerfGraphVSIX
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 // this action executes on main thread
-                // note: this is a memory leak: can clear periodically
+                // note: this is a memory leak: so clear periodically
+                var len = _txtStatus.Text.Length;
+
+                if (len > statusTextLenThresh)
+                {
+                    _txtStatus.Text = _txtStatus.Text.Substring(statusTextLenThresh - 1000);
+                    str += $"   Truncated Status History {++nTruncated} times\r\n";
+                }
                 _txtStatus.AppendText(str);
                 _txtStatus.ScrollToEnd();
             }
