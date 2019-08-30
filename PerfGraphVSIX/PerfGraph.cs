@@ -345,7 +345,7 @@ namespace PerfGraphVSIX
         }
         async Task AddDataPointsAsync()
         {
-            _dataPoints[_bufferIndex++] = _lstPCData;
+            _dataPoints[_bufferIndex++] = new List<uint>(_lstPCData);
             if (_bufferIndex == _dataPoints.Count)
             {
                 _bufferIndex = 0;
@@ -452,7 +452,7 @@ namespace PerfGraphVSIX
                 }
                 AddDataPointsAsync().Forget();
             }
-            AddStatusMsgAsync($"Sampling {sBuilder.ToString()}").Forget();
+            AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
         }
 
         void DoGC()
