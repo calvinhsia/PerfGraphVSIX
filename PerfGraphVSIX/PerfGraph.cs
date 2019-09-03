@@ -458,8 +458,9 @@ namespace PerfGraphVSIX
         void DoGC()
         {
             Dispatcher.VerifyAccess();
-            EnvDTE.DTE dte = Package.GetGlobalService(typeof(EnvDTE.DTE)) as EnvDTE.DTE;
-            dte.ExecuteCommand("Tools.ForceGC");
+
+            //EnvDTE.DTE dte = Package.GetGlobalService(typeof(EnvDTE.DTE)) as EnvDTE.DTE;
+            PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("Tools.ForceGC");
         }
 
         const int statusTextLenThresh = 100000;

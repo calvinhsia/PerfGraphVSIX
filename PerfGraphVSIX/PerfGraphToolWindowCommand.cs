@@ -29,14 +29,16 @@ namespace PerfGraphVSIX
         /// </summary>
         private readonly AsyncPackage package;
 
+        public EnvDTE.DTE g_dte;
         /// <summary>
         /// Initializes a new instance of the <see cref="PerfGraphToolWindowCommand"/> class.
         /// Adds our command handlers for menu (commands must exist in the command table file)
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
         /// <param name="commandService">Command service to add command to, not null.</param>
-        private PerfGraphToolWindowCommand(AsyncPackage package, OleMenuCommandService commandService)
+        private PerfGraphToolWindowCommand(AsyncPackage package, OleMenuCommandService commandService, EnvDTE.DTE dte)
         {
+            g_dte = dte ?? throw new ArgumentNullException(nameof(dte));
             this.package = package ?? throw new ArgumentNullException(nameof(package));
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
 
@@ -76,7 +78,8 @@ namespace PerfGraphVSIX
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
             OleMenuCommandService commandService = await package.GetServiceAsync((typeof(IMenuCommandService))) as OleMenuCommandService;
-            Instance = new PerfGraphToolWindowCommand(package, commandService);
+            EnvDTE.DTE dte = (EnvDTE.DTE)await package.GetServiceAsync(typeof(EnvDTE.DTE));
+            Instance = new PerfGraphToolWindowCommand(package, commandService, dte);
         }
 
         /// <summary>
