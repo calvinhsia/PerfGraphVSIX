@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +54,11 @@ namespace PerfGraphVSIX
             GCPctTime = 0x100,
             GCBytesInAllHeaps = 0x200,
             GCAllocatedBytesPerSec = 0x400,
+            PageFaultsPerSec = 0x800,
+            KernelHandleCount = 0x1000,
+            GDIHandleCount = 0x2000, //GetGuiResources
+            UserHandleCount = 0x4000, //GetGuiResources
+            ThreadCount = 0x8000,
         }
         public class PerfCounterData
         {
@@ -66,7 +72,19 @@ namespace PerfGraphVSIX
             public float LastValue;
             public float ReadNextValue()
             {
-                var retVal = lazyPerformanceCounter.Value.NextValue();
+                float retVal = 0;
+                switch (perfCounterType)
+                {
+                    case PerfCounterType.UserHandleCount:
+                        retVal = GetGuiResourcesGDICount();
+                        break;
+                    case PerfCounterType.GDIHandleCount:
+                        retVal = GetGuiResourcesUserCount();
+                        break;
+                    default:
+                        retVal = lazyPerformanceCounter.Value.NextValue();
+                        break;
+                }
                 LastValue = retVal;
                 return retVal;
             }
@@ -108,6 +126,25 @@ namespace PerfGraphVSIX
             {
                 return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} Enabled = {IsEnabled}";
             }
+            /// uiFlags: 0 - Count of GDI objects
+            /// uiFlags: 1 - Count of USER objects
+            /// - Win32 GDI objects (pens, brushes, fonts, palettes, regions, device contexts, bitmap headers)
+            /// - Win32 USER objects:
+            ///      - WIN32 resources (accelerator tables, bitmap resources, dialog box templates, font resources, menu resources, raw data resources, string table entries, message table entries, cursors/icons)
+            /// - Other USER objects (windows, menus)
+            ///
+            [DllImport("User32")]
+            extern public static int GetGuiResources(IntPtr hProcess, int uiFlags);
+
+            public static int GetGuiResourcesGDICount()
+            {
+                return GetGuiResources(Process.GetCurrentProcess().Handle, 0);
+            }
+
+            public static int GetGuiResourcesUserCount()
+            {
+                return GetGuiResources(Process.GetCurrentProcess().Handle, 1);
+            }
         }
 
         public static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
@@ -119,6 +156,11 @@ namespace PerfGraphVSIX
             {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
             {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
             {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
+            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
+            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
         };
 
 
@@ -139,6 +181,7 @@ namespace PerfGraphVSIX
                 {
                     IsExpanded = false,
                     Header = $"Expand for options",
+                    MaxHeight = 200,
                     ToolTip = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
                 };
                 var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
@@ -492,4 +535,5 @@ namespace PerfGraphVSIX
             }
         }
     }
+
 }
