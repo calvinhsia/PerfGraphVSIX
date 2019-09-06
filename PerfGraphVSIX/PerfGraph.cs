@@ -28,7 +28,7 @@ namespace PerfGraphVSIX
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
         /// </summary>
-        public int UpdateInterval { get; set; } = 1;
+        public int UpdateInterval { get; set; } = 1000;
         public int NumDataPoints { get; set; } = 100;
 
         public bool ScaleByteCounters { get; set; } = false;
@@ -51,14 +51,14 @@ namespace PerfGraphVSIX
             ProcessorPrivateBytes = 0x2,
             ProcessorVirtualBytes = 0x4,
             ProcessorWorkingSet = 0x8,
-            GCPctTime = 0x100,
-            GCBytesInAllHeaps = 0x200,
-            GCAllocatedBytesPerSec = 0x400,
-            PageFaultsPerSec = 0x800,
-            KernelHandleCount = 0x1000,
-            GDIHandleCount = 0x2000, //GetGuiResources
-            UserHandleCount = 0x4000, //GetGuiResources
-            ThreadCount = 0x8000,
+            GCPctTime = 0x10,
+            GCBytesInAllHeaps = 0x20,
+            GCAllocatedBytesPerSec = 0x40,
+            PageFaultsPerSec = 0x80,
+            KernelHandleCount = 0x100,
+            GDIHandleCount = 0x200, //GetGuiResources
+            UserHandleCount = 0x400, //GetGuiResources
+            ThreadCount = 0x800,
         }
         public class PerfCounterData
         {
@@ -188,7 +188,7 @@ namespace PerfGraphVSIX
                 expander.Content = spControls;
                 sp.Children.Add(expander);
 
-                spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in Seconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" });
+                spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" });
                 var txtUpdateInterval = new TextBox() { Width = 50, Height = 20, VerticalAlignment = VerticalAlignment.Top };
                 txtUpdateInterval.SetBinding(TextBox.TextProperty, nameof(UpdateInterval));
                 txtUpdateInterval.LostFocus += (o, e) =>
@@ -444,7 +444,7 @@ namespace PerfGraphVSIX
                     while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
                         DoSample();
-                        await Task.Delay(TimeSpan.FromSeconds(UpdateInterval), _ctsPcounter.Token);
+                        await Task.Delay(TimeSpan.FromMilliseconds(UpdateInterval), _ctsPcounter.Token);
                     }
                 }
                 catch (TaskCanceledException)
