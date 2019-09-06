@@ -405,6 +405,7 @@ namespace PerfGraphVSIX
                 _chart.ChartAreas.Add(chartArea);
             }
             int ndxSeries = 0;
+            chartArea.AxisY.IsStartedFromZero = false;
             foreach (var entry in _lstPCData)
             {
                 var series = new Series
