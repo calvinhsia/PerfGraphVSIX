@@ -165,7 +165,7 @@ namespace PerfGraphVSIX
 
 
 
-        Task _tskDoPerfMonitoring;
+        JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
         public static PerfGraph Instance;
         public PerfGraph()
@@ -265,7 +265,8 @@ namespace PerfGraphVSIX
                     Width = 140,
                     //                    Height = 90,
                     SelectionMode = SelectionMode.Multiple,
-                    Margin = new Thickness(10, 0, 0, 0)
+                    Margin = new Thickness(10, 0, 0, 0),
+                    ToolTip = "Multiselect various counters"
                 };
                 lbPCounters.ItemsSource = _lstPerfCounterDefinitions.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
@@ -329,10 +330,9 @@ namespace PerfGraphVSIX
                 var btnDoSample = new Button() { Content = "_DoSample", Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" };
                 spControls2.Children.Add(btnDoSample);
                 btnDoSample.Click += (o, e) =>
-                {
-                    Dispatcher.VerifyAccess();
-                    DoSample();
-                };
+                   {
+                       ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
+                   };
 
                 var txtLastStatMsg = new TextBox() { Width = 500, Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Last Sample", HorizontalAlignment = HorizontalAlignment.Left };
                 txtLastStatMsg.SetBinding(TextBox.TextProperty, nameof(LastStatMsg));
@@ -360,90 +360,37 @@ namespace PerfGraphVSIX
         // dictionary of sample # (int from 0 to NumDataPoints) =>( List (PerfCtrValues in order)
         public Dictionary<int, List<uint>> _dataPoints = new Dictionary<int, List<uint>>();
         int _bufferIndex = 0;
+        List<uint> _lstPCData; // list of samples from each selected counter
         void ResetPerfCounterMonitor()
         {
+            _ctsPcounter?.Cancel();
+            lock (_lstPerfCounterDefinitions)
+            {
+                _lstPCData = new List<uint>();
+                _dataPoints.Clear();
+                _bufferIndex = 0;
+            }
             if (UpdateInterval > 0)
             {
-                var pid = Process.GetCurrentProcess().Id;
                 AddStatusMsgAsync($"{nameof(ResetPerfCounterMonitor)}").Forget();
-                lock (_lstPerfCounterDefinitions)
-                {
-                    _dataPoints.Clear();
-                    _bufferIndex = 0;
-
-                    for (int i = 0; i < NumDataPoints; i++)
-                    {
-                        var emptyList = new List<uint>();
-                        _lstPerfCounterDefinitions.Select(s => s.perfCounterType).ToList().ForEach((s) => emptyList.Add(0));
-                        _dataPoints[i] = emptyList;
-                    }
-                }
                 DoPerfCounterMonitoring();
             }
             else
             {
                 AddStatusMsgAsync($"UpdateInterval = 0 auto sampling turned off").Forget();
-                _ctsPcounter?.Cancel();
             }
         }
-        async Task AddDataPointsAsync()
-        {
-            _dataPoints[_bufferIndex++] = new List<uint>(_lstPCData);
-            if (_bufferIndex == _dataPoints.Count)
-            {
-                _bufferIndex = 0;
-            }
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            // this needs to be done on UI thread
-            DoGC();// do a GC.Collect on every sample (the graphing uses memory)
-            _chart.Series.Clear();
-            _chart.ChartAreas.Clear();
-            ChartArea chartArea = null;
-            if (_chart.ChartAreas.Count == 0)
-            {
-                chartArea = new ChartArea("ChartArea");
-                _chart.ChartAreas.Add(chartArea);
-            }
-            int ndxSeries = 0;
-            chartArea.AxisY.IsStartedFromZero = false;
-            foreach (var entry in _lstPCData)
-            {
-                var series = new Series
-                {
-                    ChartType = SeriesChartType.Line
-                };
-                _chart.Series.Add(series);
-                for (int i = 0; i < _dataPoints.Count; i++)
-                {
-                    var ndx = _bufferIndex + i;
-                    if (ndx >= _dataPoints.Count)
-                    {
-                        ndx -= _dataPoints.Count;
-                    }
-                    var dp = new DataPoint(i + 1, _dataPoints[ndx][ndxSeries]);
-                    series.Points.Add(dp);
-                }
-                ndxSeries++;
-                if (SetMaxGraphTo100)
-                {
-                    _chart.ChartAreas[0].AxisY.Maximum = 100;
-                }
-            }
-            _chart.DataBind();
-        }
-
 
         void DoPerfCounterMonitoring()
         {
             _ctsPcounter = new CancellationTokenSource();
-            _tskDoPerfMonitoring = Task.Run(async () =>
+            _tskDoPerfMonitoring = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
-                    _lstPCData = null;
                     while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
-                        DoSample();
+                        await DoSampleAsync();
                         await Task.Delay(TimeSpan.FromMilliseconds(UpdateInterval), _ctsPcounter.Token);
                     }
                 }
@@ -454,15 +401,9 @@ namespace PerfGraphVSIX
             });
         }
 
-        List<uint> _lstPCData;
-        void DoSample()
+        async Task DoSampleAsync()
         {
             var sBuilder = new StringBuilder();
-            if (_lstPCData == null || _lstPCData.Count == 0)
-            {
-                var cnt = _lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled).Count();
-                _lstPCData = new List<uint>();
-            }
             lock (_lstPerfCounterDefinitions)
             {
                 int idx = 0;
@@ -494,15 +435,67 @@ namespace PerfGraphVSIX
                     _lstPCData[idx] = pcValue;
                     idx++;
                 }
-                AddDataPointsAsync().Forget();
             }
+            await AddDataPointsAsync();
             AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
+        }
+
+        async Task AddDataPointsAsync()
+        {
+            if (_dataPoints.Count == 0) // nothing yet
+            {
+                for (int i = 0; i < NumDataPoints; i++)
+                {
+                    _dataPoints[i] = new List<uint>(_lstPCData); // let all init points be equal, so y axis scales IsStartedFromZero
+                }
+            }
+            else
+            {
+                _dataPoints[_bufferIndex++] = new List<uint>(_lstPCData);
+                if (_bufferIndex == _dataPoints.Count) // wraparound?
+                {
+                    _bufferIndex = 0;
+                }
+            }
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            DoGC();// do a GC.Collect on main thread for every sample (the graphing uses memory)
+            // this needs to be done on UI thread
+            _chart.Series.Clear();
+            _chart.ChartAreas.Clear();
+            ChartArea chartArea = null;
+            chartArea = new ChartArea("ChartArea");
+            _chart.ChartAreas.Add(chartArea);
+            int ndxSeries = 0;
+            chartArea.AxisY.IsStartedFromZero = false;
+            foreach (var entry in _lstPCData)
+            {
+                var series = new Series
+                {
+                    ChartType = SeriesChartType.Line
+                };
+                _chart.Series.Add(series);
+                for (int i = 0; i < _dataPoints.Count; i++)
+                {
+                    var ndx = _bufferIndex + i;
+                    if (ndx >= _dataPoints.Count)
+                    {
+                        ndx -= _dataPoints.Count;
+                    }
+                    var dp = new DataPoint(i + 1, _dataPoints[ndx][ndxSeries]);
+                    series.Points.Add(dp);
+                }
+                ndxSeries++;
+                if (SetMaxGraphTo100)
+                {
+                    _chart.ChartAreas[0].AxisY.Maximum = 100;
+                }
+            }
+            _chart.DataBind();
         }
 
         void DoGC()
         {
             Dispatcher.VerifyAccess();
-
             //EnvDTE.DTE dte = Package.GetGlobalService(typeof(EnvDTE.DTE)) as EnvDTE.DTE;
             PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("Tools.ForceGC");
         }
@@ -523,7 +516,6 @@ namespace PerfGraphVSIX
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 // this action executes on main thread
-                // note: this is a memory leak: so clear periodically
                 var len = _txtStatus.Text.Length;
 
                 if (len > statusTextLenThresh)
