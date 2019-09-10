@@ -3,6 +3,7 @@ using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,6 +72,48 @@ namespace PerfGraphVSIX
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             await PerfGraphToolWindowCommand.InitializeAsync(this);
+            var tsk = SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+        }
+        async public Task<string> SendTelemetryAsync(string msg, params object[] args)
+        {
+            var result = string.Empty;
+            try
+            {
+                //var exe = Process.GetCurrentProcess().ProcessName.ToLowerInvariant(); // like windbg or clrobjexplorer or vstest.executionengine.x86
+                //if (!exe.StartsWith("testhost.x86"))
+                {
+
+                    var mTxt = args != null ? string.Format(msg, args) : msg;
+                    mTxt = System.Web.HttpUtility.UrlEncode(mTxt);
+
+                    var baseurl = "http://calvinh6/PerfGraph.asp?";
+                    var url = string.Format("{0}{1}", baseurl, mTxt);
+                    var wRequest = (HttpWebRequest)WebRequest.Create(url);
+                    wRequest.UseDefaultCredentials = true;
+
+                    await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                    {
+                        await Task.Run(async () =>
+                        {
+                            using (var resp = (HttpWebResponse)await wRequest.GetResponseAsync())
+                            {
+                                using (var respStream = resp.GetResponseStream())
+                                {
+                                    var sr = new System.IO.StreamReader(respStream, System.Text.Encoding.ASCII);
+                                    result = await sr.ReadToEndAsync();
+                                }
+                            }
+
+                        });
+                    });
+                    await Task.Yield();
+                }
+            }
+            catch (Exception)
+            {
+                //                LogString("Telemetry exception {0}", ex);
+            }
+            return result;
         }
 
         #endregion
