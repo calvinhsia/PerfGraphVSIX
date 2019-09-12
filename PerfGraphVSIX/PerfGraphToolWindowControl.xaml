@@ -39,34 +39,6 @@ xmlns:vs_shell="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microso
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid>
-        <TabControl>
-            <TabItem Header ="Main" ToolTip="Graph of counters">
-                <StackPanel Orientation="Vertical">
-                    <local:PerfGraph x:Name="perfGraph"></local:PerfGraph>
-                </StackPanel>
-            </TabItem>
-            <TabItem Header ="EditorTracker" ToolTip="Show Counts of TextViews in memory (useful to find leaks)">
-                
-            </TabItem>
-            <TabItem Header ="Options">
-                <StackPanel Orientation="Vertical">
-                    <CheckBox Content="Show Status History" ToolTip="Show the history in a scrolling textbox"/>
-                    <CheckBox Content="Set Max Graph to 100" ToolTip="Set Max Y axis to 100. Else will dynamically rescale Y axis"/>
-                    <StackPanel Orientation="Horizontal" Height="25" VerticalAlignment="Top">
-                        <Label Content="Update Interval" ToolTip="Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only"/>
-                        <TextBox Width="50"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Height="25" VerticalAlignment="Top">
-                        <Label Content="# Data points" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
-                        <TextBox Width="50"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Height="25" VerticalAlignment="Top">
-                        <Label Content="Scale 'Byte' counters" ToolTip="for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs"/>
-                        <TextBox Width="50"/>
-                    </StackPanel>
-                    <ListBox x:Name="lbCounters"/>
-                </StackPanel>
-            </TabItem>
-        </TabControl>
+        <local:PerfGraph x:Name="perfGraph"></local:PerfGraph>
     </Grid>
 </UserControl>

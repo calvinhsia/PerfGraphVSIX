@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -169,28 +170,58 @@ namespace PerfGraphVSIX
 
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
-        public static PerfGraph Instance;
+        StackPanel _spEditorTracker;
+        ObservableCollection<UIElement> _OpenedViews = new ObservableCollection<UIElement>();
+        ObservableCollection<UIElement> _LeakedViews = new ObservableCollection<UIElement>();
         public PerfGraph()
         {
             try
             {
-                Instance = this;
-                editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+                var tabControl = new TabControl();
+                this.Content = tabControl;
+                var tabMain = new TabItem()
+                {
+                    Header = "Main",
+                    ToolTip = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
+                };
+                tabControl.Items.Add(tabMain);
+                var spMain = new StackPanel() { Orientation = Orientation.Vertical };
+                tabMain.Content = spMain;
+
+                var tabEditorTracker = new TabItem() { Header = "EditorTracker", ToolTip = $"Track Editor instances. Thanks to Dave Pugh" };
+                tabControl.Items.Add(tabEditorTracker);
+                _spEditorTracker = new StackPanel() { Orientation = Orientation.Vertical };
+                tabEditorTracker.Content = _spEditorTracker;
+                tabControl.SelectionChanged += (o, e) =>
+                  {
+                      var tabItemHeader = ((TabItem)(tabControl.SelectedItem)).Header as string;
+                      switch (tabItemHeader)
+                      {
+                          case "EditorTracker":
+                              if (editorTracker == null)
+                              {
+                                  editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+                                  _spEditorTracker.Children.Add(new Label() { Content = "Opened TextViews", ToolTip = "Views that are currently opened. (Refreshed by UpdateInterval, which does GC)" });
+                                  _spEditorTracker.Children.Add(new ListBox() { ItemsSource = _OpenedViews });
+                                  _spEditorTracker.Children.Add(new Label() { Content = "Leaked TextViews", ToolTip = "Views that are currently closed but still in memory (Refreshed by UpdateInterval, which does GC)" });
+                                  _spEditorTracker.Children.Add(new ListBox() { ItemsSource = _LeakedViews });
+                              }
+                              break;
+                      }
+
+                  };
+
+
+                var tabOptions = new TabItem() { Header = "Options" };
+                tabControl.Items.Add(tabOptions);
+
 
                 this.DataContext = this;
                 //this.Height = 600;
                 //this.Width = 1000;
                 var sp = new StackPanel() { Orientation = Orientation.Vertical };
-                var expander = new Expander()
-                {
-                    IsExpanded = false,
-                    Header = $"Expand for options",
-                    MaxHeight = 200,
-                    ToolTip = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
-                };
                 var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
-                expander.Content = spControls;
-                sp.Children.Add(expander);
+                tabOptions.Content = spControls;
 
                 spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" });
                 var txtUpdateInterval = new TextBox() { Width = 50, Height = 20, VerticalAlignment = VerticalAlignment.Top };
@@ -241,7 +272,7 @@ namespace PerfGraphVSIX
                 {
                     if (_txtStatus != null)
                     {
-                        sp.Children.Remove(_txtStatus); // remove prior one
+                        spMain.Children.Remove(_txtStatus); // remove prior one
                     }
                     _txtStatus = new TextBox()
                     {
@@ -255,11 +286,11 @@ namespace PerfGraphVSIX
                         MaxHeight = 200,
                         HorizontalContentAlignment = HorizontalAlignment.Left
                     };
-                    sp.Children.Add(_txtStatus);
+                    spMain.Children.Add(_txtStatus);
                 };
                 chkShowStatusHistory.Unchecked += (o, e) =>
                 {
-                    sp.Children.Remove(_txtStatus);
+                    spMain.Children.Remove(_txtStatus);
                     _txtStatus.Text = string.Empty; // keep around so don't have thread contention
                 };
                 spControls.Children.Add(chkShowStatusHistory);
@@ -317,7 +348,6 @@ namespace PerfGraphVSIX
 #pragma warning restore VSTHRD101 // Avoid unsupported async delegates
                 spControls.Children.Add(lbPCounters);
 
-
                 _chart = new Chart()
                 {
                     //Width = 200,
@@ -328,7 +358,7 @@ namespace PerfGraphVSIX
                 {
                     Child = _chart
                 };
-                sp.Children.Add(wfh);
+                spMain.Children.Add(wfh);
                 var spControls2 = new StackPanel() { Orientation = Orientation.Horizontal };
 
                 var btnDoSample = new Button() { Content = "_DoSample", Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" };
@@ -342,15 +372,14 @@ namespace PerfGraphVSIX
                 txtLastStatMsg.SetBinding(TextBox.TextProperty, nameof(LastStatMsg));
                 spControls2.Children.Add(txtLastStatMsg);
 
-                sp.Children.Add(spControls2);
-
-                this.Content = sp;
+                spMain.Children.Add(spControls2);
 
                 var t = Task.Run(() =>
                 {
                     ResetPerfCounterMonitor();
                 });
 
+                chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
                 //        btnGo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, this));
             }
             catch (Exception ex)
@@ -495,6 +524,23 @@ namespace PerfGraphVSIX
                 }
             }
             _chart.DataBind();
+
+            if (editorTracker != null)
+            {
+                var (OpenedViews, LeakedViews) = editorTracker.GetCounts();
+                void doIt(Dictionary<string, int> dict, ObservableCollection<UIElement> uiColl)
+                {
+                    uiColl.Clear();
+                    foreach (var dictEntry in dict)
+                    {
+                        var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                        sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,15} {dictEntry.Value,3}" });
+                        uiColl.Add(sp);
+                    }
+                };
+                doIt(OpenedViews, _OpenedViews);
+                doIt(LeakedViews, _LeakedViews);
+            }
         }
 
         void DoGC()
