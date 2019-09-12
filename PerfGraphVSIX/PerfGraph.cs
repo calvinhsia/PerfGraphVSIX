@@ -23,6 +23,8 @@ namespace PerfGraphVSIX
     public class PerfGraph : UserControl, INotifyPropertyChanged
     {
         public TextBox _txtStatus;
+        EditorTracker editorTracker;
+
         readonly Chart _chart;
 
         /// <summary>
@@ -173,6 +175,8 @@ namespace PerfGraphVSIX
             try
             {
                 Instance = this;
+                editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+
                 this.DataContext = this;
                 //this.Height = 600;
                 //this.Width = 1000;

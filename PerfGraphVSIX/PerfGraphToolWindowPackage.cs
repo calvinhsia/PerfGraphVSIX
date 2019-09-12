@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -46,6 +47,8 @@ namespace PerfGraphVSIX
         /// </summary>
         public const string PackageGuidString = "ce00f7a9-fdc9-4b45-8f95-0a9e24cf4480";
 
+        public static IComponentModel ComponentModel { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PerfGraphToolWindowPackage"/> class.
         /// </summary>
@@ -72,6 +75,9 @@ namespace PerfGraphVSIX
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             await PerfGraphToolWindowCommand.InitializeAsync(this);
+
+            ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
+
             var tsk = SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
         async public Task<string> SendTelemetryAsync(string msg, params object[] args)
