@@ -40,7 +40,7 @@ namespace PerfGraphVSIX
     [ProvideToolWindow(typeof(PerfGraphToolWindow))]
     [Guid(PerfGraphToolWindowPackage.PackageGuidString)]
     [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
-    public sealed class PerfGraphToolWindowPackage : AsyncPackage
+    public sealed class PerfGraphToolWindowPackage : AsyncPackage, IVsFontAndColorEvents
     {
         /// <summary>
         /// PerfGraphToolWindowPackage GUID string.
@@ -120,6 +120,30 @@ namespace PerfGraphVSIX
                 //                LogString("Telemetry exception {0}", ex);
             }
             return result;
+        }
+        public int OnFontChanged(ref Guid rguidCategory, FontInfo[] pInfo, LOGFONTW[] pLOGFONT, uint HFONT)
+        {
+            return 0;
+        }
+
+        public int OnItemChanged(ref Guid rguidCategory, string szItem, int iItem, ColorableItemInfo[] pInfo, uint crLiteralForeground, uint crLiteralBackground)
+        {
+            return 0;
+        }
+
+        public int OnReset(ref Guid rguidCategory)
+        {
+            return 0;
+        }
+
+        public int OnResetToBaseCategory(ref Guid rguidCategory)
+        {
+            return 0;
+        }
+
+        public int OnApply()
+        {
+            return 0;
         }
 
         #endregion

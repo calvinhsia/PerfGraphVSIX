@@ -1,5 +1,6 @@
 ﻿namespace PerfGraphVSIX
 {
+    using System;
     using System.Diagnostics.CodeAnalysis;
     using System.Windows;
     using System.Windows.Controls;
@@ -34,5 +35,6 @@
                 string.Format(System.Globalization.CultureInfo.CurrentUICulture, "Invoked '{0}'", this.ToString()),
                 "PerfGraphToolWindow");
         }
+
     }
 }
