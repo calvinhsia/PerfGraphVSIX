@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Threading;
 using Microsoft.Win32;
 using Task = System.Threading.Tasks.Task;
 
@@ -40,7 +41,7 @@ namespace PerfGraphVSIX
     [ProvideToolWindow(typeof(PerfGraphToolWindow))]
     [Guid(PerfGraphToolWindowPackage.PackageGuidString)]
     [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
-    public sealed class PerfGraphToolWindowPackage : AsyncPackage, IVsFontAndColorEvents
+    public sealed class PerfGraphToolWindowPackage : AsyncPackage
     {
         /// <summary>
         /// PerfGraphToolWindowPackage GUID string.
@@ -77,9 +78,10 @@ namespace PerfGraphVSIX
             await PerfGraphToolWindowCommand.InitializeAsync(this);
 
             ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
-
+            await TaskScheduler.Default;
             var tsk = SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
+
         async public Task<string> SendTelemetryAsync(string msg, params object[] args)
         {
             var result = string.Empty;
@@ -120,30 +122,6 @@ namespace PerfGraphVSIX
                 //                LogString("Telemetry exception {0}", ex);
             }
             return result;
-        }
-        public int OnFontChanged(ref Guid rguidCategory, FontInfo[] pInfo, LOGFONTW[] pLOGFONT, uint HFONT)
-        {
-            return 0;
-        }
-
-        public int OnItemChanged(ref Guid rguidCategory, string szItem, int iItem, ColorableItemInfo[] pInfo, uint crLiteralForeground, uint crLiteralBackground)
-        {
-            return 0;
-        }
-
-        public int OnReset(ref Guid rguidCategory)
-        {
-            return 0;
-        }
-
-        public int OnResetToBaseCategory(ref Guid rguidCategory)
-        {
-            return 0;
-        }
-
-        public int OnApply()
-        {
-            return 0;
         }
 
         #endregion

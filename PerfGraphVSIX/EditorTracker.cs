@@ -25,7 +25,6 @@ namespace PerfGraphVSIX
         [ImportingConstructor]
         EditorTracker()
         {
-            "".ToString();
         }
         public void TextViewCreated(ITextView textView)
         {

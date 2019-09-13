@@ -1,11 +1,13 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Threading;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,9 +15,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
+using System.Windows.Markup;
 using System.Windows.Media;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Threading;
+using System.Xml;
 using Task = System.Threading.Tasks.Task;
 
 
@@ -23,9 +25,13 @@ namespace PerfGraphVSIX
 {
     public class PerfGraph : UserControl, INotifyPropertyChanged
     {
-        public TextBox _txtStatus;
+        TextBox _txtStatus;
         EditorTracker editorTracker;
-
+        JoinableTask _tskDoPerfMonitoring;
+        CancellationTokenSource _ctsPcounter;
+        string _LastStatMsg;
+        readonly ObservableCollection<UIElement> _OpenedViews = new ObservableCollection<UIElement>();
+        readonly ObservableCollection<UIElement> _LeakedViews = new ObservableCollection<UIElement>();
         readonly Chart _chart;
 
         /// <summary>
@@ -37,117 +43,12 @@ namespace PerfGraphVSIX
         public bool ScaleByteCounters { get; set; } = false;
         public bool SetMaxGraphTo100 { get; set; } = false;
 
-        string _LastStatMsg;
         public string LastStatMsg { get { return _LastStatMsg; } set { _LastStatMsg = value; RaisePropChanged(); } }
 
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
-        }
-
-        [Flags] // user can select multiple items. (beware scaling: pct => 0-100, Bytes => 0-4G)
-        public enum PerfCounterType
-        {
-            None,
-            ProcessorPctTime = 0x1,
-            ProcessorPrivateBytes = 0x2,
-            ProcessorVirtualBytes = 0x4,
-            ProcessorWorkingSet = 0x8,
-            GCPctTime = 0x10,
-            GCBytesInAllHeaps = 0x20,
-            GCAllocatedBytesPerSec = 0x40,
-            PageFaultsPerSec = 0x80,
-            KernelHandleCount = 0x100,
-            GDIHandleCount = 0x200, //GetGuiResources
-            UserHandleCount = 0x400, //GetGuiResources
-            ThreadCount = 0x800,
-        }
-        public class PerfCounterData
-        {
-            public PerfCounterType perfCounterType;
-            public string PerfCounterCategory;
-            public string PerfCounterName;
-            public string PerfCounterInstanceName;
-            public bool IsEnabled = false;
-            public Lazy<PerformanceCounter> lazyPerformanceCounter;
-
-            public float LastValue;
-            public float ReadNextValue()
-            {
-                float retVal = 0;
-                switch (perfCounterType)
-                {
-                    case PerfCounterType.UserHandleCount:
-                        retVal = GetGuiResourcesGDICount();
-                        break;
-                    case PerfCounterType.GDIHandleCount:
-                        retVal = GetGuiResourcesUserCount();
-                        break;
-                    default:
-                        retVal = lazyPerformanceCounter.Value.NextValue();
-                        break;
-                }
-                LastValue = retVal;
-                return retVal;
-            }
-            public PerfCounterData(PerfCounterType perfCounterType, string perfCounterCategory, string perfCounterName, string perfCounterInstanceName)
-            {
-                this.perfCounterType = perfCounterType;
-                this.PerfCounterCategory = perfCounterCategory;
-                this.PerfCounterName = perfCounterName;
-                this.PerfCounterInstanceName = perfCounterInstanceName;
-                this.lazyPerformanceCounter = new Lazy<PerformanceCounter>(() =>
-                {
-                    PerformanceCounter pc = null;
-                    var vsPid = Process.GetCurrentProcess().Id;
-                    var category = new PerformanceCounterCategory(PerfCounterCategory);
-
-                    foreach (var instanceName in category.GetInstanceNames()) // exception if you're not admin or "Performance Monitor Users" group (must re-login)
-                    {
-                        using (var cntr = new PerformanceCounter(category.CategoryName, PerfCounterInstanceName, instanceName, readOnly: true))
-                        {
-                            try
-                            {
-                                var val = (int)cntr.NextValue();
-                                if (val == vsPid)
-                                {
-                                    pc = new PerformanceCounter(PerfCounterCategory, PerfCounterName, instanceName);
-                                    break;
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                // System.InvalidOperationException: Instance 'IntelliTrace' does not exist in the specified Category.
-                            }
-                        }
-                    }
-                    return pc;
-                });
-            }
-            public override string ToString()
-            {
-                return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} Enabled = {IsEnabled}";
-            }
-            /// uiFlags: 0 - Count of GDI objects
-            /// uiFlags: 1 - Count of USER objects
-            /// - Win32 GDI objects (pens, brushes, fonts, palettes, regions, device contexts, bitmap headers)
-            /// - Win32 USER objects:
-            ///      - WIN32 resources (accelerator tables, bitmap resources, dialog box templates, font resources, menu resources, raw data resources, string table entries, message table entries, cursors/icons)
-            /// - Other USER objects (windows, menus)
-            ///
-            [DllImport("User32")]
-            extern public static int GetGuiResources(IntPtr hProcess, int uiFlags);
-
-            public static int GetGuiResourcesGDICount()
-            {
-                return GetGuiResources(Process.GetCurrentProcess().Handle, 0);
-            }
-
-            public static int GetGuiResourcesUserCount()
-            {
-                return GetGuiResources(Process.GetCurrentProcess().Handle, 1);
-            }
         }
 
         public static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
@@ -166,13 +67,6 @@ namespace PerfGraphVSIX
             {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
         };
 
-
-
-        JoinableTask _tskDoPerfMonitoring;
-        CancellationTokenSource _ctsPcounter;
-        StackPanel _spEditorTracker;
-        ObservableCollection<UIElement> _OpenedViews = new ObservableCollection<UIElement>();
-        ObservableCollection<UIElement> _LeakedViews = new ObservableCollection<UIElement>();
         public PerfGraph()
         {
             try
@@ -190,84 +84,92 @@ namespace PerfGraphVSIX
 
                 var tabEditorTracker = new TabItem() { Header = "EditorTracker", ToolTip = $"Track Editor instances. Thanks to Dave Pugh" };
                 tabControl.Items.Add(tabEditorTracker);
-                _spEditorTracker = new StackPanel() { Orientation = Orientation.Vertical };
-                tabEditorTracker.Content = _spEditorTracker;
+                var spEditorTracker = new StackPanel() { Orientation = Orientation.Vertical };
+                tabEditorTracker.Content = spEditorTracker;
                 tabControl.SelectionChanged += (o, e) =>
                   {
-                      var tabItemHeader = ((TabItem)(tabControl.SelectedItem)).Header as string;
-                      switch (tabItemHeader)
+                      if (e.OriginalSource is TabControl)
                       {
-                          case "EditorTracker":
-                              if (editorTracker == null)
-                              {
-                                  editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
-                                  _spEditorTracker.Children.Add(new Label() { Content = "Opened TextViews", ToolTip = "Views that are currently opened. (Refreshed by UpdateInterval, which does GC)" });
-                                  _spEditorTracker.Children.Add(new ListBox() { ItemsSource = _OpenedViews });
-                                  _spEditorTracker.Children.Add(new Label() { Content = "Leaked TextViews", ToolTip = "Views that are currently closed but still in memory (Refreshed by UpdateInterval, which does GC)" });
-                                  _spEditorTracker.Children.Add(new ListBox() { ItemsSource = _LeakedViews });
-                              }
-                              break;
+                          var tabItemHeader = ((TabItem)(tabControl.SelectedItem)).Header as string;
+                          switch (tabItemHeader)
+                          {
+                              case "EditorTracker":
+                                  if (editorTracker == null)
+                                  {
+                                      editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+                                      spEditorTracker.Children.Add(new Label() { Content = "Opened TextViews", ToolTip = "Views that are currently opened. (Refreshed by UpdateInterval, which does GC)" });
+                                      spEditorTracker.Children.Add(new ListBox() { ItemsSource = _OpenedViews });
+                                      spEditorTracker.Children.Add(new Label() { Content = "Leaked TextViews", ToolTip = "Views that are currently closed but still in memory (Refreshed by UpdateInterval, which does GC)" });
+                                      spEditorTracker.Children.Add(new ListBox() { ItemsSource = _LeakedViews });
+                                  }
+                                  break;
+                          }
+                          e.Handled = true;
                       }
-
                   };
-
 
                 var tabOptions = new TabItem() { Header = "Options" };
                 tabControl.Items.Add(tabOptions);
 
-
                 this.DataContext = this;
-                //this.Height = 600;
-                //this.Width = 1000;
-                var sp = new StackPanel() { Orientation = Orientation.Vertical };
                 var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
                 tabOptions.Content = spControls;
 
-                spControls.Children.Add(new Label() { Content = "Update Interval", ToolTip = "Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" });
-                var txtUpdateInterval = new TextBox() { Width = 50, Height = 20, VerticalAlignment = VerticalAlignment.Top };
-                txtUpdateInterval.SetBinding(TextBox.TextProperty, nameof(UpdateInterval));
+                var nameSpace = this.GetType().Namespace;
+                var asm = System.IO.Path.GetFileNameWithoutExtension(
+                    Assembly.GetExecutingAssembly().Location);
+
+                var xmlns = string.Format(
+@"xmlns:l=""clr-namespace:{0};assembly={1}""", nameSpace, asm);
+                //there are a lot of quotes (and braces) in XAML
+                //and the C# string requires quotes to be doubled
+
+                var strxaml =
+@"
+<Grid
+xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+" + xmlns + // add our xaml namespace
+@">
+<Grid.ColumnDefinitions>
+<ColumnDefinition Width = ""300""/>
+<ColumnDefinition/>
+</Grid.ColumnDefinitions>
+    <StackPanel Orientation = ""Vertical"" Grid.Column=""0"">
+        <StackPanel Orientation=""Horizontal"">
+            <Label Content=""Update Interval""/>
+            <TextBox Name =""txtUpdateInterval"" Text=""{Binding Path =UpdateInterval}"" ToolTip=""Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only""/>
+        </StackPanel>
+        <StackPanel Orientation=""Horizontal"">
+            <Label Content=""# Data Points in graph""/>
+            <TextBox Text=""{Binding Path =NumDataPoints}"" ToolTip=""Number of Data points (x axis). Will change on next Reset""/>
+        </StackPanel>
+        <StackPanel Orientation=""Horizontal"">
+            <CheckBox Content=""Scale 'Byte' counters (but not BytePerSec)"" IsChecked=""{Binding Path =ScaleByteCounters}"" ToolTip=""for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs""/>
+        </StackPanel>
+        <StackPanel Orientation=""Horizontal"">
+            <CheckBox Name=""chkShowStatusHistory"" Content=""Show Status History"" IsChecked=""{Binding Path =ScaleByteCounters}"" ToolTip=""Show a textbox which accumulates history of samples""/>
+        </StackPanel>
+    </StackPanel>
+    <DockPanel Grid.Column=""1"">
+        <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" ToolTip=""Multiselect various counters"" />
+    </DockPanel>
+</Grid>
+";
+                var xmlReader = XmlReader.Create(new StringReader(strxaml));
+                var spc = (System.Windows.Controls.Grid)XamlReader.Load(xmlReader);
+                spc.DataContext = this;
+
+                var txtUpdateInterval = (TextBox)spc.FindName("txtUpdateInterval");
+                var chkShowStatusHistory = (CheckBox)spc.FindName("chkShowStatusHistory");
+                var lbPCounters = (ListBox)spc.FindName("lbPCounters");
+                spControls.Children.Add(spc);
+
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
                       ResetPerfCounterMonitor();
                   };
-                spControls.Children.Add(txtUpdateInterval);
 
-                spControls.Children.Add(new Label()
-                {
-                    Content = "NumDataPoints",
-                    ToolTip = "Number of Data points (x axis). Will change on next Reset"
-                });
-                var txtNumDataPoints = new TextBox() { Width = 50, Height = 20, VerticalAlignment = VerticalAlignment.Top };
-                txtNumDataPoints.SetBinding(TextBox.TextProperty, nameof(NumDataPoints));
-                spControls.Children.Add(txtNumDataPoints);
-
-                var chkSetMaxGraphTo100 = new CheckBox()
-                {
-                    Content = "SetMaxGraphTo100",
-                    ToolTip = "Set Max Y axis to 100. Else will dynamically rescale Y axis",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top,
-                };
-                chkSetMaxGraphTo100.SetBinding(CheckBox.IsCheckedProperty, nameof(SetMaxGraphTo100));
-                spControls.Children.Add(chkSetMaxGraphTo100);
-
-                var chkScaleByteCtrs = new CheckBox()
-                {
-                    Content = "Scale 'Byte' counters (but not BytePerSec)",
-                    ToolTip = "for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top
-                };
-                chkScaleByteCtrs.SetBinding(CheckBox.IsCheckedProperty, nameof(ScaleByteCounters));
-                spControls.Children.Add(chkScaleByteCtrs);
-
-                var chkShowStatusHistory = new CheckBox()
-                {
-                    Content = "Show Status History",
-                    ToolTip = "Show a textbox which accumulates history of samples",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top
-                };
                 chkShowStatusHistory.Checked += (o, e) =>
                 {
                     if (_txtStatus != null)
@@ -293,16 +195,16 @@ namespace PerfGraphVSIX
                     spMain.Children.Remove(_txtStatus);
                     _txtStatus.Text = string.Empty; // keep around so don't have thread contention
                 };
-                spControls.Children.Add(chkShowStatusHistory);
 
-                var lbPCounters = new ListBox()
-                {
-                    Width = 140,
-                    //                    Height = 90,
-                    SelectionMode = SelectionMode.Multiple,
-                    Margin = new Thickness(10, 0, 0, 0),
-                    ToolTip = "Multiselect various counters"
-                };
+                //var lbPCounters = new ListBox()
+                //{
+                //    Width = 140,
+                //    //                    Height = 90,
+                //    SelectionMode = SelectionMode.Multiple,
+                //    Margin = new Thickness(10, 0, 0, 0),
+                //    MaxHeight = 300,
+                //    ToolTip = "Multiselect various counters"
+                //};
                 lbPCounters.ItemsSource = _lstPerfCounterDefinitions.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
                 _lstPerfCounterDefinitions.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
@@ -340,13 +242,14 @@ namespace PerfGraphVSIX
                         });
                         AddStatusMsgAsync($"SelectionChanged done").Forget();
                         lbPCounters.IsEnabled = true;
+                        el.Handled = true;
                     }
                     catch (Exception)
                     {
                     }
                 };
 #pragma warning restore VSTHRD101 // Avoid unsupported async delegates
-                spControls.Children.Add(lbPCounters);
+//                spControls.Children.Add(lbPCounters);
 
                 _chart = new Chart()
                 {
@@ -359,6 +262,7 @@ namespace PerfGraphVSIX
                     Child = _chart
                 };
                 spMain.Children.Add(wfh);
+
                 var spControls2 = new StackPanel() { Orientation = Orientation.Horizontal };
 
                 var btnDoSample = new Button() { Content = "_DoSample", Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" };
@@ -500,6 +404,10 @@ namespace PerfGraphVSIX
             _chart.ChartAreas.Add(chartArea);
             int ndxSeries = 0;
             chartArea.AxisY.IsStartedFromZero = false;
+            if (SetMaxGraphTo100)
+            {
+                _chart.ChartAreas[0].AxisY.Maximum = 100;
+            }
             foreach (var entry in _lstPCData)
             {
                 var series = new Series
@@ -518,17 +426,13 @@ namespace PerfGraphVSIX
                     series.Points.Add(dp);
                 }
                 ndxSeries++;
-                if (SetMaxGraphTo100)
-                {
-                    _chart.ChartAreas[0].AxisY.Maximum = 100;
-                }
             }
             _chart.DataBind();
 
             if (editorTracker != null)
             {
                 var (OpenedViews, LeakedViews) = editorTracker.GetCounts();
-                void doIt(Dictionary<string, int> dict, ObservableCollection<UIElement> uiColl)
+                void UpdateCollFromDict(Dictionary<string, int> dict, ObservableCollection<UIElement> uiColl)
                 {
                     uiColl.Clear();
                     foreach (var dictEntry in dict)
@@ -538,8 +442,8 @@ namespace PerfGraphVSIX
                         uiColl.Add(sp);
                     }
                 };
-                doIt(OpenedViews, _OpenedViews);
-                doIt(LeakedViews, _LeakedViews);
+                UpdateCollFromDict(OpenedViews, _OpenedViews);
+                UpdateCollFromDict(LeakedViews, _LeakedViews);
             }
         }
 
