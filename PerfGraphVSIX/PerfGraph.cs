@@ -71,21 +71,72 @@ namespace PerfGraphVSIX
         {
             try
             {
-                var tabControl = new TabControl();
-                this.Content = tabControl;
-                var tabMain = new TabItem()
-                {
-                    Header = "Main",
-                    ToolTip = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}"
-                };
-                tabControl.Items.Add(tabMain);
-                var spMain = new StackPanel() { Orientation = Orientation.Vertical };
-                tabMain.Content = spMain;
+                var nameSpace = this.GetType().Namespace;
+                var asm = System.IO.Path.GetFileNameWithoutExtension(
+                    Assembly.GetExecutingAssembly().Location);
 
-                var tabEditorTracker = new TabItem() { Header = "EditorTracker", ToolTip = $"Track Editor instances. Thanks to Dave Pugh" };
-                tabControl.Items.Add(tabEditorTracker);
-                var spEditorTracker = new StackPanel() { Orientation = Orientation.Vertical };
-                tabEditorTracker.Content = spEditorTracker;
+                // Make a namespace referring to our namespace and assembly
+                // using the prefix "l:"
+                //xmlns:l=""clr-namespace:Fish;assembly=Fish"""
+                var xmlns = string.Format(
+@"xmlns:l=""clr-namespace:{0};assembly={1}""", nameSpace, asm);
+                //there are a lot of quotes (and braces) in XAML
+                //and the C# string requires quotes to be doubled
+
+                var strxaml =
+@"
+<TabControl
+xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+" + xmlns + // add our xaml namespace
+@">
+    <TabItem Header=""Main"">
+        <StackPanel Orientation=""Vertical"" Name = ""spMain""/>
+    </TabItem>
+    <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances. Thanks to Dave Pugh"">
+        <StackPanel Orientation=""Vertical"" Name = ""spEditorTracker""/>
+    </TabItem>
+    <TabItem Header = ""Options"">
+        <Grid>
+            <Grid.ColumnDefinitions>
+            <ColumnDefinition Width = ""300""/>
+            <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation = ""Vertical"" Grid.Column=""0"">
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Update Interval""/>
+                    <TextBox Name =""txtUpdateInterval"" Text=""{Binding Path =UpdateInterval}"" ToolTip=""Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""# Data Points in graph""/>
+                    <TextBox Text=""{Binding Path =NumDataPoints}"" ToolTip=""Number of Data points (x axis). Will change on next Reset""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <CheckBox Content=""Scale 'Byte' counters (but not BytePerSec)"" IsChecked=""{Binding Path =ScaleByteCounters}"" ToolTip=""for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <CheckBox Name=""chkShowStatusHistory"" Content=""Show Status History"" IsChecked=""True"" ToolTip=""Show a textbox which accumulates history of samples""/>
+                </StackPanel>
+            </StackPanel>
+            <DockPanel Grid.Column=""1"">
+                <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" VerticalAlignment=""Top"" ToolTip=""Multiselect various counters"" />
+            </DockPanel>
+        </Grid>
+    </TabItem>
+</TabControl>
+";
+                var xmlReader = XmlReader.Create(new StringReader(strxaml));
+
+                var tabControl = (TabControl)XamlReader.Load(xmlReader);
+                tabControl.DataContext = this;
+                this.Content = tabControl;
+
+                var spMain = (StackPanel)tabControl.FindName("spMain");
+                var txtUpdateInterval = (TextBox)tabControl.FindName("txtUpdateInterval");
+                var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
+                var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
+                var spEditorTracker = (StackPanel)tabControl.FindName("spEditorTracker");
+
                 tabControl.SelectionChanged += (o, e) =>
                   {
                       if (e.OriginalSource is TabControl)
@@ -107,63 +158,6 @@ namespace PerfGraphVSIX
                           e.Handled = true;
                       }
                   };
-
-                var tabOptions = new TabItem() { Header = "Options" };
-                tabControl.Items.Add(tabOptions);
-
-                this.DataContext = this;
-                var spControls = new StackPanel() { Orientation = Orientation.Horizontal };
-                tabOptions.Content = spControls;
-
-                var nameSpace = this.GetType().Namespace;
-                var asm = System.IO.Path.GetFileNameWithoutExtension(
-                    Assembly.GetExecutingAssembly().Location);
-
-                var xmlns = string.Format(
-@"xmlns:l=""clr-namespace:{0};assembly={1}""", nameSpace, asm);
-                //there are a lot of quotes (and braces) in XAML
-                //and the C# string requires quotes to be doubled
-
-                var strxaml =
-@"
-<Grid
-xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
-xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-" + xmlns + // add our xaml namespace
-@">
-<Grid.ColumnDefinitions>
-<ColumnDefinition Width = ""300""/>
-<ColumnDefinition/>
-</Grid.ColumnDefinitions>
-    <StackPanel Orientation = ""Vertical"" Grid.Column=""0"">
-        <StackPanel Orientation=""Horizontal"">
-            <Label Content=""Update Interval""/>
-            <TextBox Name =""txtUpdateInterval"" Text=""{Binding Path =UpdateInterval}"" ToolTip=""Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only""/>
-        </StackPanel>
-        <StackPanel Orientation=""Horizontal"">
-            <Label Content=""# Data Points in graph""/>
-            <TextBox Text=""{Binding Path =NumDataPoints}"" ToolTip=""Number of Data points (x axis). Will change on next Reset""/>
-        </StackPanel>
-        <StackPanel Orientation=""Horizontal"">
-            <CheckBox Content=""Scale 'Byte' counters (but not BytePerSec)"" IsChecked=""{Binding Path =ScaleByteCounters}"" ToolTip=""for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs""/>
-        </StackPanel>
-        <StackPanel Orientation=""Horizontal"">
-            <CheckBox Name=""chkShowStatusHistory"" Content=""Show Status History"" IsChecked=""{Binding Path =ScaleByteCounters}"" ToolTip=""Show a textbox which accumulates history of samples""/>
-        </StackPanel>
-    </StackPanel>
-    <DockPanel Grid.Column=""1"">
-        <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" VerticalAlignment=""Top"" ToolTip=""Multiselect various counters"" />
-    </DockPanel>
-</Grid>
-";
-                var xmlReader = XmlReader.Create(new StringReader(strxaml));
-                var grid = (System.Windows.Controls.Grid)XamlReader.Load(xmlReader);
-                grid.DataContext = this;
-
-                var txtUpdateInterval = (TextBox)grid.FindName("txtUpdateInterval");
-                var chkShowStatusHistory = (CheckBox)grid.FindName("chkShowStatusHistory");
-                var lbPCounters = (ListBox)grid.FindName("lbPCounters");
-                spControls.Children.Add(grid);
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
@@ -254,7 +248,15 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 
                 var spControls2 = new StackPanel() { Orientation = Orientation.Horizontal };
 
-                var btnDoSample = new Button() { Content = "_DoSample", Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" };
+                var tipString = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}";
+
+                var btnDoSample = new Button()
+                {
+                    Content = "_DoSample",
+                    Height = 20,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)\r\n" + tipString
+                };
                 spControls2.Children.Add(btnDoSample);
                 btnDoSample.Click += (o, e) =>
                    {
