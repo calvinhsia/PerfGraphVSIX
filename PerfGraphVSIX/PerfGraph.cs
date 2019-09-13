@@ -176,7 +176,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                         VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                         HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                         IsUndoEnabled = false,
-                        FontFamily = new FontFamily("Courier New"),
+                        FontFamily = _fontFamily,
                         FontSize = 10,
                         Height = 200,
                         MaxHeight = 200,
@@ -421,19 +421,34 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 
             if (editorTracker != null)
             {
-                var (OpenedViews, LeakedViews) = editorTracker.GetCounts();
-                void UpdateCollFromDict(Dictionary<string, int> dict, ObservableCollection<UIElement> uiColl)
+                var (openedViews, leakedViews) = editorTracker.GetCounts();
+                _OpenedViews.Clear();
+                _LeakedViews.Clear();
+                foreach (var dictEntry in openedViews)
                 {
-                    uiColl.Clear();
-                    foreach (var dictEntry in dict)
-                    {
-                        var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                        sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,15} {dictEntry.Value,3}" });
-                        uiColl.Add(sp);
-                    }
-                };
-                UpdateCollFromDict(OpenedViews, _OpenedViews);
-                UpdateCollFromDict(LeakedViews, _LeakedViews);
+                    var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                    sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
+                    _OpenedViews.Add(sp);
+                }
+
+                foreach (var entry in leakedViews)
+                {
+                    var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._filename}", FontFamily = _fontFamily });
+                    _LeakedViews.Add(sp);
+                }
+                //void UpdateCollFromDict(Dictionary<string, int> dict, ObservableCollection<UIElement> uiColl)
+                //{
+                //    uiColl.Clear();
+                //    foreach (var dictEntry in dict)
+                //    {
+                //        var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                //        sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
+                //        uiColl.Add(sp);
+                //    }
+                //};
+                //UpdateCollFromDict(OpenedViews, _OpenedViews);
+                //UpdateCollFromDict(LeakedViews, _LeakedViews);
             }
         }
 
@@ -446,6 +461,8 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
+        FontFamily _fontFamily = new FontFamily("Consolas");
+
         async public Task AddStatusMsgAsync(string msg, params object[] args)
         {
             // we want to read the threadid 

@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Text.Editor;
+﻿using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.Collections.Generic;
@@ -21,37 +22,77 @@ namespace PerfGraphVSIX
     [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     class EditorTracker : ITextViewCreationListener
     {
-        HashSet<WeakReference<ITextView>> _hashViews = new HashSet<WeakReference<ITextView>>();
+        internal ITextDocumentFactoryService textDocumentFactoryService;
+        HashSet<textViewInstanceData> _hashViews = new HashSet<textViewInstanceData>();
+
         [ImportingConstructor]
-        EditorTracker()
+        EditorTracker(ITextDocumentFactoryService textDocumentFactoryService)
         {
+            this.textDocumentFactoryService = textDocumentFactoryService;
+        }
+
+        int _nSerialNo;
+        internal class textViewInstanceData
+        {
+            public string _filename;
+            public string _contentType;
+            public WeakReference<ITextView> _wrView;
+            public int _serialNo;
+            public textViewInstanceData(ITextView textView, string filename, int serialNo)
+            {
+                _wrView = new WeakReference<ITextView>(textView);
+                _filename = filename;
+                _serialNo = serialNo;
+                _contentType = textView.TextDataModel?.ContentType?.TypeName ?? "null";
+            }
+            public ITextView GetView()
+            {
+                ITextView ret = null;
+                if (_wrView.TryGetTarget(out ret)) // if it doesn't get view, it has been GC'd.
+                {
+                }
+                return ret;
+            }
         }
         public void TextViewCreated(ITextView textView)
         {
-            _hashViews.Add(new WeakReference<ITextView>(textView));
+            if (TryGetFileName(textView, out var filename))
+            {
+
+            }
+            _hashViews.Add(new textViewInstanceData(textView, filename, _nSerialNo++));
             //if (_hashViews.Count > 100)
             //{
             //    Cleanup();
             //}
         }
 
-        internal (Dictionary<string, int>, Dictionary<string, int>) GetCounts()
+        internal (Dictionary<string, int>, List<textViewInstanceData>) GetCounts()
         {
             var dictOpen = new Dictionary<string, int>();
-            var dictLeaked = new Dictionary<string, int>();
-            var lstDeadViews = new List<WeakReference<ITextView>>();
+            var dictLeaked = new List<textViewInstanceData>();
+            var lstDeadViews = new List<textViewInstanceData>();
             foreach (var entry in _hashViews)
             {
-                if (!entry.TryGetTarget(out var view)) // if it doesn't get view, it has been GC'd.
+                var view = entry.GetView();
+                if (view == null) 
                 {
                     lstDeadViews.Add(entry);
                 }
                 else
                 {
-                    var dict = view.IsClosed ? dictLeaked : dictOpen;
-                    var contentType = view.TextDataModel?.ContentType?.TypeName ?? "null";
-                    dict.TryGetValue(contentType, out int cnt);
-                    dict[contentType] = ++cnt;
+                    if (!view.IsClosed)
+                    {
+                        dictOpen.TryGetValue(entry._contentType, out int cnt);
+                        dictOpen[entry._contentType] = ++cnt;
+                    }
+                    else
+                    {
+                        dictLeaked.Add(entry);
+                    }
+                    //var dict = view.IsClosed ? dictLeaked : dictOpen;
+                    //dict.TryGetValue(contentType, out int cnt);
+                    //dict[contentType] = ++cnt;
                 }
             }
             foreach (var entry in lstDeadViews)
@@ -61,6 +102,17 @@ namespace PerfGraphVSIX
             return (dictOpen, dictLeaked);
         }
 
+        private bool TryGetFileName(ITextView textView, out string filePath)
+        {
+            if (this.textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out var textDocument))
+            {
+                filePath = textDocument.FilePath;
+                return true;
+            }
+
+            filePath = string.Empty;
+            return false;
+        }
 
         //void Cleanup()
         //{
