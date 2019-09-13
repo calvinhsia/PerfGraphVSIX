@@ -152,18 +152,18 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
         </StackPanel>
     </StackPanel>
     <DockPanel Grid.Column=""1"">
-        <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" ToolTip=""Multiselect various counters"" />
+        <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" VerticalAlignment=""Top"" ToolTip=""Multiselect various counters"" />
     </DockPanel>
 </Grid>
 ";
                 var xmlReader = XmlReader.Create(new StringReader(strxaml));
-                var spc = (System.Windows.Controls.Grid)XamlReader.Load(xmlReader);
-                spc.DataContext = this;
+                var grid = (System.Windows.Controls.Grid)XamlReader.Load(xmlReader);
+                grid.DataContext = this;
 
-                var txtUpdateInterval = (TextBox)spc.FindName("txtUpdateInterval");
-                var chkShowStatusHistory = (CheckBox)spc.FindName("chkShowStatusHistory");
-                var lbPCounters = (ListBox)spc.FindName("lbPCounters");
-                spControls.Children.Add(spc);
+                var txtUpdateInterval = (TextBox)grid.FindName("txtUpdateInterval");
+                var chkShowStatusHistory = (CheckBox)grid.FindName("chkShowStatusHistory");
+                var lbPCounters = (ListBox)grid.FindName("lbPCounters");
+                spControls.Children.Add(grid);
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
@@ -196,15 +196,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                     _txtStatus.Text = string.Empty; // keep around so don't have thread contention
                 };
 
-                //var lbPCounters = new ListBox()
-                //{
-                //    Width = 140,
-                //    //                    Height = 90,
-                //    SelectionMode = SelectionMode.Multiple,
-                //    Margin = new Thickness(10, 0, 0, 0),
-                //    MaxHeight = 300,
-                //    ToolTip = "Multiselect various counters"
-                //};
                 lbPCounters.ItemsSource = _lstPerfCounterDefinitions.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
                 _lstPerfCounterDefinitions.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
@@ -248,8 +239,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                     {
                     }
                 };
-#pragma warning restore VSTHRD101 // Avoid unsupported async delegates
-//                spControls.Children.Add(lbPCounters);
 
                 _chart = new Chart()
                 {
@@ -284,7 +273,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 });
 
                 chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
-                //        btnGo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, this));
             }
             catch (Exception ex)
             {
