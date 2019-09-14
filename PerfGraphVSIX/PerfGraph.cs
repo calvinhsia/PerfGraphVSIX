@@ -263,7 +263,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                        ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
                    };
 
-                var txtLastStatMsg = new TextBox() { Width = 500, Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Last Sample", HorizontalAlignment = HorizontalAlignment.Left };
+                var txtLastStatMsg = new TextBox() { Width = 500, Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Last Sample", HorizontalAlignment = HorizontalAlignment.Left, FontFamily = _fontFamily };
                 txtLastStatMsg.SetBinding(TextBox.TextProperty, nameof(LastStatMsg));
                 spControls2.Children.Add(txtLastStatMsg);
 
@@ -421,7 +421,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 
             if (editorTracker != null)
             {
-                var (openedViews, leakedViews) = editorTracker.GetCounts();
+                var (openedViews, lstLeakedViews) = editorTracker.GetCounts();
                 _OpenedViews.Clear();
                 _LeakedViews.Clear();
                 foreach (var dictEntry in openedViews)
@@ -431,24 +431,12 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                     _OpenedViews.Add(sp);
                 }
 
-                foreach (var entry in leakedViews)
+                foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._filename}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo, 3} {entry._filename}", FontFamily = _fontFamily });
                     _LeakedViews.Add(sp);
                 }
-                //void UpdateCollFromDict(Dictionary<string, int> dict, ObservableCollection<UIElement> uiColl)
-                //{
-                //    uiColl.Clear();
-                //    foreach (var dictEntry in dict)
-                //    {
-                //        var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                //        sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
-                //        uiColl.Add(sp);
-                //    }
-                //};
-                //UpdateCollFromDict(OpenedViews, _OpenedViews);
-                //UpdateCollFromDict(LeakedViews, _LeakedViews);
             }
         }
 

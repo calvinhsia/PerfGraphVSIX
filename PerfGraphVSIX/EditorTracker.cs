@@ -70,7 +70,7 @@ namespace PerfGraphVSIX
         internal (Dictionary<string, int>, List<textViewInstanceData>) GetCounts()
         {
             var dictOpen = new Dictionary<string, int>();
-            var dictLeaked = new List<textViewInstanceData>();
+            var lstLeaked = new List<textViewInstanceData>();
             var lstDeadViews = new List<textViewInstanceData>();
             foreach (var entry in _hashViews)
             {
@@ -88,7 +88,7 @@ namespace PerfGraphVSIX
                     }
                     else
                     {
-                        dictLeaked.Add(entry);
+                        lstLeaked.Add(entry);
                     }
                     //var dict = view.IsClosed ? dictLeaked : dictOpen;
                     //dict.TryGetValue(contentType, out int cnt);
@@ -99,7 +99,7 @@ namespace PerfGraphVSIX
             {
                 _hashViews.Remove(entry);
             }
-            return (dictOpen, dictLeaked);
+            return (dictOpen, lstLeaked);
         }
 
         private bool TryGetFileName(ITextView textView, out string filePath)
