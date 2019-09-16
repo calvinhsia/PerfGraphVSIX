@@ -30,8 +30,8 @@ namespace PerfGraphVSIX
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
         string _LastStatMsg;
-        readonly ObservableCollection<UIElement> _OpenedViews = new ObservableCollection<UIElement>();
-        readonly ObservableCollection<UIElement> _LeakedViews = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> _OpenedViews { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> _LeakedViews { get; set; } = new ObservableCollection<UIElement>();
         readonly Chart _chart;
 
         /// <summary>
@@ -94,7 +94,12 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
         <StackPanel Orientation=""Vertical"" Name = ""spMain""/>
     </TabItem>
     <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances. Thanks to Dave Pugh"">
-        <StackPanel Orientation=""Vertical"" Name = ""spEditorTracker""/>
+        <StackPanel Orientation=""Vertical"" Name = ""spEditorTracker"">
+            <Label Content=""Opened TextViews"" ToolTip=""Views that are currently opened. (Refreshed by UpdateInterval, which does GC)""/>
+            <ListBox ItemsSource=""{Binding Path=_OpenedViews}""/>
+            <Label Content=""Leaked TextViews"" ToolTip=""Views that are currently closed but still in memory (Refreshed by UpdateInterval, which does GC)""/>
+            <ListBox ItemsSource=""{Binding Path=_LeakedViews}"" MaxHeight = ""200""/>
+        </StackPanel>
     </TabItem>
     <TabItem Header = ""Options"">
         <Grid>
@@ -136,28 +141,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
                 var spEditorTracker = (StackPanel)tabControl.FindName("spEditorTracker");
-
-                tabControl.SelectionChanged += (o, e) =>
-                  {
-                      if (e.OriginalSource is TabControl)
-                      {
-                          var tabItemHeader = ((TabItem)(tabControl.SelectedItem)).Header as string;
-                          switch (tabItemHeader)
-                          {
-                              case "EditorTracker":
-                                  if (editorTracker == null)
-                                  {
-                                      editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
-                                      spEditorTracker.Children.Add(new Label() { Content = "Opened TextViews", ToolTip = "Views that are currently opened. (Refreshed by UpdateInterval, which does GC)" });
-                                      spEditorTracker.Children.Add(new ListBox() { ItemsSource = _OpenedViews });
-                                      spEditorTracker.Children.Add(new Label() { Content = "Leaked TextViews", ToolTip = "Views that are currently closed but still in memory (Refreshed by UpdateInterval, which does GC)" });
-                                      spEditorTracker.Children.Add(new ListBox() { ItemsSource = _LeakedViews });
-                                  }
-                                  break;
-                          }
-                          e.Handled = true;
-                      }
-                  };
+                editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
@@ -434,7 +418,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo, 3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = _fontFamily });
                     _LeakedViews.Add(sp);
                 }
             }
