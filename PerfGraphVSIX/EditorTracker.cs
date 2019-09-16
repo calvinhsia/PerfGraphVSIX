@@ -38,12 +38,14 @@ namespace PerfGraphVSIX
             public string _contentType;
             public WeakReference<ITextView> _wrView;
             public int _serialNo;
+            public DateTime _dtCreated;
             public textViewInstanceData(ITextView textView, string filename, int serialNo)
             {
                 _wrView = new WeakReference<ITextView>(textView);
                 _filename = filename;
                 _serialNo = serialNo;
                 _contentType = textView.TextDataModel?.ContentType?.TypeName ?? "null";
+                _dtCreated = DateTime.Now;
             }
             public ITextView GetView()
             {
@@ -99,7 +101,7 @@ namespace PerfGraphVSIX
             {
                 _hashViews.Remove(entry);
             }
-            return (dictOpen, lstLeaked);
+            return (dictOpen, lstLeaked.OrderByDescending(k=>k._serialNo).ToList());
         }
 
         private bool TryGetFileName(ITextView textView, out string filePath)

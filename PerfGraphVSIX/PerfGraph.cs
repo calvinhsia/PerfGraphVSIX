@@ -434,7 +434,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo, 3} {entry._filename}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo, 3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = _fontFamily });
                     _LeakedViews.Add(sp);
                 }
             }
