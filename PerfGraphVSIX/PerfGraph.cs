@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Shell;
+﻿using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
@@ -71,18 +72,13 @@ namespace PerfGraphVSIX
         {
             try
             {
-                var nameSpace = this.GetType().Namespace;
-                var asm = System.IO.Path.GetFileNameWithoutExtension(
-                    Assembly.GetExecutingAssembly().Location);
-
                 // Make a namespace referring to our namespace and assembly
                 // using the prefix "l:"
                 //xmlns:l=""clr-namespace:Fish;assembly=Fish"""
-                var xmlns = string.Format(
-@"xmlns:l=""clr-namespace:{0};assembly={1}""", nameSpace, asm);
+                var asm = Path.GetFileNameWithoutExtension(GetType().Assembly.Location);
+                var xmlns = $@"xmlns:l=""clr-namespace:{GetType().Namespace};assembly={asm}""";
                 //there are a lot of quotes (and braces) in XAML
                 //and the C# string requires quotes to be doubled
-
                 var strxaml =
 @"
 <TabControl
@@ -93,11 +89,11 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header=""Main"">
         <StackPanel Orientation=""Vertical"" Name = ""spMain""/>
     </TabItem>
-    <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances. Thanks to Dave Pugh"">
-        <StackPanel Orientation=""Vertical"" Name = ""spEditorTracker"">
+    <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances"">
+        <StackPanel Orientation=""Vertical"">
             <Label Content=""Opened TextViews"" ToolTip=""Views that are currently opened. (Refreshed by UpdateInterval, which does GC)""/>
             <ListBox ItemsSource=""{Binding Path=_OpenedViews}""/>
-            <Label Content=""Leaked TextViews"" ToolTip=""Views that are currently closed but still in memory (Refreshed by UpdateInterval, which does GC)""/>
+            <Label Content=""Leaked TextViews"" ToolTip=""Views that have ITextView.IsClosed==true, but still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh""/>
             <ListBox ItemsSource=""{Binding Path=_LeakedViews}"" MaxHeight = ""200""/>
         </StackPanel>
     </TabItem>
@@ -110,11 +106,11 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             <StackPanel Orientation = ""Vertical"" Grid.Column=""0"">
                 <StackPanel Orientation=""Horizontal"">
                     <Label Content=""Update Interval""/>
-                    <TextBox Name =""txtUpdateInterval"" Text=""{Binding Path =UpdateInterval}"" ToolTip=""Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only""/>
+                    <l:MyTextBox Name =""txtUpdateInterval"" Text=""{Binding Path =UpdateInterval}"" ToolTip=""Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only""/>
                 </StackPanel>
                 <StackPanel Orientation=""Horizontal"">
                     <Label Content=""# Data Points in graph""/>
-                    <TextBox Text=""{Binding Path =NumDataPoints}"" ToolTip=""Number of Data points (x axis). Will change on next Reset""/>
+                    <l:MyTextBox Text=""{Binding Path =NumDataPoints}"" ToolTip=""Number of Data points (x axis). Will change on next Reset""/>
                 </StackPanel>
                 <StackPanel Orientation=""Horizontal"">
                     <CheckBox Content=""Scale 'Byte' counters (but not BytePerSec)"" IsChecked=""{Binding Path =ScaleByteCounters}"" ToolTip=""for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs""/>
@@ -137,10 +133,9 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 this.Content = tabControl;
 
                 var spMain = (StackPanel)tabControl.FindName("spMain");
-                var txtUpdateInterval = (TextBox)tabControl.FindName("txtUpdateInterval");
+                var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
-                var spEditorTracker = (StackPanel)tabControl.FindName("spEditorTracker");
                 editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
 
                 txtUpdateInterval.LostFocus += (o, e) =>
@@ -375,6 +370,8 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             _chart.ChartAreas.Clear();
             ChartArea chartArea = null;
             chartArea = new ChartArea("ChartArea");
+            chartArea.AxisY.LabelStyle.Format = "{0:n0}";
+            chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
             _chart.ChartAreas.Add(chartArea);
             int ndxSeries = 0;
             chartArea.AxisY.IsStartedFromZero = false;
@@ -459,6 +456,20 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 _txtStatus.AppendText(str);
                 _txtStatus.ScrollToEnd();
             }
+        }
+
+    }
+    // a textbox that selects all when focused:
+    public class MyTextBox : TextBox
+    {
+        public MyTextBox()
+        {
+            this.SetResourceReference(TextBox.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            this.SetResourceReference(TextBox.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
+            this.GotFocus += (o, e) =>
+            {
+                this.SelectAll();
+            };
         }
     }
 
