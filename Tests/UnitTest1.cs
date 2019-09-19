@@ -60,6 +60,89 @@ namespace Tests
             }
         }
 
+        class MyBigContainer : MyContainer
+        {
+            int[] _bigArray;
+            public MyBigContainer(object obj) : base(obj)
+            {
+                _bigArray = new int[10000];
+            }
+        }
+
+
+        [TestMethod]
+        public async Task TestWeakObsColl()
+        {
+            int nThreads = 100;
+            int nIter = 1000;
+            int cnt = 0;
+            int nDequeued = 0;
+            var coll = new ObservableCollection<WeakReference<MyBigContainer>>();
+            try
+            {
+                var cts = new CancellationTokenSource();
+                var doneEvent = new ManualResetEventSlim();
+                var queue = new ConcurrentQueue<WeakReference<MyBigContainer>>();
+                var taskDrain = Task.Run(async () =>
+                {
+                    LogTestMessage($"Starting drain");
+                    while (!doneEvent.IsSet || !queue.IsEmpty)
+                    {
+                        while (queue.TryDequeue(out var item))
+                        {
+//                            LogTestMessage($"Deq {item}");
+                            nDequeued++;
+                            coll.Add(item);
+                        }
+                        await Task.Yield();
+                    }
+                    LogTestMessage($"done drain");
+                });
+
+                var tasks = new Task<int>[nThreads];
+                for (int iThread = 0; iThread < nThreads; iThread++)
+                {
+                    var x = iThread;
+                    tasks[iThread] = Task.Run(() =>
+                    {
+                        for (int i = 0; i < nIter; i++)
+                        {
+                            queue.Enqueue(new WeakReference<MyBigContainer>(new MyBigContainer(Interlocked.Increment(ref cnt))));
+                        }
+                        return 0;
+                    }
+                    );
+                }
+                await Task.Run(() => Task.WaitAll(tasks));
+                doneEvent.Set();
+                cts.Cancel();
+                await taskDrain;
+                Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
+
+                var lstToDel = new ObservableCollection<WeakReference<MyBigContainer>>();
+                foreach (var itm in coll)
+                {
+                    if (!itm.TryGetTarget(out var _))
+                    {
+                        lstToDel.Add(itm);
+                    }
+                }
+                LogTestMessage($"Removing {lstToDel.Count} items");
+                foreach (var itm in lstToDel)
+                {
+                    coll.Remove(itm);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogTestMessage($"got exception {ex.ToString()}");
+                throw;
+            }
+            LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
+            Assert.AreEqual(nIter * nThreads, cnt, $" items added should be equal");
+            Assert.IsTrue(nIter * nThreads> coll.Count, $" coll count should be < because GC");
+        }
+
 
         [TestMethod]
         public async Task TestQueueThreads()
@@ -118,7 +201,7 @@ namespace Tests
                 throw;
             }
             LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
-            Assert.AreEqual(nIter * nThreads, cnt, $" should be equal");
+            Assert.AreEqual(nIter * nThreads, cnt, $" items added should be equal");
             Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
         }
 
@@ -129,7 +212,7 @@ namespace Tests
         public async Task TestObsCollThreads()
         {
             ObservableCollection<MyContainer> coll = new ObservableCollection<MyContainer>();
-            int nThreads = 100;
+            int nThreads = 250;
             int nIter = 100000;
             int cnt = 0;
             try
