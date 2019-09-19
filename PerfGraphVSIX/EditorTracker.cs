@@ -83,7 +83,11 @@ namespace PerfGraphVSIX
                 }
                 else
                 {
-                    if (!view.IsClosed)
+                    var typView = view.GetType();
+                    var IsClosedProp = typView.GetProperty("IsClosed");
+                    var valIsClosedProp =IsClosedProp.GetValue(view) ;
+                    if (!(bool)valIsClosedProp)
+//                    if (!view.IsClosed)
                     {
                         dictOpen.TryGetValue(entry._contentType, out int cnt);
                         dictOpen[entry._contentType] = ++cnt;
