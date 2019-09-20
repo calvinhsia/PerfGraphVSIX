@@ -58,6 +58,7 @@ namespace PerfGraphVSIX
         }
         public void TextViewCreated(ITextView textView)
         {
+            PerfGraph.Instance._objTracker.AddObjectToTrack(textView);
             if (TryGetFileName(textView, out var filename))
             {
 

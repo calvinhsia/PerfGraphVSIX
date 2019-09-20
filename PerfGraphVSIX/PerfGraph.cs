@@ -26,9 +26,11 @@ namespace PerfGraphVSIX
 {
     public class PerfGraph : UserControl, INotifyPropertyChanged
     {
+        public static PerfGraph Instance;
+
         TextBox _txtStatus;
-        EditorTracker _editorTracker;
-        ObjTracker _objTracker;
+        internal EditorTracker _editorTracker;
+        internal ObjTracker _objTracker;
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
         string _LastStatMsg;
@@ -75,6 +77,7 @@ namespace PerfGraphVSIX
 
         public PerfGraph()
         {
+            Instance = this;
             try
             {
                 // Make a namespace referring to our namespace and assembly
@@ -437,19 +440,19 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             {
                 var (createdObjs, lstLeakedObjs) = _objTracker.GetCounts();
                 _CreatedObjs.Clear();
-                _LeakedViews.Clear();
+                _LeakedObjs.Clear();
                 foreach (var dictEntry in createdObjs)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
-                    _OpenedViews.Add(sp);
+                    _CreatedObjs.Add(sp);
                 }
 
                 foreach (var entry in lstLeakedObjs)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"{ entry.descriptor,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")}", FontFamily = _fontFamily });
-                    _LeakedViews.Add(sp);
+                    _LeakedObjs.Add(sp);
                 }
             }
         }

@@ -48,6 +48,7 @@ namespace PerfGraphVSIX
                     bool fDidGetSpecialType = false;
                     switch (typeName)
                     {
+                        case "WpfTextView":
                         case "Microsoft.VisualStudio.Text.Implementation.TextBuffer":
                             var IsClosedProp = obj.GetType().GetProperty("IsClosed");
                             var valIsClosedProp = IsClosedProp.GetValue(obj);
