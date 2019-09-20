@@ -23,6 +23,7 @@ namespace PerfGraphVSIX
         {
             static int g_baseSerialNo = 0;
             internal WeakReference<object> _wr;
+            internal int _hashCodeTarget;
 
             public string Descriptor { get; private set; }
             public int _serialNo;
@@ -32,6 +33,7 @@ namespace PerfGraphVSIX
                 _dtCreated = DateTime.Now;
                 _wr = new WeakReference<object>(obj);
                 _serialNo = g_baseSerialNo;
+                _hashCodeTarget = obj.GetHashCode();
                 Interlocked.Increment(ref g_baseSerialNo);
                 Descriptor = $"{obj.GetType().FullName} {description}".Trim();
             }
@@ -88,7 +90,7 @@ namespace PerfGraphVSIX
             }
         }
 
-        readonly HashSet<ObjWeakRefData> _hashObjs = new HashSet<ObjWeakRefData>();
+        readonly Dictionary<int, ObjWeakRefData> _dictObjsToTrack = new Dictionary<int, ObjWeakRefData>();
         readonly ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
 
         /// <summary>
@@ -105,15 +107,18 @@ namespace PerfGraphVSIX
             while (_queue.TryDequeue(out var obj))
             {
                 var o = obj as ObjWeakRefData;
-                if (o._wr.TryGetTarget(out _)) // has it been GC'd?
+                if (o._wr.TryGetTarget(out var _)) // has it been GC'd?
                 {
-                    _hashObjs.Add(o); // still alive
+                    if (!_dictObjsToTrack.ContainsKey(o._hashCodeTarget))
+                    {
+                        _dictObjsToTrack[o._hashCodeTarget] = o; // still alive
+                    }
                 }
             }
             var dictLiveObjs = new Dictionary<string, int>(); // classname + desc, count
             var lstDeadObjs = new List<ObjWeakRefData>();
             var lstLeakedObjs = new List<ObjWeakRefData>();
-            foreach (var itm in _hashObjs)
+            foreach (var itm in _dictObjsToTrack.Values)
             {
                 if (itm._wr.TryGetTarget(out _))
                 { // the obj is still in memory. Has it been closed or disposed?
@@ -134,7 +139,7 @@ namespace PerfGraphVSIX
             }
             foreach (var entry in lstDeadObjs)
             {
-                _hashObjs.Remove(entry);
+                _dictObjsToTrack.Remove(entry._hashCodeTarget);
             }
             return (dictLiveObjs, lstLeakedObjs);
         }
@@ -143,9 +148,9 @@ namespace PerfGraphVSIX
         public void Cleanup()
         {
             var lstGCObjs = new List<ObjWeakRefData>(); // create new outside lock
-            lock (_hashObjs)
+            lock (_dictObjsToTrack)
             {
-                foreach (var entry in _hashObjs)
+                foreach (var entry in _dictObjsToTrack.Values)
                 {
                     if (!entry._wr.TryGetTarget(out var _)) // if it doesn't get obj, it has been GC'd.
                     {
@@ -154,7 +159,7 @@ namespace PerfGraphVSIX
                 }
                 foreach (var entry in lstGCObjs)
                 {
-                    _hashObjs.Remove(entry);
+                    _dictObjsToTrack.Remove(entry._hashCodeTarget);
                 }
             }
         }

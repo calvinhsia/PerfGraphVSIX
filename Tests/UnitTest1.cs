@@ -153,7 +153,7 @@ namespace Tests
                     }
                     cts.Cancel();
                     Assert.AreEqual(1, res.Item1.Count, "only 1 leaking type");
-                    Assert.IsTrue(res.Item1["MyBigData"] > 1000, "# live > 1000");
+                    Assert.IsTrue(res.Item1.Values.First() > 1000, "# live > 1000");
                     Assert.IsTrue(res.Item2.Count > 1000, "# leaked > 1000");
                 }
                 //                    Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
