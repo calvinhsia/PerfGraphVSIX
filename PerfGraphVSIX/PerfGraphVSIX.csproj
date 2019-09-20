@@ -58,6 +58,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="EditorTracker.cs" />
+    <Compile Include="ObjTracker.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="PerfGraph.cs" />
     <Compile Include="PerfGraphToolWindow.cs" />

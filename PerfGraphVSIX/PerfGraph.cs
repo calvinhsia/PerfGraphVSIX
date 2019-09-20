@@ -27,13 +27,18 @@ namespace PerfGraphVSIX
     public class PerfGraph : UserControl, INotifyPropertyChanged
     {
         TextBox _txtStatus;
-        EditorTracker editorTracker;
+        EditorTracker _editorTracker;
+        ObjTracker _objTracker;
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
         string _LastStatMsg;
+        readonly Chart _chart;
+
         public ObservableCollection<UIElement> _OpenedViews { get; set; } = new ObservableCollection<UIElement>();
         public ObservableCollection<UIElement> _LeakedViews { get; set; } = new ObservableCollection<UIElement>();
-        readonly Chart _chart;
+
+        public ObservableCollection<UIElement> _CreatedObjs { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> _LeakedObjs { get; set; } = new ObservableCollection<UIElement>();
 
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
@@ -97,6 +102,14 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             <ListBox ItemsSource=""{Binding Path=_LeakedViews}"" MaxHeight = ""200""/>
         </StackPanel>
     </TabItem>
+    <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances. Requires ClrProfilerAPI"">
+        <StackPanel Orientation=""Vertical"">
+            <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. (Refreshed by UpdateInterval, which does GC)""/>
+            <ListBox ItemsSource=""{Binding Path=_CreatedObjs}""/>
+            <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory (Refreshed by UpdateInterval, which does GC).""/>
+            <ListBox ItemsSource=""{Binding Path=_LeakedObjs}"" MaxHeight = ""200""/>
+        </StackPanel>
+    </TabItem>
     <TabItem Header = ""Options"">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -136,7 +149,8 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
-                editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+                _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+                _objTracker = new ObjTracker();
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
@@ -400,9 +414,9 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             }
             _chart.DataBind();
 
-            if (editorTracker != null)
+            if (_editorTracker != null)
             {
-                var (openedViews, lstLeakedViews) = editorTracker.GetCounts();
+                var (openedViews, lstLeakedViews) = _editorTracker.GetCounts();
                 _OpenedViews.Clear();
                 _LeakedViews.Clear();
                 foreach (var dictEntry in openedViews)
@@ -416,6 +430,25 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = _fontFamily });
+                    _LeakedViews.Add(sp);
+                }
+            }
+            if (_objTracker != null)
+            {
+                var (createdObjs, lstLeakedObjs) = _objTracker.GetCounts();
+                _CreatedObjs.Clear();
+                _LeakedViews.Clear();
+                foreach (var dictEntry in createdObjs)
+                {
+                    var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                    sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
+                    _OpenedViews.Add(sp);
+                }
+
+                foreach (var entry in lstLeakedObjs)
+                {
+                    var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry.descriptor,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")}", FontFamily = _fontFamily });
                     _LeakedViews.Add(sp);
                 }
             }
