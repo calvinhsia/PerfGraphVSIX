@@ -41,7 +41,8 @@ namespace Tests
     {
         class Basecontainer
         {
-            object _obj;
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0052:Remove unread private members", Justification = "<Pending>")]
+            readonly object _obj;
             internal Basecontainer(object obj)
             {
                 this._obj = obj;
@@ -49,15 +50,14 @@ namespace Tests
         }
         class MyContainer : Basecontainer
         {
-            WeakReference<object> wr;
+            readonly WeakReference<object> wr;
             public MyContainer(object obj) : base(obj)
             {
                 wr = new WeakReference<object>(obj);
             }
             public object GetTarget()
             {
-                object ret = null;
-                wr.TryGetTarget(out ret);
+                wr.TryGetTarget(out object ret);
                 return ret;
             }
             public override string ToString()
@@ -68,23 +68,25 @@ namespace Tests
 
         class MyBigContainer : MyContainer
         {
-            int[] _bigArray;
+            readonly int[] _bigArray;
             public MyBigContainer(object obj) : base(obj)
             {
                 _bigArray = new int[10000];
+                _bigArray[0] = 1;
             }
         }
 
         class MyBigData : IDisposable
         {
-            int[] _bigArray;
-            object _obj;
+            readonly int[] _bigArray;
+            readonly object _obj;
             public MyBigData(object obj)
             {
                 _bigArray = new int[10000];
+                _bigArray[0] = 1;
                 _obj = obj;
             }
-            bool _fDisposed { get; set; } = false;
+            bool _fDisposed = false;
             public void Dispose()
             {
                 if (!_fDisposed)
@@ -110,46 +112,50 @@ namespace Tests
             var objTracker = new ObjTracker();
             try
             {
-                var cts = new CancellationTokenSource();
-                var doneEvent = new ManualResetEventSlim();
-                var tasks = new Task[nThreads];
-                for (int iThread = 0; iThread < nThreads; iThread++)
+                using (var cts = new CancellationTokenSource())
                 {
-                    tasks[iThread] = Task.Run(() =>
+                    using (var doneEvent = new ManualResetEventSlim())
                     {
-                        for (int i = 0; i < nIter; i++)
+                        var tasks = new Task[nThreads];
+                        for (int iThread = 0; iThread < nThreads; iThread++)
                         {
-                            var obj = new MyBigData(cnt);
-                            Interlocked.Increment(ref cnt);
-                            objTracker.AddObjectToTrack(obj);
-                            if (rand.Next(100) < 50)
+                            tasks[iThread] = Task.Run(() =>
                             {
-                                obj.Dispose();
+                                for (int i = 0; i < nIter; i++)
+                                {
+                                    var obj = new MyBigData(cnt);
+                                    Interlocked.Increment(ref cnt);
+                                    objTracker.AddObjectToTrack(obj);
+                                    if (rand.Next(100) < 50)
+                                    {
+                                        obj.Dispose();
+                                    }
+                                    if (rand.Next(100) < 50)
+                                    {
+                                        hashHardRefs.Add(obj);
+                                    }
+                                }
                             }
-                            if (rand.Next(100) < 50)
-                            {
-                                hashHardRefs.Add(obj);
-                            }
+                            );
                         }
+                        await Task.Run(() => Task.WaitAll(tasks));
+                        doneEvent.Set();
                     }
-                    );
+                    var res = objTracker.GetCounts();
+                    LogTestMessage($"Got results: live: {res.Item1.Count}  Leaked: {res.Item2.Count}  HardRefsCount={hashHardRefs.Count}");
+                    foreach (var live in res.Item1)
+                    {
+                        LogTestMessage($"  Live {live.Value,3} {live.Key}");
+                    }
+                    foreach (var leak in res.Item2)
+                    {
+                        LogTestMessage($"  Leaked {leak._serialNo} {leak.Descriptor}");
+                    }
+                    cts.Cancel();
+                    Assert.AreEqual(1, res.Item1.Count, "only 1 leaking type");
+                    Assert.IsTrue(res.Item1["MyBigData"] > 1000, "# live > 1000");
+                    Assert.IsTrue(res.Item2.Count > 1000, "# leaked > 1000");
                 }
-                await Task.Run(() => Task.WaitAll(tasks));
-                doneEvent.Set();
-                var res = objTracker.GetCounts();
-                LogTestMessage($"Got results: live: {res.Item1.Count}  Leaked: {res.Item2.Count}  HardRefsCount={hashHardRefs.Count}");
-                foreach (var live in res.Item1)
-                {
-                    LogTestMessage($"  Live {live.Value,3} {live.Key}");
-                }
-                foreach (var leak in res.Item2)
-                {
-                    LogTestMessage($"  Leaked {leak._serialNo} {leak.descriptor}");
-                }
-                cts.Cancel();
-                Assert.AreEqual(1, res.Item1.Count, "only 1 leaking type");
-                Assert.IsTrue(res.Item1["MyBigData"] > 1000, "# live > 1000");
-                Assert.IsTrue(res.Item2.Count > 1000, "# leaked > 1000");
                 //                    Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
 
             }
@@ -177,28 +183,32 @@ namespace Tests
             var objTracker = new ObjTracker();
             try
             {
-                var cts = new CancellationTokenSource();
-                var doneEvent = new ManualResetEventSlim();
-                var tasks = new Task[nThreads];
-                for (int iThread = 0; iThread < nThreads; iThread++)
+                using (var cts = new CancellationTokenSource())
                 {
-                    tasks[iThread] = Task.Run(() =>
+                    using (var doneEvent = new ManualResetEventSlim())
                     {
-                        for (int i = 0; i < nIter; i++)
+                        var tasks = new Task[nThreads];
+                        for (int iThread = 0; iThread < nThreads; iThread++)
                         {
-                            var obj = new MyBigData(cnt);
-                            Interlocked.Increment(ref cnt);
-                            Interlocked.CompareExchange(ref hardref, obj, null);
-                            objTracker.AddObjectToTrack(obj);
+                            tasks[iThread] = Task.Run(() =>
+                            {
+                                for (int i = 0; i < nIter; i++)
+                                {
+                                    var obj = new MyBigData(cnt);
+                                    Interlocked.Increment(ref cnt);
+                                    Interlocked.CompareExchange(ref hardref, obj, null);
+                                    objTracker.AddObjectToTrack(obj);
+                                }
+                            }
+                            );
                         }
+                        await Task.Run(() => Task.WaitAll(tasks));
+                        doneEvent.Set();
                     }
-                    );
+                    var res = objTracker.GetCounts();
+                    cts.Cancel();
+                    Assert.AreEqual(1, res.Item1.Count, "only 1 left in hardref");
                 }
-                await Task.Run(() => Task.WaitAll(tasks));
-                doneEvent.Set();
-                var res = objTracker.GetCounts();
-                cts.Cancel();
-                Assert.AreEqual(1, res.Item1.Count, "only 1 left in hardref");
                 //                    Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
 
             }
@@ -226,45 +236,49 @@ namespace Tests
             var coll = new ObservableCollection<WeakReference<object>>();
             try
             {
-                var cts = new CancellationTokenSource();
-                var doneEvent = new ManualResetEventSlim();
-                var queue = new ConcurrentQueue<WeakReference<object>>();
-                var taskDrain = Task.Run(async () =>
+                using (var cts = new CancellationTokenSource())
                 {
-                    LogTestMessage($"Starting drain");
-                    while (!doneEvent.IsSet || !queue.IsEmpty)
+                    using (var doneEvent = new ManualResetEventSlim())
                     {
-                        while (queue.TryDequeue(out var item))
+                        var queue = new ConcurrentQueue<WeakReference<object>>();
+                        var taskDrain = Task.Run(async () =>
                         {
-                            //                            LogTestMessage($"Deq {item}");
-                            nDequeued++;
-                            coll.Add(item);
-                        }
-                        await Task.Yield();
-                    }
-                    LogTestMessage($"done drain");
-                });
+                            LogTestMessage($"Starting drain");
+                            while (!doneEvent.IsSet || !queue.IsEmpty)
+                            {
+                                while (queue.TryDequeue(out var item))
+                                {
+                                //                            LogTestMessage($"Deq {item}");
+                                nDequeued++;
+                                    coll.Add(item);
+                                }
+                                await Task.Yield();
+                            }
+                            LogTestMessage($"done drain");
+                        });
 
-                var tasks = new Task<int>[nThreads];
-                for (int iThread = 0; iThread < nThreads; iThread++)
-                {
-                    var x = iThread;
-                    tasks[iThread] = Task.Run(() =>
-                    {
-                        for (int i = 0; i < nIter; i++)
+                        var tasks = new Task<int>[nThreads];
+                        for (int iThread = 0; iThread < nThreads; iThread++)
                         {
-                            var obj = new MyContainer(Interlocked.Increment(ref cnt));
-                            Interlocked.CompareExchange(ref hardref, obj, null);
-                            queue.Enqueue(new WeakReference<object>(obj));
+                            var x = iThread;
+                            tasks[iThread] = Task.Run(() =>
+                            {
+                                for (int i = 0; i < nIter; i++)
+                                {
+                                    var obj = new MyContainer(Interlocked.Increment(ref cnt));
+                                    Interlocked.CompareExchange(ref hardref, obj, null);
+                                    queue.Enqueue(new WeakReference<object>(obj));
+                                }
+                                return 0;
+                            }
+                            );
                         }
-                        return 0;
+                        await Task.Run(() => Task.WaitAll(tasks));
+                        doneEvent.Set();
+                        cts.Cancel();
+                        await taskDrain;
                     }
-                    );
                 }
-                await Task.Run(() => Task.WaitAll(tasks));
-                doneEvent.Set();
-                cts.Cancel();
-                await taskDrain;
                 Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
 
                 var lstToDel = new ObservableCollection<WeakReference<object>>();
@@ -304,43 +318,47 @@ namespace Tests
             var coll = new ObservableCollection<WeakReference<MyBigContainer>>();
             try
             {
-                var cts = new CancellationTokenSource();
-                var doneEvent = new ManualResetEventSlim();
-                var queue = new ConcurrentQueue<WeakReference<MyBigContainer>>();
-                var taskDrain = Task.Run(async () =>
+                using (var cts = new CancellationTokenSource())
                 {
-                    LogTestMessage($"Starting drain");
-                    while (!doneEvent.IsSet || !queue.IsEmpty)
+                    using (var doneEvent = new ManualResetEventSlim())
                     {
-                        while (queue.TryDequeue(out var item))
+                        var queue = new ConcurrentQueue<WeakReference<MyBigContainer>>();
+                        var taskDrain = Task.Run(async () =>
                         {
-                            //                            LogTestMessage($"Deq {item}");
-                            nDequeued++;
-                            coll.Add(item);
-                        }
-                        await Task.Yield();
-                    }
-                    LogTestMessage($"done drain");
-                });
+                            LogTestMessage($"Starting drain");
+                            while (!doneEvent.IsSet || !queue.IsEmpty)
+                            {
+                                while (queue.TryDequeue(out var item))
+                                {
+                                //                            LogTestMessage($"Deq {item}");
+                                nDequeued++;
+                                    coll.Add(item);
+                                }
+                                await Task.Yield();
+                            }
+                            LogTestMessage($"done drain");
+                        });
 
-                var tasks = new Task<int>[nThreads];
-                for (int iThread = 0; iThread < nThreads; iThread++)
-                {
-                    var x = iThread;
-                    tasks[iThread] = Task.Run(() =>
-                    {
-                        for (int i = 0; i < nIter; i++)
+                        var tasks = new Task<int>[nThreads];
+                        for (int iThread = 0; iThread < nThreads; iThread++)
                         {
-                            queue.Enqueue(new WeakReference<MyBigContainer>(new MyBigContainer(Interlocked.Increment(ref cnt))));
+                            var x = iThread;
+                            tasks[iThread] = Task.Run(() =>
+                            {
+                                for (int i = 0; i < nIter; i++)
+                                {
+                                    queue.Enqueue(new WeakReference<MyBigContainer>(new MyBigContainer(Interlocked.Increment(ref cnt))));
+                                }
+                                return 0;
+                            }
+                            );
                         }
-                        return 0;
+                        await Task.Run(() => Task.WaitAll(tasks));
+                        doneEvent.Set();
+                        cts.Cancel();
+                        await taskDrain;
                     }
-                    );
                 }
-                await Task.Run(() => Task.WaitAll(tasks));
-                doneEvent.Set();
-                cts.Cancel();
-                await taskDrain;
                 Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
 
                 var lstToDel = new ObservableCollection<WeakReference<MyBigContainer>>();
@@ -378,44 +396,48 @@ namespace Tests
             ObservableCollection<MyContainer> coll = new ObservableCollection<MyContainer>();
             try
             {
-                var cts = new CancellationTokenSource();
-                var doneEvent = new ManualResetEventSlim();
-                var queue = new ConcurrentQueue<MyContainer>();
-                var taskDrain = Task.Run(async () =>
+                using (var cts = new CancellationTokenSource())
                 {
-                    LogTestMessage($"Starting drain");
-                    while (!doneEvent.IsSet || queue.Count > 0)
+                    using (var doneEvent = new ManualResetEventSlim())
                     {
-                        await Task.Yield();
-                        while (queue.TryDequeue(out var mycont))
+                        var queue = new ConcurrentQueue<MyContainer>();
+                        var taskDrain = Task.Run(async () =>
                         {
-                            LogTestMessage($"Deq {mycont}");
-                            nDequeued++;
-                            coll.Add(mycont);
-                        }
-                    }
-                    LogTestMessage($"done drain");
-                });
+                            LogTestMessage($"Starting drain");
+                            while (!doneEvent.IsSet || queue.Count > 0)
+                            {
+                                await Task.Yield();
+                                while (queue.TryDequeue(out var mycont))
+                                {
+                                    LogTestMessage($"Deq {mycont}");
+                                    nDequeued++;
+                                    coll.Add(mycont);
+                                }
+                            }
+                            LogTestMessage($"done drain");
+                        });
 
-                var tasks = new Task<int>[nThreads];
-                for (int iThread = 0; iThread < nThreads; iThread++)
-                {
-                    var x = iThread;
-                    tasks[iThread] = Task.Run(() =>
-                    {
-                        LogTestMessage($"starting {x}");
-                        for (int i = 0; i < nIter; i++)
+                        var tasks = new Task<int>[nThreads];
+                        for (int iThread = 0; iThread < nThreads; iThread++)
                         {
-                            queue.Enqueue(new MyContainer(Interlocked.Increment(ref cnt)));
+                            var x = iThread;
+                            tasks[iThread] = Task.Run(() =>
+                            {
+                                LogTestMessage($"starting {x}");
+                                for (int i = 0; i < nIter; i++)
+                                {
+                                    queue.Enqueue(new MyContainer(Interlocked.Increment(ref cnt)));
+                                }
+                                return 0;
+                            }
+                            );
                         }
-                        return 0;
+                        await Task.Run(() => Task.WaitAll(tasks));
+                        doneEvent.Set();
+                        cts.Cancel();
+                        await taskDrain;
                     }
-                    );
                 }
-                await Task.Run(() => Task.WaitAll(tasks));
-                doneEvent.Set();
-                cts.Cancel();
-                await taskDrain;
                 Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
 
             }

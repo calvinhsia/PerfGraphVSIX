@@ -36,11 +36,11 @@ namespace PerfGraphVSIX
         string _LastStatMsg;
         readonly Chart _chart;
 
-        public ObservableCollection<UIElement> _OpenedViews { get; set; } = new ObservableCollection<UIElement>();
-        public ObservableCollection<UIElement> _LeakedViews { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> OpenedViews { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> LeakedViews { get; set; } = new ObservableCollection<UIElement>();
 
-        public ObservableCollection<UIElement> _CreatedObjs { get; set; } = new ObservableCollection<UIElement>();
-        public ObservableCollection<UIElement> _LeakedObjs { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> CreatedObjs { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<UIElement> LeakedObjs { get; set; } = new ObservableCollection<UIElement>();
 
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
@@ -100,17 +100,17 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances"">
         <StackPanel Orientation=""Vertical"">
             <Label Content=""Opened TextViews"" ToolTip=""Views that are currently opened. (Refreshed by UpdateInterval, which does GC)""/>
-            <ListBox ItemsSource=""{Binding Path=_OpenedViews}""/>
+            <ListBox ItemsSource=""{Binding Path=OpenedViews}""/>
             <Label Content=""Leaked TextViews"" ToolTip=""Views that have ITextView.IsClosed==true, but still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh""/>
-            <ListBox ItemsSource=""{Binding Path=_LeakedViews}"" MaxHeight = ""200""/>
+            <ListBox ItemsSource=""{Binding Path=LeakedViews}"" MaxHeight = ""200""/>
         </StackPanel>
     </TabItem>
     <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances. Requires ClrProfilerAPI"">
         <StackPanel Orientation=""Vertical"">
             <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. (Refreshed by UpdateInterval, which does GC)""/>
-            <ListBox ItemsSource=""{Binding Path=_CreatedObjs}""/>
+            <ListBox ItemsSource=""{Binding Path=CreatedObjs}""/>
             <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory (Refreshed by UpdateInterval, which does GC).""/>
-            <ListBox ItemsSource=""{Binding Path=_LeakedObjs}"" MaxHeight = ""200""/>
+            <ListBox ItemsSource=""{Binding Path=LeakedObjs}"" MaxHeight = ""200""/>
         </StackPanel>
     </TabItem>
     <TabItem Header = ""Options"">
@@ -385,8 +385,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             // this needs to be done on UI thread
             _chart.Series.Clear();
             _chart.ChartAreas.Clear();
-            ChartArea chartArea = null;
-            chartArea = new ChartArea("ChartArea");
+            ChartArea chartArea = new ChartArea("ChartArea");
             chartArea.AxisY.LabelStyle.Format = "{0:n0}";
             chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
             _chart.ChartAreas.Add(chartArea);
@@ -420,39 +419,39 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             if (_editorTracker != null)
             {
                 var (openedViews, lstLeakedViews) = _editorTracker.GetCounts();
-                _OpenedViews.Clear();
-                _LeakedViews.Clear();
+                OpenedViews.Clear();
+                LeakedViews.Clear();
                 foreach (var dictEntry in openedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
-                    _OpenedViews.Add(sp);
+                    OpenedViews.Add(sp);
                 }
 
                 foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = _fontFamily });
-                    _LeakedViews.Add(sp);
+                    LeakedViews.Add(sp);
                 }
             }
             if (_objTracker != null)
             {
                 var (createdObjs, lstLeakedObjs) = _objTracker.GetCounts();
-                _CreatedObjs.Clear();
-                _LeakedObjs.Clear();
+                CreatedObjs.Clear();
+                LeakedObjs.Clear();
                 foreach (var dictEntry in createdObjs)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
-                    _CreatedObjs.Add(sp);
+                    CreatedObjs.Add(sp);
                 }
 
                 foreach (var entry in lstLeakedObjs)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry.descriptor,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")}", FontFamily = _fontFamily });
-                    _LeakedObjs.Add(sp);
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry.Descriptor,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")}", FontFamily = _fontFamily });
+                    LeakedObjs.Add(sp);
                 }
             }
         }
@@ -466,7 +465,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
-        FontFamily _fontFamily = new FontFamily("Consolas");
+        readonly FontFamily _fontFamily = new FontFamily("Consolas");
 
         async public Task AddStatusMsgAsync(string msg, params object[] args)
         {

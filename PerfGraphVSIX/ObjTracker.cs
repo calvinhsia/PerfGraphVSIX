@@ -24,7 +24,7 @@ namespace PerfGraphVSIX
             static int g_baseSerialNo = 0;
             internal WeakReference<object> _wr;
 
-            public string descriptor { get; private set; }
+            public string Descriptor { get; private set; }
             public int _serialNo;
             public DateTime _dtCreated;
             public ObjWeakRefData(object obj, string description)
@@ -33,7 +33,7 @@ namespace PerfGraphVSIX
                 _wr = new WeakReference<object>(obj);
                 _serialNo = g_baseSerialNo;
                 Interlocked.Increment(ref g_baseSerialNo);
-                descriptor = $"{obj.GetType().Name} {description}".Trim();
+                Descriptor = $"{obj.GetType().FullName} {description}".Trim();
             }
             /// <summary>
             /// Certain known objects have a flag when they're finished: e.g. IsClosed or _disposed.
@@ -48,7 +48,7 @@ namespace PerfGraphVSIX
                     bool fDidGetSpecialType = false;
                     switch (typeName)
                     {
-                        case "WpfTextView":
+                        case "Microsoft.VisualStudio.Text.Editor.Implementation.WpfTextView":
                         case "Microsoft.VisualStudio.Text.Implementation.TextBuffer":
                             var IsClosedProp = obj.GetType().GetProperty("IsClosed");
                             var valIsClosedProp = IsClosedProp.GetValue(obj);
@@ -88,8 +88,8 @@ namespace PerfGraphVSIX
             }
         }
 
-        HashSet<ObjWeakRefData> _hashObjs = new HashSet<ObjWeakRefData>();
-        ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
+        readonly HashSet<ObjWeakRefData> _hashObjs = new HashSet<ObjWeakRefData>();
+        readonly ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
 
         /// <summary>
         /// Called from native code from any thread. minimize any memory allocations
@@ -105,7 +105,7 @@ namespace PerfGraphVSIX
             while (_queue.TryDequeue(out var obj))
             {
                 var o = obj as ObjWeakRefData;
-                if (o._wr.TryGetTarget(out var _)) // has it been GC'd?
+                if (o._wr.TryGetTarget(out _)) // has it been GC'd?
                 {
                     _hashObjs.Add(o); // still alive
                 }
@@ -115,7 +115,7 @@ namespace PerfGraphVSIX
             var lstLeakedObjs = new List<ObjWeakRefData>();
             foreach (var itm in _hashObjs)
             {
-                if (itm._wr.TryGetTarget(out var objdata))
+                if (itm._wr.TryGetTarget(out _))
                 { // the obj is still in memory. Has it been closed or disposed?
                     if (itm.HasBeenClosedOrDisposed())
                     {
@@ -123,8 +123,8 @@ namespace PerfGraphVSIX
                     }
                     else
                     {
-                        dictLiveObjs.TryGetValue(itm.descriptor, out var cnt);
-                        dictLiveObjs[itm.descriptor] = ++cnt;
+                        dictLiveObjs.TryGetValue(itm.Descriptor, out var cnt);
+                        dictLiveObjs[itm.Descriptor] = ++cnt;
                     }
                 }
                 else

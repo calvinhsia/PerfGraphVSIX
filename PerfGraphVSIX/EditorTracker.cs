@@ -23,23 +23,25 @@ namespace PerfGraphVSIX
     class EditorTracker : ITextViewCreationListener
     {
         internal ITextDocumentFactoryService textDocumentFactoryService;
-        HashSet<textViewInstanceData> _hashViews = new HashSet<textViewInstanceData>();
+        readonly HashSet<TextViewInstanceData> _hashViews = new HashSet<TextViewInstanceData>();
 
         [ImportingConstructor]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
         EditorTracker(ITextDocumentFactoryService textDocumentFactoryService)
         {
             this.textDocumentFactoryService = textDocumentFactoryService;
         }
 
         int _nSerialNo;
-        internal class textViewInstanceData
+
+        internal class TextViewInstanceData
         {
             public string _filename;
             public string _contentType;
             public WeakReference<ITextView> _wrView;
             public int _serialNo;
             public DateTime _dtCreated;
-            public textViewInstanceData(ITextView textView, string filename, int serialNo)
+            public TextViewInstanceData(ITextView textView, string filename, int serialNo)
             {
                 _wrView = new WeakReference<ITextView>(textView);
                 _filename = filename;
@@ -49,8 +51,7 @@ namespace PerfGraphVSIX
             }
             public ITextView GetView()
             {
-                ITextView ret = null;
-                if (_wrView.TryGetTarget(out ret)) // if it doesn't get view, it has been GC'd.
+                if (_wrView.TryGetTarget(out ITextView ret)) // if it doesn't get view, it has been GC'd.
                 {
                 }
                 return ret;
@@ -58,23 +59,24 @@ namespace PerfGraphVSIX
         }
         public void TextViewCreated(ITextView textView)
         {
-            PerfGraph.Instance._objTracker.AddObjectToTrack(textView);
             if (TryGetFileName(textView, out var filename))
             {
 
             }
-            _hashViews.Add(new textViewInstanceData(textView, filename, _nSerialNo++));
+            var instData = new TextViewInstanceData(textView, filename, _nSerialNo++);
+            _hashViews.Add(instData);
+            PerfGraph.Instance._objTracker.AddObjectToTrack(textView, description: $"{instData._contentType} {instData._filename}");
             //if (_hashViews.Count > 100)
             //{
             //    Cleanup();
             //}
         }
 
-        internal (Dictionary<string, int>, List<textViewInstanceData>) GetCounts()
+        internal (Dictionary<string, int>, List<TextViewInstanceData>) GetCounts()
         {
             var dictOpen = new Dictionary<string, int>();
-            var lstLeaked = new List<textViewInstanceData>();
-            var lstDeadViews = new List<textViewInstanceData>();
+            var lstLeaked = new List<TextViewInstanceData>();
+            var lstDeadViews = new List<TextViewInstanceData>();
             foreach (var entry in _hashViews)
             {
                 var view = entry.GetView();
