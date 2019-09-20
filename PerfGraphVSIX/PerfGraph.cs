@@ -100,17 +100,17 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances"">
         <StackPanel Orientation=""Vertical"">
             <Label Content=""Opened TextViews"" ToolTip=""Views that are currently opened. (Refreshed by UpdateInterval, which does GC)""/>
-            <ListBox ItemsSource=""{Binding Path=OpenedViews}""/>
+            <ListBox ItemsSource=""{Binding Path=OpenedViews}"" MaxHeight = ""400""/>
             <Label Content=""Leaked TextViews"" ToolTip=""Views that have ITextView.IsClosed==true, but still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh""/>
-            <ListBox ItemsSource=""{Binding Path=LeakedViews}"" MaxHeight = ""200""/>
+            <ListBox ItemsSource=""{Binding Path=LeakedViews}"" MaxHeight = ""400""/>
         </StackPanel>
     </TabItem>
     <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances. Requires ClrProfilerAPI"">
         <StackPanel Orientation=""Vertical"">
-            <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. (Refreshed by UpdateInterval, which does GC)""/>
-            <ListBox ItemsSource=""{Binding Path=CreatedObjs}""/>
-            <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory (Refreshed by UpdateInterval, which does GC).""/>
-            <ListBox ItemsSource=""{Binding Path=LeakedObjs}"" MaxHeight = ""200""/>
+            <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC)""/>
+            <ListBox ItemsSource=""{Binding Path=CreatedObjs}"" MaxHeight = ""400""/>
+            <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC).""/>
+            <ListBox ItemsSource=""{Binding Path=LeakedObjs}"" MaxHeight = ""400""/>
         </StackPanel>
     </TabItem>
     <TabItem Header = ""Options"">
@@ -443,14 +443,14 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 foreach (var dictEntry in createdObjs)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"#Inst={dictEntry.Value,3} {dictEntry.Key,-15}", FontFamily = _fontFamily });
                     CreatedObjs.Add(sp);
                 }
 
                 foreach (var entry in lstLeakedObjs)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry.Descriptor,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"SerNo={entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry.Descriptor,-15} ", FontFamily = _fontFamily });
                     LeakedObjs.Add(sp);
                 }
             }

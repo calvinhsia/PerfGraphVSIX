@@ -63,7 +63,7 @@ namespace PerfGraphVSIX
                         var mems = obj.GetType().GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                         foreach (var mem in mems
                             .Where(m => m.Name.IndexOf("disposed", comparisonType: StringComparison.OrdinalIgnoreCase) > 0 &&
-                                    m.MemberType.HasFlag(MemberTypes.Field) || m.MemberType.HasFlag(MemberTypes.Property)))
+                                    (m.MemberType.HasFlag(MemberTypes.Field) || m.MemberType.HasFlag(MemberTypes.Property))))
                         {
                             if (mem is PropertyInfo propinfo && propinfo.PropertyType.Name == "Boolean") // the setter has Void PropertyType
                             {
@@ -87,6 +87,10 @@ namespace PerfGraphVSIX
                     }
                 }
                 return hasBeenClosedOrDisposed;
+            }
+            public override string ToString()
+            {
+                return $"{_serialNo} {Descriptor}";
             }
         }
 

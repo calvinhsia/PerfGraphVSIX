@@ -3,8 +3,10 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -57,6 +59,8 @@ namespace PerfGraphVSIX
                 return ret;
             }
         }
+
+        readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
         public void TextViewCreated(ITextView textView)
         {
             if (TryGetFileName(textView, out var filename))
@@ -67,25 +71,35 @@ namespace PerfGraphVSIX
 
             if (textView.GetType().Name == "WpfTextView")
             {
-                var bFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
-                var props = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
-                var propList = props.GetType().GetField("properties", bFlags).GetValue(props) as System.Collections.Specialized.HybridDictionary;
+                HandleEvent(textView.TextBuffer, "Changed", "TextBuffer+=");
+                HandleEvent(textView.TextBuffer, "ChangedLowPriority", "TextBuffer+=");
+                HandleEvent(textView.TextBuffer, "ChangedHighPriority", "TextBuffer+=");
+                HandleEvent(textView.TextBuffer, "ReadOnlyRegionsChanged", "TextBuffer+=");
+
+                HandleEvent(textView, "Closed","TextView.Closed+=");
+                var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
+                var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
                 foreach (var val in propList.Values)
                 {
                     var valType = val.GetType();
-                    if (valType.Name=="EditorOptions")
+                    if (valType.Name == "EditorOptions")
                     {
-                        var editorOptionsField = valType.GetField("OptionChanged", bFlags)?.GetValue(val) as Delegate;
-                        var invocationList = editorOptionsField?.GetInvocationList();
-                        if (invocationList != null)
-                        {
-                            foreach (var targ in invocationList)
-                            {
-                                var obj = targ.Target;
-                                PerfGraph.Instance._objTracker.AddObjectToTrack(obj);
-                            }
-                        }
+                        HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
                     }
+                }
+            }
+        }
+
+        void HandleEvent(object objInstance, string eventName, string desc)
+        {
+            var eventField = objInstance.GetType().GetField(eventName, bFlags)?.GetValue(objInstance) as Delegate;
+            var invocationList = eventField?.GetInvocationList();
+            if (invocationList != null)
+            {
+                foreach (var targ in invocationList)
+                {
+                    var obj = targ.Target;
+                    PerfGraph.Instance._objTracker.AddObjectToTrack(obj, description: desc );
                 }
             }
         }

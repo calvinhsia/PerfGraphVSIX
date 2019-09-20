@@ -33,7 +33,7 @@ namespace PerfGraphVSIX
         public float LastValue;
         public float ReadNextValue()
         {
-            float retVal = 0;
+            float retVal;
             switch (perfCounterType)
             {
                 case PerfCounterType.UserHandleCount:
