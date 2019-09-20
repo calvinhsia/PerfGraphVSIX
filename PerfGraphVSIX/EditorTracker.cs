@@ -61,15 +61,33 @@ namespace PerfGraphVSIX
         {
             if (TryGetFileName(textView, out var filename))
             {
-
             }
             var instData = new TextViewInstanceData(textView, filename, _nSerialNo++);
             _hashViews.Add(instData);
-            PerfGraph.Instance._objTracker.AddObjectToTrack(textView, description: $"{instData._contentType} {instData._filename}");
-            //if (_hashViews.Count > 100)
-            //{
-            //    Cleanup();
-            //}
+
+            if (textView.GetType().Name == "WpfTextView")
+            {
+                var bFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+                var props = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
+                var propList = props.GetType().GetField("properties", bFlags).GetValue(props) as System.Collections.Specialized.HybridDictionary;
+                foreach (var val in propList.Values)
+                {
+                    var valType = val.GetType();
+                    if (valType.Name=="EditorOptions")
+                    {
+                        var editorOptionsField = valType.GetField("OptionChanged", bFlags)?.GetValue(val) as Delegate;
+                        var invocationList = editorOptionsField?.GetInvocationList();
+                        if (invocationList != null)
+                        {
+                            foreach (var targ in invocationList)
+                            {
+                                var obj = targ.Target;
+                                PerfGraph.Instance._objTracker.AddObjectToTrack(obj);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         internal (Dictionary<string, int>, List<TextViewInstanceData>) GetCounts()
@@ -80,7 +98,7 @@ namespace PerfGraphVSIX
             foreach (var entry in _hashViews)
             {
                 var view = entry.GetView();
-                if (view == null) 
+                if (view == null)
                 {
                     lstDeadViews.Add(entry);
                 }
@@ -88,9 +106,9 @@ namespace PerfGraphVSIX
                 {
                     var typView = view.GetType();
                     var IsClosedProp = typView.GetProperty("IsClosed");
-                    var valIsClosedProp =IsClosedProp.GetValue(view) ;
+                    var valIsClosedProp = IsClosedProp.GetValue(view);
                     if (!(bool)valIsClosedProp)
-//                    if (!view.IsClosed)
+                    //                    if (!view.IsClosed)
                     {
                         dictOpen.TryGetValue(entry._contentType, out int cnt);
                         dictOpen[entry._contentType] = ++cnt;
@@ -108,7 +126,7 @@ namespace PerfGraphVSIX
             {
                 _hashViews.Remove(entry);
             }
-            return (dictOpen, lstLeaked.OrderByDescending(k=>k._serialNo).ToList());
+            return (dictOpen, lstLeaked.OrderByDescending(k => k._serialNo).ToList());
         }
 
         private bool TryGetFileName(ITextView textView, out string filePath)
