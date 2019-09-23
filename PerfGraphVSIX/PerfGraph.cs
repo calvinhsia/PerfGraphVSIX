@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
+using PerfGraphVSIX.VisualStudioRPS;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,6 +31,9 @@ namespace PerfGraphVSIX
 
         TextBox _txtStatus;
         internal EditorTracker _editorTracker;
+
+        public UserControl _BrowLeakedObjects { get; }
+
         internal ObjTracker _objTracker;
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
@@ -40,7 +44,13 @@ namespace PerfGraphVSIX
         public ObservableCollection<UIElement> LeakedViews { get; set; } = new ObservableCollection<UIElement>();
 
         public ObservableCollection<UIElement> CreatedObjs { get; set; } = new ObservableCollection<UIElement>();
-        public ObservableCollection<UIElement> LeakedObjs { get; set; } = new ObservableCollection<UIElement>();
+        public ObservableCollection<LeakedObject> LeakedObjs { get; set; } = new ObservableCollection<LeakedObject>();
+        public class LeakedObject
+        {
+            public int SerialNo { get; set; }
+            public DateTime Created { get; set; }
+            public string ClassName { get; set; }
+        }
 
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
@@ -114,7 +124,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC)""/>
             <ListBox ItemsSource=""{Binding Path=CreatedObjs}"" MaxHeight = ""400""/>
             <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC).""/>
-            <ListBox ItemsSource=""{Binding Path=LeakedObjs}"" MaxHeight = ""400""/>
+            <UserControl Name=""BrowLeakedObjects""/>
         </StackPanel>
     </TabItem>
     <TabItem Header = ""Options"">
@@ -164,6 +174,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
+                _BrowLeakedObjects = (UserControl)tabControl.FindName("BrowLeakedObjects");
                 _objTracker = new ObjTracker();
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
                 _editorTracker.SetObjectTracker(_objTracker);
@@ -460,12 +471,33 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                     CreatedObjs.Add(sp);
                 }
 
-                foreach (var entry in lstLeakedObjs)
-                {
-                    var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"SerNo={entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry.Descriptor,-15} ", FontFamily = _fontFamily });
-                    LeakedObjs.Add(sp);
-                }
+                //foreach (var entry in lstLeakedObjs)
+                //{
+                //    //var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                //    //sp.Children.Add(new TextBlock() { Text = $"SerNo={entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry.Descriptor,-15} ", FontFamily = _fontFamily });
+                //    LeakedObjs.Add(new LeakedObject()
+                //    {
+                //        SerialNo = entry._serialNo,
+                //        Created = entry._dtCreated,
+                //        ClassName=entry.Descriptor,
+                //    });
+                //}
+                //var q = from entry in lstLeakedObjs
+                //        select new
+                //        {
+                //            SerialNo=entry._serialNo,
+                //            DtCreated = entry._dtCreated,
+                //            entry.Descriptor
+                //        };
+                _BrowLeakedObjects.Content = new BrowsePanel(
+                        from entry in lstLeakedObjs
+                        select new
+                        {
+                            SerialNo = entry._serialNo,
+                            DtCreated = entry._dtCreated,
+                            entry.Descriptor
+                        },
+                        new[] { 60, 130, 600 });
             }
         }
 

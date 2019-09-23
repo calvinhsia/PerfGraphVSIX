@@ -103,7 +103,10 @@ namespace PerfGraphVSIX
         /// </summary>
         public void AddObjectToTrack(object obj, string description = null)
         {
-            _queue.Enqueue(new ObjWeakRefData(obj, description));
+            if (obj != null)
+            {
+                _queue.Enqueue(new ObjWeakRefData(obj, description));
+            }
         }
 
         public (Dictionary<string, int>, List<ObjWeakRefData>) GetCounts()

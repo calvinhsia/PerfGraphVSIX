@@ -57,6 +57,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Browse.cs" />
     <Compile Include="EditorTracker.cs" />
     <Compile Include="ObjTracker.cs" />
     <Compile Include="PerfCounterData.cs" />
