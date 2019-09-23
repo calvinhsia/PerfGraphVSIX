@@ -152,8 +152,9 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
-                _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
                 _objTracker = new ObjTracker();
+                _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+                _editorTracker.SetObjectTracker(_objTracker);
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {

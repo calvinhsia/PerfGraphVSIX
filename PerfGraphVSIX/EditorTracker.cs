@@ -35,6 +35,7 @@ namespace PerfGraphVSIX
         }
 
         int _nSerialNo;
+        private ObjTracker _objectTracker;
 
         internal class TextViewInstanceData
         {
@@ -71,12 +72,6 @@ namespace PerfGraphVSIX
 
             if (textView.GetType().Name == "WpfTextView")
             {
-                HandleEvent(textView.TextBuffer, "Changed", "TextBuffer+=");
-                HandleEvent(textView.TextBuffer, "ChangedLowPriority", "TextBuffer+=");
-                HandleEvent(textView.TextBuffer, "ChangedHighPriority", "TextBuffer+=");
-                HandleEvent(textView.TextBuffer, "ReadOnlyRegionsChanged", "TextBuffer+=");
-
-                HandleEvent(textView, "Closed","TextView.Closed+=");
                 var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
                 var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
                 foreach (var val in propList.Values)
@@ -87,6 +82,12 @@ namespace PerfGraphVSIX
                         HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
                     }
                 }
+                HandleEvent(textView.TextBuffer, "Changed", "TextBuffer+=");
+                HandleEvent(textView.TextBuffer, "ChangedLowPriority", "TextBuffer+=");
+                HandleEvent(textView.TextBuffer, "ChangedHighPriority", "TextBuffer+=");
+                HandleEvent(textView.TextBuffer, "ReadOnlyRegionsChanged", "TextBuffer+=");
+
+                HandleEvent(textView, "Closed", "TextView.Closed+=");
             }
         }
 
@@ -99,7 +100,7 @@ namespace PerfGraphVSIX
                 foreach (var targ in invocationList)
                 {
                     var obj = targ.Target;
-                    PerfGraph.Instance._objTracker.AddObjectToTrack(obj, description: desc );
+                    _objectTracker.AddObjectToTrack(obj, description: desc );
                 }
             }
         }
@@ -153,6 +154,11 @@ namespace PerfGraphVSIX
 
             filePath = string.Empty;
             return false;
+        }
+
+        internal void SetObjectTracker(ObjTracker objTracker)
+        {
+            _objectTracker = objTracker;
         }
 
         //void Cleanup()
