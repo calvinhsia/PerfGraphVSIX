@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -69,14 +70,66 @@ namespace PerfGraphVSIX
             }
             var instData = new TextViewInstanceData(textView, filename, _nSerialNo++);
             _hashViews.Add(instData);
-
-            if (textView.GetType().Name == "WpfTextView")
+            var hashVisitedObjs = new HashSet<object>();
+            bool TryAddObjectVisited(object obj)
+            {
+                var fDidAdd = false;
+                if (!hashVisitedObjs.Contains(obj))
+                {
+                    hashVisitedObjs.Add(obj);
+                    _objectTracker.AddObjectToTrack(obj);
+                    fDidAdd = true;
+                }
+                return fDidAdd;
+            }
+            void AddMemsOfObject(object obj, int nLevel = 1)
+            {
+                if (TryAddObjectVisited(obj))
+                {
+                    foreach (var fld in obj.GetType().GetFields(bFlags))
+                    {
+                        var valFld = fld.GetValue(obj);
+                        if (valFld != null)
+                        {
+                            Debug.WriteLine($"{new string(' ', nLevel)} {obj.GetType().Name} {fld.Name} {fld.FieldType.BaseType?.Name}  {valFld.GetType().Name}");
+                            if (valFld is EventHandler evHandler)
+                            {
+                                "".ToArray();
+                            }
+                            if (valFld is Object)
+                            {
+                                AddMemsOfObject(valFld, nLevel + 1);
+                            }
+                        }
+                    }
+                }
+            }
+            AddMemsOfObject(textView);
+            if (textView.GetType().Name == "________WpfTextView")
             {
                 var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
                 var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
                 foreach (var val in propList.Values)
                 {
                     var valType = val.GetType();
+                    foreach (var fld in valType.GetFields(bFlags))
+                    {
+                        var valFld = fld.GetValue(val);
+                        if (fld.FieldType.BaseType?.FullName == "System.Delegate")
+                        {
+                            "".ToString();
+                        }
+                        if (fld.FieldType.BaseType?.FullName == "System.MulticastDelegate")
+                        {
+                            HandleEvent(val, fld.Name, "");
+                            "".ToString();
+                        }
+                        else if (fld.FieldType.BaseType?.FullName == "System.Object")
+                        {
+                            TryAddObjectVisited(valFld);
+                            "".ToString();
+                        }
+                    }
                     if (valType.Name == "EditorOptions")
                     {
                         HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
@@ -100,7 +153,7 @@ namespace PerfGraphVSIX
                 foreach (var targ in invocationList)
                 {
                     var obj = targ.Target;
-                    _objectTracker.AddObjectToTrack(obj, description: desc );
+                    _objectTracker.AddObjectToTrack(obj, description: desc);
                 }
             }
         }
