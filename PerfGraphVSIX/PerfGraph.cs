@@ -53,6 +53,10 @@ namespace PerfGraphVSIX
 
         public string LastStatMsg { get { return _LastStatMsg; } set { _LastStatMsg = value; RaisePropChanged(); } }
 
+        public string CurrentDirectory { get { return Environment.CurrentDirectory; } }
+
+        public string ExtensionDirectory { get { return this.GetType().Assembly.Location; } }
+
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
         {
@@ -116,10 +120,18 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header = ""Options"">
         <Grid>
             <Grid.ColumnDefinitions>
-            <ColumnDefinition Width = ""300""/>
+            <ColumnDefinition Width = ""600""/>
             <ColumnDefinition/>
             </Grid.ColumnDefinitions>
             <StackPanel Orientation = ""Vertical"" Grid.Column=""0"">
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Current Dir""/>
+                    <TextBlock Text=""{Binding Path =CurrentDirectory}""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Extension Dir""/>
+                    <TextBlock Text=""{Binding Path =ExtensionDirectory}""/>
+                </StackPanel>
                 <StackPanel Orientation=""Horizontal"">
                     <Label Content=""Update Interval""/>
                     <l:MyTextBox Name =""txtUpdateInterval"" Text=""{Binding Path =UpdateInterval}"" ToolTip=""Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only""/>
@@ -269,7 +281,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 {
                     ResetPerfCounterMonitor();
                 });
-
+                var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
                 chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
             }
             catch (Exception ex)
