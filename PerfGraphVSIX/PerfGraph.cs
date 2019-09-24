@@ -1,5 +1,9 @@
-﻿using Microsoft.VisualStudio.PlatformUI;
+﻿using EnvDTE;
+using EnvDTE80;
+using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.ProjectSystem.Properties;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Threading;
 using PerfGraphVSIX.VisualStudioRPS;
 using System;
@@ -27,12 +31,11 @@ namespace PerfGraphVSIX
 {
     public class PerfGraph : UserControl, INotifyPropertyChanged
     {
-        public static PerfGraph Instance;
 
         TextBox _txtStatus;
         internal EditorTracker _editorTracker;
 
-        public UserControl _BrowLeakedObjects { get; }
+        public UserControl BrowLeakedObjects { get; }
 
         internal ObjTracker _objTracker;
         JoinableTask _tskDoPerfMonitoring;
@@ -91,7 +94,7 @@ namespace PerfGraphVSIX
 
         public PerfGraph()
         {
-            Instance = this;
+            Dispatcher.VerifyAccess();
             try
             {
                 // Make a namespace referring to our namespace and assembly
@@ -174,7 +177,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
-                _BrowLeakedObjects = (UserControl)tabControl.FindName("BrowLeakedObjects");
+                BrowLeakedObjects = (UserControl)tabControl.FindName("BrowLeakedObjects");
                 _objTracker = new ObjTracker();
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
                 _editorTracker.SetObjectTracker(_objTracker);
@@ -295,6 +298,54 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
                 chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
+
+                //                _solutionEvents = new Microsoft.VisualStudio.Shell.Events.SolutionEvents();
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution += (o, e) =>
+                 {
+                     var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution)}");
+                 };
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
+                {
+                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                    var hier = e.Hierarchy;
+                    if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root, 
+                        (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject, 
+                        out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
+                    {
+                        var proj = extObject as EnvDTE.Project; // comobj
+                        var name = proj.Name;
+                        var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
+                        if (context == null && proj != null)
+                        {
+                            context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
+                        }
+                        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                        _objTracker.AddObjectToTrack(context, description: proj.Name);
+                        //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
+                    }
+                };
+
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += (o,e) =>
+                 {
+                     var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution)}");
+                 };
+
+                //var ev = (Events2)PerfGraphToolWindowCommand.Instance.g_dte.Events;
+                //_solutionEvents = ev.SolutionEvents;
+                //_solutionEvents.AfterClosing += () =>
+                //{
+                //    var task = AddStatusMsgAsync($"{nameof(_solutionEvents.AfterClosing)}");
+                //};
+                //_solutionEvents.Opened += () =>
+                //{
+                //    var task = AddStatusMsgAsync($"{nameof(_solutionEvents.Opened)}");
+
+                //};
+                //_solutionEvents.ProjectAdded += (o) =>
+                //{
+
+                //};
+
             }
             catch (Exception ex)
             {
@@ -489,7 +540,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 //            DtCreated = entry._dtCreated,
                 //            entry.Descriptor
                 //        };
-                _BrowLeakedObjects.Content = new BrowsePanel(
+                BrowLeakedObjects.Content = new BrowsePanel(
                         from entry in lstLeakedObjs
                         select new
                         {
@@ -510,7 +561,9 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
+        //Microsoft.VisualStudio.Shell.Events.SolutionEvents _solutionEvents;
         readonly FontFamily _fontFamily = new FontFamily("Consolas");
+
 
         async public Task AddStatusMsgAsync(string msg, params object[] args)
         {
