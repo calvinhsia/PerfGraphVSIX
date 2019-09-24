@@ -32,7 +32,7 @@ namespace Tests
                 addedObjects.Add($"added {o.ToString()}");
             };
 
-            var objectTracker = new ObjTracker();
+            var objectTracker = new ObjTracker(new PerfGraph());
             AddObject(this);
 
             LogTestMessage($"done scanning");

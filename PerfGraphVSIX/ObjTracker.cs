@@ -96,6 +96,12 @@ namespace PerfGraphVSIX
 
         readonly Dictionary<int, ObjWeakRefData> _dictObjsToTrack = new Dictionary<int, ObjWeakRefData>();
         readonly ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
+        private PerfGraph _perfGraph;
+
+        public ObjTracker(PerfGraph perfGraph)
+        {
+            this._perfGraph = perfGraph;
+        }
 
         /// <summary>
         /// Called from native code from any thread. minimize any memory allocations

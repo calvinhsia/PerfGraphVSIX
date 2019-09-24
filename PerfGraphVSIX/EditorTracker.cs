@@ -37,6 +37,7 @@ namespace PerfGraphVSIX
 
         int _nSerialNo;
         private ObjTracker _objectTracker;
+        PerfGraph _perfGraph;
 
         internal class TextViewInstanceData
         {
@@ -68,6 +69,10 @@ namespace PerfGraphVSIX
         {
             try
             {
+                if (!_perfGraph.TrackTextViews)
+                {
+                    return;
+                }
                 if (TryGetFileName(textView, out var filename))
                 {
                 }
@@ -76,7 +81,7 @@ namespace PerfGraphVSIX
                 hashVisitedObjs = new HashSet<object>();
                 //AddMemsOfObject(textView);
 
-                if (true)
+                if (_perfGraph.TrackContainedObjects)
                 {
                     var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
                     var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
@@ -226,6 +231,10 @@ namespace PerfGraphVSIX
             var dictOpen = new Dictionary<string, int>();
             var lstLeaked = new List<TextViewInstanceData>();
             var lstDeadViews = new List<TextViewInstanceData>();
+            if (!_perfGraph.TrackTextViews)
+            {
+                _hashViews.Clear();
+            }
             foreach (var entry in _hashViews)
             {
                 var view = entry.GetView();
@@ -272,9 +281,10 @@ namespace PerfGraphVSIX
             return false;
         }
 
-        internal void SetObjectTracker(ObjTracker objTracker)
+        internal void Initialize(PerfGraph perfGraph, ObjTracker objTracker)
         {
             _objectTracker = objTracker;
+            _perfGraph = perfGraph;
         }
 
         //void Cleanup()

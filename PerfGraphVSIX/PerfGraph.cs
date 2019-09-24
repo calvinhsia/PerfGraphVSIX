@@ -66,6 +66,12 @@ namespace PerfGraphVSIX
 
         public string LastStatMsg { get { return _LastStatMsg; } set { _LastStatMsg = value; RaisePropChanged(); } }
 
+        public string ObjectTrackerFilter { get; set; }
+
+        public bool TrackTextViews { get; set; } = true;
+        public bool TrackProjectObjects { get; set; } = true;
+        public bool TrackContainedObjects { get; set; } = true;
+
         public string CurrentDirectory { get { return Environment.CurrentDirectory; } }
 
         public string ExtensionDirectory { get { return this.GetType().Assembly.Location; } }
@@ -114,7 +120,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header=""Main"">
         <StackPanel Orientation=""Vertical"" Name = ""spMain""/>
     </TabItem>
-    <TabItem Header = ""EditorTracker"" ToolTip=""Track Editor instances"">
+    <TabItem Header = ""TextView Tracker"" ToolTip=""Track Editor TextView instances"">
         <StackPanel Orientation=""Vertical"">
             <Label Content=""Opened TextViews"" ToolTip=""Views that are currently opened. (Refreshed by UpdateInterval, which does GC)""/>
             <ListBox ItemsSource=""{Binding Path=OpenedViews}"" MaxHeight = ""400""/>
@@ -159,6 +165,20 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 <StackPanel Orientation=""Horizontal"">
                     <CheckBox Name=""chkShowStatusHistory"" Content=""Show Status History"" IsChecked=""True"" ToolTip=""Show a textbox which accumulates history of samples""/>
                 </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""OBjectTrackerFilter""/>
+                    <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" ToolTip=""Filter to include only these items""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <CheckBox Content=""TrackTextViews"" IsChecked=""{Binding Path=TrackTextViews}"" ToolTip=""Listen for TextView Creation Events and track them""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <CheckBox Content=""Track Project Objects"" IsChecked=""{Binding Path=TrackProjectObjects}"" ToolTip=""Listen for Project Creation Events and track them. Currently wors for CPS and C++""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <CheckBox Content=""Track Contained Objects"" IsChecked=""{Binding Path=TrackContainedObjects}"" 
+                        ToolTip=""For Textviews, delve into propertybag to find subscribers to EditOptions and track those. For Projects, delve...""/>
+                </StackPanel>
             </StackPanel>
             <DockPanel Grid.Column=""1"">
                 <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" VerticalAlignment=""Top"" ToolTip=""Multiselect various counters"" />
@@ -178,9 +198,9 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
                 BrowLeakedObjects = (UserControl)tabControl.FindName("BrowLeakedObjects");
-                _objTracker = new ObjTracker();
+                _objTracker = new ObjTracker(this);
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
-                _editorTracker.SetObjectTracker(_objTracker);
+                _editorTracker.Initialize(this, _objTracker);
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
@@ -302,32 +322,41 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 //                _solutionEvents = new Microsoft.VisualStudio.Shell.Events.SolutionEvents();
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution += (o, e) =>
                  {
-                     var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution)}");
+                     if (this.TrackProjectObjects)
+                     {
+                         var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution)}");
+                     }
                  };
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {
                     Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-                    var hier = e.Hierarchy;
-                    if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root, 
-                        (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject, 
-                        out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
+                    if (this.TrackProjectObjects)
                     {
-                        var proj = extObject as EnvDTE.Project; // comobj
-                        var name = proj.Name;
-                        var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
-                        if (context == null && proj != null)
+                        var hier = e.Hierarchy;
+                        if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root,
+                            (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject,
+                            out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
                         {
-                            context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
+                            var proj = extObject as EnvDTE.Project; // comobj or Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject 
+                            var name = proj.Name;
+                            var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
+                            if (context == null && proj != null)
+                            {
+                                context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
+                            }
+                            var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                            _objTracker.AddObjectToTrack(context, description: proj.Name);
+                            //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
                         }
-                        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
-                        _objTracker.AddObjectToTrack(context, description: proj.Name);
-                        //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
                     }
                 };
 
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += (o,e) =>
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += (o, e) =>
                  {
-                     var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution)}");
+                     if (this.TrackProjectObjects)
+                     {
+                         var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution)}");
+                     }
                  };
 
                 //var ev = (Events2)PerfGraphToolWindowCommand.Instance.g_dte.Events;
