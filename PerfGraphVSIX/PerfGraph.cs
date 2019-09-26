@@ -135,7 +135,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                     <Label Content=""Filter""/>
                     <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" Width=""400"" ToolTip=""Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'""/>
                 </StackPanel>
-            <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC)""/>
+            <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending""/>
             <ListBox ItemsSource=""{Binding Path=CreatedObjs}"" MaxHeight = ""400""/>
             <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC).""/>
             <UserControl Name=""BrowLeakedObjects""/>
@@ -552,7 +552,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var (createdObjs, lstLeakedObjs) = _objTracker.GetCounts();
                 CreatedObjs.Clear();
                 LeakedObjs.Clear();
-                foreach (var dictEntry in createdObjs)
+                foreach (var dictEntry in createdObjs.OrderByDescending(e=>e.Value))
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"#Inst={dictEntry.Value,3} {dictEntry.Key,-15}", FontFamily = _fontFamily });
