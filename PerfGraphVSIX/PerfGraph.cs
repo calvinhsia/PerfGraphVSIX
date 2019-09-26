@@ -34,6 +34,7 @@ namespace PerfGraphVSIX
 
         TextBox _txtStatus;
         internal EditorTracker _editorTracker;
+        internal OpenFolderTracker _openFolderTracker;
 
         public UserControl BrowLeakedObjects { get; }
 
@@ -66,7 +67,7 @@ namespace PerfGraphVSIX
 
         public string LastStatMsg { get { return _LastStatMsg; } set { _LastStatMsg = value; RaisePropChanged(); } }
 
-        public string ObjectTrackerFilter { get; set; }
+        public string ObjectTrackerFilter { get; set; } = ".*";
 
         public bool TrackTextViews { get; set; } = true;
         public bool TrackProjectObjects { get; set; } = true;
@@ -117,10 +118,10 @@ xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 " + xmlns + // add our xaml namespace
 @">
-    <TabItem Header=""Main"">
+    <TabItem Header=""Graph"">
         <StackPanel Orientation=""Vertical"" Name = ""spMain""/>
     </TabItem>
-    <TabItem Header = ""TextView Tracker"" ToolTip=""Track Editor TextView instances"">
+    <TabItem Header = ""TextViewTracker"" ToolTip=""Track Editor TextView instances"">
         <StackPanel Orientation=""Vertical"">
             <Label Content=""Opened TextViews"" ToolTip=""Views that are currently opened. (Refreshed by UpdateInterval, which does GC)""/>
             <ListBox ItemsSource=""{Binding Path=OpenedViews}"" MaxHeight = ""400""/>
@@ -128,8 +129,12 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             <ListBox ItemsSource=""{Binding Path=LeakedViews}"" MaxHeight = ""400""/>
         </StackPanel>
     </TabItem>
-    <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances. Requires ClrProfilerAPI"">
+    <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances"">
         <StackPanel Orientation=""Vertical"">
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Filter""/>
+                    <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" Width=""400"" ToolTip=""Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'""/>
+                </StackPanel>
             <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC)""/>
             <ListBox ItemsSource=""{Binding Path=CreatedObjs}"" MaxHeight = ""400""/>
             <Label Content=""Leaked Objects"" ToolTip=""Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC).""/>
@@ -166,10 +171,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                     <CheckBox Name=""chkShowStatusHistory"" Content=""Show Status History"" IsChecked=""True"" ToolTip=""Show a textbox which accumulates history of samples""/>
                 </StackPanel>
                 <StackPanel Orientation=""Horizontal"">
-                    <Label Content=""OBjectTrackerFilter""/>
-                    <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" ToolTip=""Filter to include only these items""/>
-                </StackPanel>
-                <StackPanel Orientation=""Horizontal"">
                     <CheckBox Content=""TrackTextViews"" IsChecked=""{Binding Path=TrackTextViews}"" ToolTip=""Listen for TextView Creation Events and track them""/>
                 </StackPanel>
                 <StackPanel Orientation=""Horizontal"">
@@ -201,6 +202,9 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 _objTracker = new ObjTracker(this);
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
                 _editorTracker.Initialize(this, _objTracker);
+                _openFolderTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<OpenFolderTracker>();
+                _openFolderTracker.Initialize(this, _objTracker);
+                
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                   {
@@ -330,6 +334,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {
                     Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+
                     if (this.TrackProjectObjects)
                     {
                         var hier = e.Hierarchy;
@@ -344,9 +349,12 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                             {
                                 context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
                             }
-                            var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
-                            _objTracker.AddObjectToTrack(context, description: proj.Name);
-                            //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
+                            if (context != null)
+                            {
+                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                                _objTracker.AddObjectToTrack(context, ObjTracker.ObjSource.FromProject, description: proj.Name);
+                                //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
+                            }
                         }
                     }
                 };

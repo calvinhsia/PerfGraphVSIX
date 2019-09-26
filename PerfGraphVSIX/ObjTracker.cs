@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +20,12 @@ namespace PerfGraphVSIX
     /// </summary>
     public class ObjTracker
     {
+        public enum ObjSource
+        {
+            FromTextView,
+            FromProject,
+            FromTest
+        }
         public class ObjWeakRefData
         {
             static int g_baseSerialNo = 0;
@@ -28,9 +35,12 @@ namespace PerfGraphVSIX
             public string Descriptor { get; private set; }
             public int _serialNo;
             public DateTime _dtCreated;
-            public ObjWeakRefData(object obj, string description)
+            public readonly ObjSource _objSource;
+
+            public ObjWeakRefData(object obj, ObjSource objSource, string description)
             {
                 _dtCreated = DateTime.Now;
+                _objSource = objSource;
                 _wr = new WeakReference<object>(obj);
                 _serialNo = g_baseSerialNo;
                 _hashCodeTarget = obj.GetHashCode();
@@ -96,7 +106,7 @@ namespace PerfGraphVSIX
 
         readonly Dictionary<int, ObjWeakRefData> _dictObjsToTrack = new Dictionary<int, ObjWeakRefData>();
         readonly ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
-        private PerfGraph _perfGraph;
+        private readonly PerfGraph _perfGraph;
 
         public ObjTracker(PerfGraph perfGraph)
         {
@@ -107,11 +117,11 @@ namespace PerfGraphVSIX
         /// Called from native code from any thread. minimize any memory allocations
         /// We'll queue the objs on any random thread, then dequeue to HashSet when needed
         /// </summary>
-        public void AddObjectToTrack(object obj, string description = null)
+        public void AddObjectToTrack(object obj, ObjSource objSource, string description = null)
         {
             if (obj != null)
             {
-                _queue.Enqueue(new ObjWeakRefData(obj, description));
+                _queue.Enqueue(new ObjWeakRefData(obj, objSource, description));
             }
         }
 
@@ -135,14 +145,23 @@ namespace PerfGraphVSIX
             {
                 if (itm._wr.TryGetTarget(out _))
                 { // the obj is still in memory. Has it been closed or disposed?
-                    if (itm.HasBeenClosedOrDisposed())
+                    if (_perfGraph.TrackTextViews && itm._objSource == ObjSource.FromTextView ||
+                        _perfGraph.TrackProjectObjects && itm._objSource == ObjSource.FromProject
+                        )
                     {
-                        lstLeakedObjs.Add(itm);
-                    }
-                    else
-                    {
-                        dictLiveObjs.TryGetValue(itm.Descriptor, out var cnt);
-                        dictLiveObjs[itm.Descriptor] = ++cnt;
+                        if (string.IsNullOrEmpty(_perfGraph.ObjectTrackerFilter) ||
+                            Regex.IsMatch(itm.Descriptor,_perfGraph.ObjectTrackerFilter.Trim(), RegexOptions.IgnoreCase))
+                        {
+                            if (itm.HasBeenClosedOrDisposed())
+                            {
+                                lstLeakedObjs.Add(itm);
+                            }
+                            else
+                            {
+                                dictLiveObjs.TryGetValue(itm.Descriptor, out var cnt);
+                                dictLiveObjs[itm.Descriptor] = ++cnt;
+                            }
+                        }
                     }
                 }
                 else

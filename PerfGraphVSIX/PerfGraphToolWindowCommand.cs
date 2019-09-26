@@ -27,7 +27,7 @@ namespace PerfGraphVSIX
         /// <summary>
         /// VS Package that provides this command, not null.
         /// </summary>
-        private readonly AsyncPackage package;
+        public readonly AsyncPackage package;
 
         public EnvDTE.DTE g_dte;
         /// <summary>

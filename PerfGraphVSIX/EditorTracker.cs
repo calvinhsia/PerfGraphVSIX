@@ -157,7 +157,7 @@ namespace PerfGraphVSIX
                 hashVisitedObjs.Add(obj);
                 if (objTyp.Module.Name != "mscorlib.dll")
                 {
-                    _objectTracker.AddObjectToTrack(obj);
+                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView);
                 }
                 if (nLevel < 1000)
                 {
@@ -221,7 +221,7 @@ namespace PerfGraphVSIX
                 foreach (var targ in invocationList)
                 {
                     var obj = targ.Target;
-                    _objectTracker.AddObjectToTrack(obj, description: desc);
+                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView, description: desc);
                 }
             }
         }

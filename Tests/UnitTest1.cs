@@ -125,7 +125,7 @@ namespace Tests
                                 {
                                     var obj = new MyBigData(cnt);
                                     Interlocked.Increment(ref cnt);
-                                    objTracker.AddObjectToTrack(obj);
+                                    objTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTest);
                                     if (rand.Next(100) < 50)
                                     {
                                         obj.Dispose();
@@ -197,7 +197,7 @@ namespace Tests
                                     var obj = new MyBigData(cnt);
                                     Interlocked.Increment(ref cnt);
                                     Interlocked.CompareExchange(ref hardref, obj, null);
-                                    objTracker.AddObjectToTrack(obj);
+                                    objTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTest);
                                 }
                             }
                             );
