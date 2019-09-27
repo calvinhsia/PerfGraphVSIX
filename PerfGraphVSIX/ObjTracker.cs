@@ -111,6 +111,11 @@ namespace PerfGraphVSIX
         public ObjTracker(PerfGraph perfGraph)
         {
             this._perfGraph = perfGraph;
+            perfGraph._btnClearObjects.Click += (o, e) =>
+             {
+                 var tsk = perfGraph.AddStatusMsgAsync($"Clearing the tracking of {_dictObjsToTrack.Count} tracked objects.");
+                 _dictObjsToTrack.Clear();
+             };
         }
 
         /// <summary>

@@ -88,7 +88,7 @@ namespace PerfGraphVSIX
             try
             {
                 //var exe = Process.GetCurrentProcess().ProcessName.ToLowerInvariant(); // like windbg or clrobjexplorer or vstest.executionengine.x86
-                //if (!exe.StartsWith("testhost.x86"))
+                if (Environment.GetEnvironmentVariable("username") != "calvinh")
                 {
 
                     var mTxt = args != null ? string.Format(msg, args) : msg;

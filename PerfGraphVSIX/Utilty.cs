@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -7,17 +6,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Tests
+namespace PerfGraphVSIX
 {
-    [TestClass]
-    public class TestCancellationToken : BaseTestClass
+    class Utilty
     {
-        readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
+        static readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
         // uses reflection to find any referenced linked tokensources or registered callbacks
-        void ProcessCancellationToken(CancellationToken token, Action<string> logger)
+        public static void ProcessCancellationToken(CancellationToken token, Action<string> logger)
         {
             logger($"Processing tkn {token}");
-            var tks = token.GetType().GetField("m_source", bFlags).GetValue(token);
+            var tks = token.GetType().GetField("m_source", bFlags).GetValue(token) as CancellationTokenSource;
             /*
         private int CallbackCount
         {
@@ -81,7 +79,11 @@ namespace Tests
                                     foreach (var targ in invocationList)
                                     {
                                         logger($"  inv list target = {targ.Target}");
-                                        var obj = targ.Target;
+                                        var objTarg = targ.Target;
+                                        if (objTarg != null)
+                                        {
+
+                                        }
                                         //                                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView, description: desc);
                                     }
                                 }
@@ -96,81 +98,6 @@ namespace Tests
 
             }
             var linkedList = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
-        }
-
-        private class Someclass
-        {
-            public Someclass(CancellationToken token)
-            {
-                token.Register(Handlecancel);
-                token.Register(() =>
-                {
-
-                });
-            }
-            void Handlecancel()
-            {
-            }
-        }
-        [TestMethod]
-        public void TestCts()
-        {
-            using (var cts = new CancellationTokenSource())
-            {
-
-                //var newctsDoesNotLeak = new CancellationTokenSource(); // by itself (not from linked).. doesn't leak mem or handles
-
-                //var myevent = CreateEvent(IntPtr.Zero, false, false, $"aa{i}"); // leaks kernel handles, this is used internally in CTS
-                //CloseHandle(myevent); // must close else leaks kernel handles
-
-
-                //var timer = new Timer((st) =>
-                //{
-                //}, state: 0, dueTime: 0, period: 1000);  //this leaks mem. 
-                //timer.Dispose(); // must dispose else leaks. Not a CTS leak, but used internally
-
-
-
-                //var mre = new ManualResetEvent(initialState: false);// leaks mem and handles. Not a CTS leak (used internally by CTS)
-
-
-
-
-                //var cts1 = CancellationTokenSource.CreateLinkedTokenSource(new CancellationToken[] { cts.Token });
-                //cts1.Dispose(); // must dispose else leaks CTS Leak Type No. 1. Calling Cancel has no effect on the leak: still must call dispose
-
-
-
-                var tk = cts.Token;
-                var cancellationTokenRegistration = tk.Register(() =>
-                {
-
-                });
-                var x = new Someclass(tk);
-                var x2 = new Someclass(tk);
-                var x3 = new Someclass(tk);
-                ProcessCancellationToken(tk, (str)=> LogTestMessage(str));
-            }
-            //cancellationTokenRegistration.Dispose(); // must dispose else leaks. CTS Leak Type No. 2
-
-
-
-
-            //var newcts = new CancellationTokenSource();
-            //newcts.CancelAfter(TimeSpan.FromMinutes(10)); // this leaks mem. 
-            //newcts.Dispose(); // must dispost else leaks CTS Leak Type No. 3
-
-
-            //var newcts = new CancellationTokenSource();
-            //var handle = newcts.Token.WaitHandle; // this internally lazily instantiates a ManualResetEvent
-            //newcts.Dispose(); // must dispose, else leaks mem and handles. CTS Leak Type No. 4
-
-
-            //var newcts = new CancellationTokenSource();
-            //var linked = CancellationTokenSource.CreateLinkedTokenSource(newcts.Token);
-            //newcts.Dispose(); // this does not leak: disposing the original cts means the linked won't leak. However, not necessarily recommended
-
-
         }
     }
 }

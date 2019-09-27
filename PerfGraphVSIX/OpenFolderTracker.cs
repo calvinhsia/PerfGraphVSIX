@@ -20,7 +20,6 @@ namespace PerfGraphVSIX
         {
             _vsFolderWorkspaceService = vsFolderWorkspaceService;
         }
-        readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
 
         internal void Initialize(PerfGraph perfGraph, ObjTracker objTracker)
         {
@@ -35,11 +34,12 @@ namespace PerfGraphVSIX
             if (wrkspace != null)
             {
                 var disposeToken = (wrkspace as Microsoft.VisualStudio.Workspace.IWorkspace2).DisposeToken;
-                var tks = disposeToken.GetType().GetField("m_source", bFlags).GetValue(disposeToken);
-                var reglist = tks.GetType().GetField("m_registeredCallbacksLists", bFlags).GetValue(tks);
-                var elemType = reglist.GetType().GetElementType();
+                Utilty.ProcessCancellationToken(disposeToken, (s)=> { });
+                //var tks = disposeToken.GetType().GetField("m_source", bFlags).GetValue(disposeToken);
+                //var reglist = tks.GetType().GetField("m_registeredCallbacksLists", bFlags).GetValue(tks);
+                //var elemType = reglist.GetType().GetElementType();
 
-                var linkedList = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
+                //var linkedList = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
             }
             return Task.CompletedTask;
 

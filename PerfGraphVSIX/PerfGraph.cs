@@ -43,6 +43,7 @@ namespace PerfGraphVSIX
         CancellationTokenSource _ctsPcounter;
         string _LastStatMsg;
         readonly Chart _chart;
+        internal Button _btnClearObjects;
 
         public ObservableCollection<UIElement> OpenedViews { get; set; } = new ObservableCollection<UIElement>();
         public ObservableCollection<UIElement> LeakedViews { get; set; } = new ObservableCollection<UIElement>();
@@ -132,6 +133,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances"">
         <StackPanel Orientation=""Vertical"">
                 <StackPanel Orientation=""Horizontal"">
+                    <Button Name=""btnClearObjects"" Content=""Clear tracked objects"" ToolTip=""Clear the list of objects being tracked. The objects will not be tracked: but they may still be in memory"">
                     <Label Content=""Filter""/>
                     <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" Width=""400"" ToolTip=""Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'""/>
                 </StackPanel>
@@ -198,6 +200,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
                 var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
                 var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
+                _btnClearObjects = (Button)tabControl.FindName("btnClearObjects");
                 BrowLeakedObjects = (UserControl)tabControl.FindName("BrowLeakedObjects");
                 _objTracker = new ObjTracker(this);
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
