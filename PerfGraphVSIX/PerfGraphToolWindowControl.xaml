@@ -7,7 +7,7 @@
              xmlns:local="clr-namespace:PerfGraphVSIX"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="300"
-             Name="MyToolWindow">
+             Name="MyToolWindow" DataContext="{Binding Mode=OneWay, RelativeSource={RelativeSource Self}}">
     <UserControl.Resources>
         <ResourceDictionary xmlns:vs_shell="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0">
             <Style TargetType="Label">
@@ -48,7 +48,100 @@
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid>
+    <!--<Grid>
         <local:PerfGraph x:Name="perfGraph"></local:PerfGraph>
+    </Grid>-->
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height = "*"/>
+            <RowDefinition Height = "5"/>
+            <RowDefinition Height = "*"/>
+        </Grid.RowDefinitions>
+        <TabControl Name="tabControl" Grid.Row="0">
+            <TabItem Header="Graph">
+                <StackPanel Orientation="Vertical" Name = "spGraph">
+                    <WindowsFormsHost Name="wfhost"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header = "TextViewTracker" ToolTip="Track Editor TextView instances">
+                <StackPanel Orientation="Vertical">
+                    <Label Content="Opened TextViews" ToolTip="Views that are currently opened. (Refreshed by UpdateInterval, which does GC)"/>
+                    <ListBox ItemsSource="{Binding OpenedViews}" MaxHeight = "400"/>
+                    <Label Content="Leaked TextViews" ToolTip="Views that have ITextView.IsClosed==true, but still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh"/>
+                    <ListBox ItemsSource="{Binding LeakedViews}" MaxHeight = "400"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header = "ObjectTracker" ToolTip="Track Object instances">
+                <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Name="btnClearObjects" Content="Clear tracked objects" ToolTip="Clear the list of objects being tracked. The objects will not be tracked: but they may still be in memory"/>
+                        <Label Content="Filter"/>
+                        <local:MyTextBox Text="{Binding ObjectTrackerFilter}" Width="146"
+                    ToolTip="Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'  Negative: All without 'text': '^((?!text).)*$'"/>
+                    </StackPanel>
+                    <Label Content="Created Objects" ToolTip="Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending"/>
+                    <ListBox ItemsSource="{Binding CreatedObjs}" MaxHeight = "400"/>
+                    <Label Content="Leaked Objects" ToolTip="Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
+                    <UserControl Name="BrowLeakedObjects"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header = "Options" ToolTip="{Binding TipString}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width = "600"/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation = "Vertical" Grid.Column="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Current Dir"/>
+                            <TextBlock Text="{Binding CurrentDirectory}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Extension Dir"/>
+                            <TextBlock Text="{Binding ExtensionDirectory}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Update Interval"/>
+                            <local:MyTextBox x:Name ="txtUpdateInterval" ToolTip="Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" Text="{Binding UpdateInterval}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="# Data Points in graph"/>
+                            <local:MyTextBox Text="{Binding NumDataPoints}" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox Content="Scale 'Byte' counters (but not BytePerSec)" IsChecked="{Binding ScaleByteCounters}" ToolTip="for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox Name="chkShowStatusHistory" Content="Show Status History" IsChecked="True" ToolTip="Show a textbox which accumulates history of samples"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox Content="TrackTextViews" IsChecked="{Binding TrackTextViews}" ToolTip="Listen for TextView Creation Events and track them"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox Content="Track Project Objects" IsChecked="{Binding TrackProjectObjects}" ToolTip="Listen for Project Creation Events and track them. Currently wors for CPS and C++"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox Content="Track Contained Objects" IsChecked="{Binding TrackContainedObjects}" 
+                        ToolTip="For Textviews, delve into propertybag to find subscribers to EditOptions and track those. For Projects, delve..."/>
+                        </StackPanel>
+                    </StackPanel>
+                    <DockPanel Grid.Column="1">
+                        <ListBox Name="lbPCounters" SelectionMode="Multiple" Width="160" MaxHeight = "300" VerticalAlignment="Top" ToolTip="Multiselect various counters" />
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
+        <StackPanel Grid.Row="2" Orientation="Vertical">
+            <StackPanel Orientation="Horizontal">
+                <Button Name="btnDoSample" Content="DoSample" Height="20" VerticalAlignment="Top" ToolTip="Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" />
+                <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
+            </StackPanel>
+            <TextBox Name="txtStatus" Height="200" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 
+            HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" VerticalAlignment="Top" HorizontalContentAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
+        </StackPanel>
     </Grid>
+
+
 </UserControl>

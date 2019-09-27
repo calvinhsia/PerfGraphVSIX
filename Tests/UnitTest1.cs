@@ -109,7 +109,7 @@ namespace Tests
             int cnt = 0;
             var rand = new Random(1);
             ConcurrentBag<object> hashHardRefs = new ConcurrentBag<object>();
-            var objTracker = new ObjTracker(new PerfGraph());
+            var objTracker = new ObjTracker(new PerfGraphToolWindowControl());
             try
             {
                 using (var cts = new CancellationTokenSource())
@@ -180,7 +180,7 @@ namespace Tests
             int cnt = 0;
             object hardref = null;
 
-            var objTracker = new ObjTracker(new PerfGraph());
+            var objTracker = new ObjTracker(new PerfGraphToolWindowControl());
             try
             {
                 using (var cts = new CancellationTokenSource())

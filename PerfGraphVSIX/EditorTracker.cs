@@ -37,7 +37,7 @@ namespace PerfGraphVSIX
 
         int _nSerialNo;
         private ObjTracker _objectTracker;
-        PerfGraph _perfGraph;
+        PerfGraphToolWindowControl _perfGraph;
 
         internal class TextViewInstanceData
         {
@@ -281,7 +281,7 @@ namespace PerfGraphVSIX
             return false;
         }
 
-        internal void Initialize(PerfGraph perfGraph, ObjTracker objTracker)
+        internal void Initialize(PerfGraphToolWindowControl perfGraph, ObjTracker objTracker)
         {
             _objectTracker = objTracker;
             _perfGraph = perfGraph;

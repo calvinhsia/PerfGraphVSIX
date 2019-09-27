@@ -62,7 +62,6 @@
     <Compile Include="ObjTracker.cs" />
     <Compile Include="OpenFolderTracker.cs" />
     <Compile Include="PerfCounterData.cs" />
-    <Compile Include="PerfGraph.cs" />
     <Compile Include="PerfGraphToolWindow.cs" />
     <Compile Include="PerfGraphToolWindowCommand.cs" />
     <Compile Include="PerfGraphToolWindowControl.xaml.cs">

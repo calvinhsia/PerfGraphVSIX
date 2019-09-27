@@ -609,8 +609,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
             PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("Tools.ForceGC");
         }
 
-        const int statusTextLenThresh = 100000;
-        int nTruncated = 0;
         //Microsoft.VisualStudio.Shell.Events.SolutionEvents _solutionEvents;
 
 

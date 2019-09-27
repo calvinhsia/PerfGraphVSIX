@@ -13,7 +13,7 @@ namespace PerfGraphVSIX
     public class OpenFolderTracker
     {
         public IVsFolderWorkspaceService _vsFolderWorkspaceService;
-        internal PerfGraph _perfGraph;
+        internal PerfGraphToolWindowControl _perfGraph;
         internal ObjTracker _objTracker;
         [ImportingConstructor]
         public OpenFolderTracker(IVsFolderWorkspaceService vsFolderWorkspaceService)
@@ -21,7 +21,7 @@ namespace PerfGraphVSIX
             _vsFolderWorkspaceService = vsFolderWorkspaceService;
         }
 
-        internal void Initialize(PerfGraph perfGraph, ObjTracker objTracker)
+        internal void Initialize(PerfGraphToolWindowControl perfGraph, ObjTracker objTracker)
         {
             this._perfGraph = perfGraph;
             this._objTracker = objTracker;

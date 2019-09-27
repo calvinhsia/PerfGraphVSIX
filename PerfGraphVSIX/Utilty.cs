@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace PerfGraphVSIX
 {
+    public class CancellationTokenP
     class Utilty
     {
         static readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;

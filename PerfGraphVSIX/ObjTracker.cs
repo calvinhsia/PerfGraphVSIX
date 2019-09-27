@@ -106,12 +106,12 @@ namespace PerfGraphVSIX
 
         readonly Dictionary<int, ObjWeakRefData> _dictObjsToTrack = new Dictionary<int, ObjWeakRefData>();
         readonly ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
-        private readonly PerfGraph _perfGraph;
+        private readonly PerfGraphToolWindowControl _perfGraph;
 
-        public ObjTracker(PerfGraph perfGraph)
+        public ObjTracker(PerfGraphToolWindowControl perfGraph)
         {
             this._perfGraph = perfGraph;
-            perfGraph._btnClearObjects.Click += (o, e) =>
+            perfGraph.btnClearObjects.Click += (o, e) =>
              {
                  var tsk = perfGraph.AddStatusMsgAsync($"Clearing the tracking of {_dictObjsToTrack.Count} tracked objects.");
                  _dictObjsToTrack.Clear();
