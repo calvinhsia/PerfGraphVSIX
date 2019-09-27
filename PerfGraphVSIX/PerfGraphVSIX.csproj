@@ -60,6 +60,7 @@
     <Compile Include="Browse.cs" />
     <Compile Include="EditorTracker.cs" />
     <Compile Include="ObjTracker.cs" />
+    <Compile Include="ObjWeakRefData.cs" />
     <Compile Include="OpenFolderTracker.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="PerfGraphToolWindow.cs" />

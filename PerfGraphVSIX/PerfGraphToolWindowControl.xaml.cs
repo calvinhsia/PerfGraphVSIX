@@ -203,7 +203,7 @@
                             if (context != null)
                             {
                                 var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
-                                _objTracker.AddObjectToTrack(context, ObjTracker.ObjSource.FromProject, description: proj.Name);
+                                _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
                                 //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
                             }
                         }

@@ -3,13 +3,8 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PerfGraphVSIX
 {
@@ -63,7 +58,11 @@ namespace PerfGraphVSIX
             }
         }
 
-        readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
+        internal void Initialize(PerfGraphToolWindowControl perfGraph, ObjTracker objTracker)
+        {
+            _objectTracker = objTracker;
+            _perfGraph = perfGraph;
+        }
 
         public void TextViewCreated(ITextView textView)
         {
@@ -78,153 +77,13 @@ namespace PerfGraphVSIX
                 }
                 var instData = new TextViewInstanceData(textView, filename, _nSerialNo++);
                 _hashViews.Add(instData);
-                hashVisitedObjs = new HashSet<object>();
-                //AddMemsOfObject(textView);
-
-                if (_perfGraph.TrackContainedObjects)
-                {
-                    var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
-                    var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
-                    foreach (var val in propList.Values)
-                    {
-                        var valType = val.GetType();
-                        foreach (var fld in valType.GetFields(bFlags))
-                        {
-                            var valFld = fld.GetValue(val);
-                            if (fld.FieldType.BaseType?.FullName == "System.Delegate")
-                            {
-                                "".ToString();
-                            }
-                            if (fld.FieldType.BaseType?.FullName == "System.MulticastDelegate")
-                            {
-                                HandleEvent(val, fld.Name, "");
-                                "".ToString();
-                            }
-                            else if (fld.FieldType.BaseType?.FullName == "System.Object")
-                            {
-                                //                            TryAddObjectVisited(valFld);
-                                "".ToString();
-                            }
-                        }
-                        if (valType.Name == "EditorOptions")
-                        {
-                            HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
-                        }
-                    }
-                    HandleEvent(textView.TextBuffer, "Changed", "TextBuffer+=");
-                    HandleEvent(textView.TextBuffer, "ChangedLowPriority", "TextBuffer+=");
-                    HandleEvent(textView.TextBuffer, "ChangedHighPriority", "TextBuffer+=");
-                    HandleEvent(textView.TextBuffer, "ReadOnlyRegionsChanged", "TextBuffer+=");
-
-                    HandleEvent(textView, "Closed", "TextView.Closed+=");
-                }
+                _objectTracker.AddObjectToTrack(textView, ObjSource.FromTextView, description: filename);
             }
             catch (Exception)
             {
             }
         }
 
-        internal HashSet<object> hashVisitedObjs;
-        //bool TryAddObjectVisited(object obj)
-        //{
-        //    var fDidAdd = false;
-        //    if (!hashVisitedObjs.Contains(obj))
-        //    {
-        //        hashVisitedObjs.Add(obj);
-        //        _objectTracker.AddObjectToTrack(obj);
-        //        fDidAdd = true;
-        //    }
-        //    return fDidAdd;
-        //}
-
-        void AddMemsOfObject(object obj, int nLevel = 1)
-        {
-            var objTyp = obj.GetType();
-            if (obj != null && objTyp.IsClass && objTyp.FullName != "System.String")
-            {
-                if (objTyp.IsArray)
-                {
-                    var elemtyp = objTyp.GetElementType();
-                    if (elemtyp.IsPrimitive || elemtyp.Name == "String")
-                    {
-                        return;
-                    }
-                }
-                if (hashVisitedObjs.Contains(obj))
-                {
-                    return;
-                }
-                hashVisitedObjs.Add(obj);
-                if (objTyp.Module.Name != "mscorlib.dll")
-                {
-                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView);
-                }
-                if (nLevel < 1000)
-                {
-                    var members = objTyp.GetMembers(bFlags).Where(m => m.MemberType == MemberTypes.Field || m.MemberType == MemberTypes.Property);
-                    foreach (var mem in members)
-                    {
-                        if (mem is FieldInfo fldInfo)
-                        {
-                            var valFld = fldInfo.GetValue(obj);
-                            if (valFld != null)
-                            {
-                                var valFldType = valFld.GetType();
-                                if (valFld.GetType().IsClass) // delegate or class (not value type or interfacer
-                                {
-                                    var name = objTyp.FullName;
-                                    switch (name)
-                                    {
-                                        case "System.Reflection.Pointer":
-                                        case "System.String":
-                                            break;
-                                        default:
-                                            //                                                        LogTestMessage($"{new string(' ', nLevel)} {nLevel} {objTyp.Name} {fldInfo.Name} {fldInfo.FieldType.BaseType?.Name}  {valFld.GetType().Name}");
-                                            if (valFld is EventHandler evHandler)
-                                            {
-                                                "".ToString();
-                                            }
-                                            if (valFld is Object)
-                                            {
-                                                AddMemsOfObject(valFld, nLevel + 1);
-                                            }
-                                            break;
-
-                                    }
-                                }
-                            }
-                        }
-                        else if (mem is PropertyInfo propInfo)
-                        {
-                            "".ToString();
-                            try
-                            {
-                                if (!propInfo.PropertyType.IsPrimitive)
-                                {
-                                    var valProp = propInfo.GetValue(obj); // dictionary.item[]
-                                    AddMemsOfObject(valProp, nLevel + 1);
-                                }
-                            }
-                            catch (Exception) { }
-                        }
-                    }
-                }
-            }
-        }
-
-        void HandleEvent(object objInstance, string eventName, string desc)
-        {
-            var eventField = objInstance.GetType().GetField(eventName, bFlags)?.GetValue(objInstance) as Delegate;
-            var invocationList = eventField?.GetInvocationList();
-            if (invocationList != null)
-            {
-                foreach (var targ in invocationList)
-                {
-                    var obj = targ.Target;
-                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView, description: desc);
-                }
-            }
-        }
 
         internal (Dictionary<string, int>, List<TextViewInstanceData>) GetCounts()
         {
@@ -281,11 +140,6 @@ namespace PerfGraphVSIX
             return false;
         }
 
-        internal void Initialize(PerfGraphToolWindowControl perfGraph, ObjTracker objTracker)
-        {
-            _objectTracker = objTracker;
-            _perfGraph = perfGraph;
-        }
 
         //void Cleanup()
         //{

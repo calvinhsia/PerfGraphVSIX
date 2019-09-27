@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.Text;
 
 namespace PerfGraphVSIX
 {
@@ -20,93 +21,10 @@ namespace PerfGraphVSIX
     /// </summary>
     public class ObjTracker
     {
-        public enum ObjSource
-        {
-            FromTextView,
-            FromProject,
-            FromTest
-        }
-        public class ObjWeakRefData
-        {
-            static int g_baseSerialNo = 0;
-            internal WeakReference<object> _wr;
-            internal int _hashCodeTarget;
-
-            public string Descriptor { get; private set; }
-            public int _serialNo;
-            public DateTime _dtCreated;
-            public readonly ObjSource _objSource;
-
-            public ObjWeakRefData(object obj, ObjSource objSource, string description)
-            {
-                _dtCreated = DateTime.Now;
-                _objSource = objSource;
-                _wr = new WeakReference<object>(obj);
-                _serialNo = g_baseSerialNo;
-                _hashCodeTarget = obj.GetHashCode();
-                Interlocked.Increment(ref g_baseSerialNo);
-                Descriptor = $"{obj.GetType().FullName} {description}".Trim();
-            }
-            /// <summary>
-            /// Certain known objects have a flag when they're finished: e.g. IsClosed or _disposed.
-            /// </summary>
-            /// <returns></returns>
-            public bool HasBeenClosedOrDisposed()
-            {
-                var hasBeenClosedOrDisposed = false;
-                if (_wr.TryGetTarget(out var obj))
-                {
-                    var typeName = obj.GetType().Name; //"MyBigData"
-                    bool fDidGetSpecialType = false;
-                    switch (typeName)
-                    {
-                        case "Microsoft.VisualStudio.Text.Editor.Implementation.WpfTextView":
-                        case "Microsoft.VisualStudio.Text.Implementation.TextBuffer":
-                            var IsClosedProp = obj.GetType().GetProperty("IsClosed");
-                            var valIsClosedProp = IsClosedProp.GetValue(obj);
-                            hasBeenClosedOrDisposed = (bool)valIsClosedProp;
-                            fDidGetSpecialType = true;
-                            break;
-                    }
-                    if (!fDidGetSpecialType)
-                    {
-                        var mems = obj.GetType().GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        foreach (var mem in mems
-                            .Where(m => m.Name.IndexOf("disposed", comparisonType: StringComparison.OrdinalIgnoreCase) > 0 &&
-                                    (m.MemberType.HasFlag(MemberTypes.Field) || m.MemberType.HasFlag(MemberTypes.Property))))
-                        {
-                            if (mem is PropertyInfo propinfo && propinfo.PropertyType.Name == "Boolean") // the setter has Void PropertyType
-                            {
-                                var valIsDisposed = propinfo.GetValue(obj);
-                                hasBeenClosedOrDisposed = (bool)valIsDisposed;
-                                break;
-                            }
-                            else if (mem is FieldInfo fieldinfo && fieldinfo.FieldType.Name == "Boolean" && !mem.Name.Contains("BackingField"))
-                            {
-                                var valIsDisposed = fieldinfo.GetValue(obj);
-                                hasBeenClosedOrDisposed = (bool)valIsDisposed;
-                                break;
-                            }
-                            else if (mem is MethodInfo methInfo && methInfo.ReturnType.Name == "Boolean")
-                            {
-                                var valIsDisposed = methInfo.Invoke(obj, parameters: null);
-                                hasBeenClosedOrDisposed = (bool)valIsDisposed;
-                                break;
-                            }
-                        }
-                    }
-                }
-                return hasBeenClosedOrDisposed;
-            }
-            public override string ToString()
-            {
-                return $"{_serialNo} {Descriptor}";
-            }
-        }
-
         readonly Dictionary<int, ObjWeakRefData> _dictObjsToTrack = new Dictionary<int, ObjWeakRefData>();
         readonly ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
-        private readonly PerfGraphToolWindowControl _perfGraph;
+        readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
+        internal readonly PerfGraphToolWindowControl _perfGraph;
 
         public ObjTracker(PerfGraphToolWindowControl perfGraph)
         {
@@ -146,32 +64,33 @@ namespace PerfGraphVSIX
             var dictLiveObjs = new Dictionary<string, int>(); // classname + desc, count
             var lstDeadObjs = new List<ObjWeakRefData>();
             var lstLeakedObjs = new List<ObjWeakRefData>();
-            foreach (var itm in _dictObjsToTrack.Values)
+            foreach (var wkrefData in _dictObjsToTrack.Values)
             {
-                if (itm._wr.TryGetTarget(out _))
+                if (wkrefData._wr.TryGetTarget(out var objTracked))
                 { // the obj is still in memory. Has it been closed or disposed?
-                    if (_perfGraph.TrackTextViews && itm._objSource == ObjSource.FromTextView ||
-                        _perfGraph.TrackProjectObjects && itm._objSource == ObjSource.FromProject
+                    if (_perfGraph.TrackTextViews && wkrefData._objSource == ObjSource.FromTextView ||
+                        _perfGraph.TrackProjectObjects && wkrefData._objSource == ObjSource.FromProject
                         )
                     {
                         if (string.IsNullOrEmpty(_perfGraph.ObjectTrackerFilter) ||
-                            Regex.IsMatch(itm.Descriptor,_perfGraph.ObjectTrackerFilter.Trim(), RegexOptions.IgnoreCase))
+                            Regex.IsMatch(wkrefData.Descriptor,_perfGraph.ObjectTrackerFilter.Trim(), RegexOptions.IgnoreCase))
                         {
-                            if (itm.HasBeenClosedOrDisposed())
+                            wkrefData.ProcessSpecialTypes(objTracked, this);
+                            if (wkrefData.HasBeenClosedOrDisposed())
                             {
-                                lstLeakedObjs.Add(itm);
+                                lstLeakedObjs.Add(wkrefData);
                             }
                             else
                             {
-                                dictLiveObjs.TryGetValue(itm.Descriptor, out var cnt);
-                                dictLiveObjs[itm.Descriptor] = ++cnt;
+                                dictLiveObjs.TryGetValue(wkrefData.Descriptor, out var cnt);
+                                dictLiveObjs[wkrefData.Descriptor] = ++cnt;
                             }
                         }
                     }
                 }
                 else
                 {
-                    lstDeadObjs.Add(itm);
+                    lstDeadObjs.Add(wkrefData);
                 }
             }
             foreach (var entry in lstDeadObjs)
@@ -197,6 +116,20 @@ namespace PerfGraphVSIX
                 foreach (var entry in lstGCObjs)
                 {
                     _dictObjsToTrack.Remove(entry._hashCodeTarget);
+                }
+            }
+        }
+
+        internal void HandleEvent(object objInstance, string eventName, string desc)
+        {
+            var eventField = objInstance.GetType().GetField(eventName, bFlags)?.GetValue(objInstance) as Delegate;
+            var invocationList = eventField?.GetInvocationList();
+            if (invocationList != null)
+            {
+                foreach (var targ in invocationList)
+                {
+                    var obj = targ.Target;
+                    AddObjectToTrack(obj, ObjSource.FromTextView, description: desc);
                 }
             }
         }
