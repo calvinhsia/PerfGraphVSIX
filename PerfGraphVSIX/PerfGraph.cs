@@ -66,6 +66,8 @@ namespace PerfGraphVSIX
         public bool ScaleByteCounters { get; set; } = false;
         public bool SetMaxGraphTo100 { get; set; } = false;
 
+        public FontFamily FontFamilyMono { get; set; } = new FontFamily("Consolas");
+
         public string LastStatMsg { get { return _LastStatMsg; } set { _LastStatMsg = value; RaisePropChanged(); } }
 
         public string ObjectTrackerFilter { get; set; } = ".*";
@@ -114,13 +116,19 @@ namespace PerfGraphVSIX
                 //and the C# string requires quotes to be doubled
                 var strxaml =
 @"
-<TabControl
+<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 " + xmlns + // add our xaml namespace
 @">
+<Grid.RowDefinitions>
+    <RowDefinition Height = ""*""/>
+    <RowDefinition Height = ""5""/>
+    <RowDefinition Height = ""*""/>
+</Grid.RowDefinitions>
+<TabControl Name=""tabControl"" Grid.Row=""0"">
     <TabItem Header=""Graph"">
-        <StackPanel Orientation=""Vertical"" Name = ""spMain""/>
+        <StackPanel Orientation=""Vertical"" Name = ""spGraph""/>
     </TabItem>
     <TabItem Header = ""TextViewTracker"" ToolTip=""Track Editor TextView instances"">
         <StackPanel Orientation=""Vertical"">
@@ -133,9 +141,10 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
     <TabItem Header = ""ObjectTracker"" ToolTip=""Track Object instances"">
         <StackPanel Orientation=""Vertical"">
                 <StackPanel Orientation=""Horizontal"">
-                    <Button Name=""btnClearObjects"" Content=""Clear tracked objects"" ToolTip=""Clear the list of objects being tracked. The objects will not be tracked: but they may still be in memory"">
+                    <Button Name=""btnClearObjects"" Content=""Clear tracked objects"" ToolTip=""Clear the list of objects being tracked. The objects will not be tracked: but they may still be in memory""/>
                     <Label Content=""Filter""/>
-                    <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" Width=""400"" ToolTip=""Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'""/>
+                    <l:MyTextBox Text=""{Binding Path =ObjectTrackerFilter}"" Width=""400"" 
+                    ToolTip=""Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'  Negative: All without 'text': '^((?!text).)*$'""/>
                 </StackPanel>
             <Label Content=""Created Objects"" ToolTip=""Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending""/>
             <ListBox ItemsSource=""{Binding Path=CreatedObjs}"" MaxHeight = ""400""/>
@@ -184,24 +193,72 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 </StackPanel>
             </StackPanel>
             <DockPanel Grid.Column=""1"">
-                <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" MaxHeight = ""300"" VerticalAlignment=""Top"" ToolTip=""Multiselect various counters"" />
+                <ListBox Name=""lbPCounters"" SelectionMode=""Multiple"" Width=""160"" MaxHeight = ""300"" VerticalAlignment=""Top"" ToolTip=""Multiselect various counters"" />
             </DockPanel>
         </Grid>
     </TabItem>
 </TabControl>
+    <GridSplitter Grid.Row=""1"" Height=""5"" HorizontalAlignment=""Stretch""/>
+    <StackPanel Grid.Row=""2"" Orientation=""Vertical"">
+        <StackPanel Orientation=""Horizontal"">
+            <Button Name=""btnDoSample"" Content=""DoSample"" Height=""20"" VerticalAlignment=""Top"" />
+            <TextBox Name=""txtLastStatMsg"" Text=""{Binding Path=LastStatMsg}"" Width=""500"" Height=""20"" VerticalAlignment=""Top"" HorizontalAlignment=""Left"" FontFamily=""{Binding Path=FontFamilyMono}""/>
+        </StackPanel>
+        <TextBox Name=""txtStatus"" Height=""200"" MaxHeight=""200"" IsReadOnly=""true"" IsUndoEnabled=""false"" FontSize=""10"" 
+            HorizontalScrollBarVisibility=""Auto"" VerticalScrollBarVisibility=""Auto"" VerticalAlignment=""Top"" HorizontalContentAlignment=""Left"" FontFamily=""{Binding Path=FontFamilyMono}""/>
+    </StackPanel>
+</Grid>
 ";
+                var tipString = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}";
                 var xmlReader = XmlReader.Create(new StringReader(strxaml));
 
-                var tabControl = (TabControl)XamlReader.Load(xmlReader);
-                tabControl.DataContext = this;
-                this.Content = tabControl;
+                var gridMain = (System.Windows.Controls.Grid)XamlReader.Load(xmlReader);
+                var tabControl = (TabControl) gridMain.FindName("tabControl");
+                gridMain.DataContext = this;
+                this.Content = gridMain;
 
-                var spMain = (StackPanel)tabControl.FindName("spMain");
-                var txtUpdateInterval = (MyTextBox)tabControl.FindName("txtUpdateInterval");
-                var chkShowStatusHistory = (CheckBox)tabControl.FindName("chkShowStatusHistory");
-                var lbPCounters = (ListBox)tabControl.FindName("lbPCounters");
-                _btnClearObjects = (Button)tabControl.FindName("btnClearObjects");
-                BrowLeakedObjects = (UserControl)tabControl.FindName("BrowLeakedObjects");
+                var spGraph = (StackPanel)gridMain.FindName("spGraph");
+                var txtUpdateInterval = (MyTextBox)gridMain.FindName("txtUpdateInterval");
+                var chkShowStatusHistory = (CheckBox)gridMain.FindName("chkShowStatusHistory");
+                var lbPCounters = (ListBox)gridMain.FindName("lbPCounters");
+                _btnClearObjects = (Button)gridMain.FindName("btnClearObjects");
+                BrowLeakedObjects = (UserControl)gridMain.FindName("BrowLeakedObjects");
+
+                var btnDoSample = (Button)gridMain.FindName("btnDoSample");
+
+                btnDoSample.ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)\r\n" + tipString;
+                btnDoSample.Click += (o, e) =>
+                {
+                    ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
+                };
+                _txtStatus = (TextBox)gridMain.FindName("txtStatus");
+                //chkShowStatusHistory.Checked += (o, e) =>
+                //{
+                //    if (_txtStatus != null)
+                //    {
+                //        spGraph.Children.Remove(_txtStatus); // remove prior one
+                //    }
+                //    _txtStatus = new TextBox()
+                //    {
+                //        IsReadOnly = true,
+                //        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                //        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                //        IsUndoEnabled = false,
+                //        FontFamily = FontFamilyMono,
+                //        FontSize = 10,
+                //        Height = 200,
+                //        MaxHeight = 200,
+                //        HorizontalContentAlignment = HorizontalAlignment.Left
+                //    };
+                //    spGraph.Children.Add(_txtStatus);
+                //};
+                //chkShowStatusHistory.Unchecked += (o, e) =>
+                //{
+                //    spGraph.Children.Remove(_txtStatus);
+                //    _txtStatus.Text = string.Empty; // keep around so don't have thread contention
+                //};
+
+
                 _objTracker = new ObjTracker(this);
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
                 _editorTracker.Initialize(this, _objTracker);
@@ -214,31 +271,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                       ResetPerfCounterMonitor();
                   };
 
-                chkShowStatusHistory.Checked += (o, e) =>
-                {
-                    if (_txtStatus != null)
-                    {
-                        spMain.Children.Remove(_txtStatus); // remove prior one
-                    }
-                    _txtStatus = new TextBox()
-                    {
-                        IsReadOnly = true,
-                        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                        HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                        IsUndoEnabled = false,
-                        FontFamily = _fontFamily,
-                        FontSize = 10,
-                        Height = 200,
-                        MaxHeight = 200,
-                        HorizontalContentAlignment = HorizontalAlignment.Left
-                    };
-                    spMain.Children.Add(_txtStatus);
-                };
-                chkShowStatusHistory.Unchecked += (o, e) =>
-                {
-                    spMain.Children.Remove(_txtStatus);
-                    _txtStatus.Text = string.Empty; // keep around so don't have thread contention
-                };
 
                 lbPCounters.ItemsSource = _lstPerfCounterDefinitions.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
@@ -294,30 +326,8 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 {
                     Child = _chart
                 };
-                spMain.Children.Add(wfh);
+                spGraph.Children.Add(wfh);
 
-                var spControls2 = new StackPanel() { Orientation = Orientation.Horizontal };
-
-                var tipString = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git version {this.GetType().Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}";
-
-                var btnDoSample = new Button()
-                {
-                    Content = "_DoSample",
-                    Height = 20,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    ToolTip = "Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)\r\n" + tipString
-                };
-                spControls2.Children.Add(btnDoSample);
-                btnDoSample.Click += (o, e) =>
-                   {
-                       ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
-                   };
-
-                var txtLastStatMsg = new TextBox() { Width = 500, Height = 20, VerticalAlignment = VerticalAlignment.Top, ToolTip = "Last Sample", HorizontalAlignment = HorizontalAlignment.Left, FontFamily = _fontFamily };
-                txtLastStatMsg.SetBinding(TextBox.TextProperty, nameof(LastStatMsg));
-                spControls2.Children.Add(txtLastStatMsg);
-
-                spMain.Children.Add(spControls2);
 
                 var t = Task.Run(() =>
                 {
@@ -539,14 +549,14 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 foreach (var dictEntry in openedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"{ dictEntry.Key,-15} {dictEntry.Value,3}", FontFamily = FontFamilyMono });
                     OpenedViews.Add(sp);
                 }
 
                 foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = FontFamilyMono });
                     LeakedViews.Add(sp);
                 }
             }
@@ -558,7 +568,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
                 foreach (var dictEntry in createdObjs.OrderByDescending(e=>e.Value))
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"#Inst={dictEntry.Value,3} {dictEntry.Key,-15}", FontFamily = _fontFamily });
+                    sp.Children.Add(new TextBlock() { Text = $"#Inst={dictEntry.Value,3} {dictEntry.Key,-15}", FontFamily = FontFamilyMono });
                     CreatedObjs.Add(sp);
                 }
 
@@ -602,7 +612,6 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
         //Microsoft.VisualStudio.Shell.Events.SolutionEvents _solutionEvents;
-        readonly FontFamily _fontFamily = new FontFamily("Consolas");
 
 
         async public Task AddStatusMsgAsync(string msg, params object[] args)

@@ -12,8 +12,10 @@ namespace PerfGraphVSIX
     {
         static readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
         // uses reflection to find any referenced linked tokensources or registered callbacks
-        public static void ProcessCancellationToken(CancellationToken token, Action<string> logger)
+        public static (int, int) ProcessCancellationToken(CancellationToken token, Action<string> logger)
         {
+            int nRegCallbacks = 0;
+            int nLinkedTokens = 0;
             logger($"Processing tkn {token}");
             var tks = token.GetType().GetField("m_source", bFlags).GetValue(token) as CancellationTokenSource;
             /*
@@ -49,7 +51,6 @@ namespace PerfGraphVSIX
             if (tks.GetType().GetField("m_registeredCallbacksLists", bFlags).GetValue(tks) is Array reglist)
             {
                 //var elemType = reglist.GetType().GetElementType(); // System.Threading.SparselyPopulatedArray`1[System.Threading.CancellationCallbackInfo]
-
                 foreach (var oSparselyPopulatedArray in reglist)
                 {
                     if (oSparselyPopulatedArray != null) // SparselyPopulatedArray
@@ -78,6 +79,7 @@ namespace PerfGraphVSIX
                                     logger($"Got invocationlist len = {invocationList.Length}");
                                     foreach (var targ in invocationList)
                                     {
+                                        nRegCallbacks++;
                                         logger($"  inv list target = {targ.Target}");
                                         var objTarg = targ.Target;
                                         if (objTarg != null)
@@ -98,6 +100,7 @@ namespace PerfGraphVSIX
 
             }
             var linkedList = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
+            return (nRegCallbacks, nLinkedTokens);
         }
     }
 }

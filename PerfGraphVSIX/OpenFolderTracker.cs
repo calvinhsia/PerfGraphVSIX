@@ -34,7 +34,10 @@ namespace PerfGraphVSIX
             if (wrkspace != null)
             {
                 var disposeToken = (wrkspace as Microsoft.VisualStudio.Workspace.IWorkspace2).DisposeToken;
-                Utilty.ProcessCancellationToken(disposeToken, (s)=> { });
+                var (nReg, nLinked) = Utilty.ProcessCancellationToken(disposeToken, (s) =>
+                {
+                });
+                var tsk = _perfGraph.AddStatusMsgAsync($"# disposeToken callback Registrations = {nReg} Linked = {nLinked}");
                 //var tks = disposeToken.GetType().GetField("m_source", bFlags).GetValue(disposeToken);
                 //var reglist = tks.GetType().GetField("m_registeredCallbacksLists", bFlags).GetValue(tks);
                 //var elemType = reglist.GetType().GetElementType();

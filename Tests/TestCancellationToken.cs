@@ -149,7 +149,10 @@ namespace Tests
                 var x = new Someclass(tk);
                 var x2 = new Someclass(tk);
                 var x3 = new Someclass(tk);
-                ProcessCancellationToken(tk, (str)=> LogTestMessage(str));
+                ProcessCancellationToken(tk, logger: (str) =>
+                {
+                    LogTestMessage(str);
+                });
             }
             //cancellationTokenRegistration.Dispose(); // must dispose else leaks. CTS Leak Type No. 2
 
