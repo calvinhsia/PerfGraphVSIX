@@ -14,19 +14,6 @@ namespace PerfGraphVSIX
         FromTest
     }
 
-    //public class CancellationTokenWeakRefData : ObjWeakRefData
-    //{
-    //    public CancellationTokenWeakRefData(object obj, ObjSource objSource, string description) : base(obj, objSource, description)
-    //    {
-    //    }
-    //}
-
-    //public class EventHandlerWeakRefData : ObjWeakRefData
-    //{
-    //    public EventHandlerWeakRefData(object obj, ObjSource objSource, string description) : base(obj, objSource, description)
-    //    {
-    //    }
-    //}
     public class ObjWeakRefData
     {
         static int g_baseSerialNo = 0;
@@ -99,72 +86,6 @@ namespace PerfGraphVSIX
             }
             return hasBeenClosedOrDisposed;
         }
-        readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
-
-        internal void ProcessSpecialTypes(object objTracked, ObjTracker objTracker)
-        {
-            if (objTracked is CancellationToken ctoken)
-            {
-
-            }
-            else if (objTracked is ITextView textView)
-            {
-                if (objTracker._perfGraph.TrackTextViews)
-                {
-                    var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
-                    var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
-                    foreach (var val in propList.Values)
-                    {
-                        if (val != null)
-                        {
-                            var valType = val.GetType();
-                            foreach (var fld in valType.GetFields(bFlags))
-                            {
-                                var valFld = fld.GetValue(val);
-                                if (fld.FieldType.BaseType?.FullName == "System.Delegate")
-                                {
-                                    "".ToString();
-                                }
-                                if (fld.FieldType.BaseType?.FullName == "System.MulticastDelegate")
-                                {
-                                    objTracker.HandleEvent(val, fld.Name, "");
-                                    "".ToString();
-                                }
-                                else if (fld.FieldType.BaseType?.FullName == "System.Object")
-                                {
-                                    //                            TryAddObjectVisited(valFld);
-                                    "".ToString();
-                                }
-                            }
-                            if (valType.Name == "EditorOptions")
-                            {
-                                objTracker.HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
-                            }
-                        }
-                    }
-                    objTracker.HandleEvent(textView.TextBuffer, "Changed", "TextBuffer+=");
-                    objTracker.HandleEvent(textView.TextBuffer, "ChangedLowPriority", "TextBuffer+=");
-                    objTracker.HandleEvent(textView.TextBuffer, "ChangedHighPriority", "TextBuffer+=");
-                    objTracker.HandleEvent(textView.TextBuffer, "ReadOnlyRegionsChanged", "TextBuffer+=");
-
-                    objTracker.HandleEvent(textView, "Closed", "TextView.Closed+=");
-
-                }
-            }
-        }
-        //void HandleEvent(object objInstance, string eventName, string desc)
-        //{
-        //    var eventField = objInstance.GetType().GetField(eventName, bFlags)?.GetValue(objInstance) as Delegate;
-        //    var invocationList = eventField?.GetInvocationList();
-        //    if (invocationList != null)
-        //    {
-        //        foreach (var targ in invocationList)
-        //        {
-        //            var obj = targ.Target;
-        //            _objectTracker.AddObjectToTrack(obj, ObjSource.FromTextView, description: desc);
-        //        }
-        //    }
-        //}
 
         public override string ToString()
         {

@@ -80,9 +80,13 @@
                         <local:MyTextBox Text="{Binding ObjectTrackerFilter}" Width="146"
                     ToolTip="Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'  Negative: All without 'text': '^((?!text).)*$'"/>
                     </StackPanel>
-                    <Label Content="Created Objects" ToolTip="Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="{Binding CntCreatedObjs}" ToolTip="Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending"/>
+                    </StackPanel>
                     <ListBox ItemsSource="{Binding CreatedObjs}" MaxHeight = "400"/>
-                    <Label Content="Leaked Objects" ToolTip="Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="{Binding CntLeakedObjs}" ToolTip="Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
+                    </StackPanel>
                     <UserControl Name="BrowLeakedObjects"/>
                 </StackPanel>
             </TabItem>
@@ -103,11 +107,11 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Update Interval"/>
-                            <local:MyTextBox x:Name ="txtUpdateInterval" ToolTip="Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" Text="{Binding UpdateInterval}"/>
+                            <local:MyTextBox x:Name ="txtUpdateInterval" Width="90" ToolTip="Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" Text="{Binding UpdateInterval}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <Label Content="# Data Points in graph"/>
-                            <local:MyTextBox Text="{Binding NumDataPoints}" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
+                            <local:MyTextBox Text="{Binding NumDataPoints}" Width="90" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <CheckBox Content="Scale 'Byte' counters (but not BytePerSec)" IsChecked="{Binding ScaleByteCounters}" ToolTip="for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs"/>

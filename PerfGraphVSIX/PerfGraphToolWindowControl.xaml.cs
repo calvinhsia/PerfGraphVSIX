@@ -34,15 +34,13 @@
 
         public ObservableCollection<UIElement> OpenedViews { get; set; } = new ObservableCollection<UIElement>();
         public ObservableCollection<UIElement> LeakedViews { get; set; } = new ObservableCollection<UIElement>();
-
         public ObservableCollection<UIElement> CreatedObjs { get; set; } = new ObservableCollection<UIElement>();
         public ObservableCollection<LeakedObject> LeakedObjs { get; set; } = new ObservableCollection<LeakedObject>();
-        public class LeakedObject
-        {
-            public int SerialNo { get; set; }
-            public DateTime Created { get; set; }
-            public string ClassName { get; set; }
-        }
+
+        private string _CntCreatedObjs;
+        public string CntCreatedObjs { get { return _CntCreatedObjs; } set { _CntCreatedObjs = value; RaisePropChanged(); } }
+        private string _CntLeakedObjs;
+        public string CntLeakedObjs { get { return _CntLeakedObjs; } set { _CntLeakedObjs = value; RaisePropChanged(); } }
 
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
@@ -73,6 +71,12 @@
         void RaisePropChanged([CallerMemberName] string propName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+        }
+        public class LeakedObject
+        {
+            public int SerialNo { get; set; }
+            public DateTime Created { get; set; }
+            public string ClassName { get; set; }
         }
 
         public static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
@@ -109,10 +113,10 @@
                     ResetPerfCounterMonitor();
                 };
 
-                btnDoSample.Click+=(o,e)=>
-                {
-                    ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
-                };
+                btnDoSample.Click += (o, e) =>
+                  {
+                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
+                  };
 
 
                 lbPCounters.ItemsSource = _lstPerfCounterDefinitions.Select(s => s.perfCounterType);
@@ -163,7 +167,7 @@
                 {
                     //Width = 200,
                     //Height = 400,
-//                    Dock = System.Windows.Forms.DockStyle.Fill
+                    //                    Dock = System.Windows.Forms.DockStyle.Fill
                 };
                 wfhost.Child = _chart;
 
@@ -397,6 +401,7 @@
                     LeakedViews.Add(sp);
                 }
             }
+            int nCntInstances = 0;
             if (_objTracker != null)
             {
                 var (createdObjs, lstLeakedObjs) = _objTracker.GetCounts();
@@ -407,6 +412,7 @@
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
                     sp.Children.Add(new TextBlock() { Text = $"#Inst={dictEntry.Value,3} {dictEntry.Key,-15}", FontFamily = FontFamilyMono });
                     CreatedObjs.Add(sp);
+                    nCntInstances += dictEntry.Value;
                 }
 
                 //foreach (var entry in lstLeakedObjs)
@@ -437,6 +443,8 @@
                         },
                         new[] { 60, 130, 600 });
             }
+            CntCreatedObjs = $"Created Objs: #Types = {CreatedObjs.Count} #Instances={nCntInstances}";
+            CntLeakedObjs = $"Leaked Objs: {LeakedObjs.Count}";
         }
 
         void DoGC()
