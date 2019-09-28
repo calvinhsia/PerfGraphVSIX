@@ -98,14 +98,6 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation = "Vertical" Grid.Column="0">
                         <StackPanel Orientation="Horizontal">
-                            <Label Content="Current Dir"/>
-                            <TextBlock Text="{Binding CurrentDirectory}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Extension Dir"/>
-                            <TextBlock Text="{Binding ExtensionDirectory}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
                             <Label Content="Update Interval"/>
                             <local:MyTextBox x:Name ="txtUpdateInterval" Width="90" ToolTip="Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" Text="{Binding UpdateInterval}"/>
                         </StackPanel>

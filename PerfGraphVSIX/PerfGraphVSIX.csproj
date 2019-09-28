@@ -82,6 +82,7 @@
     <VSCTCompile Include="PerfGraphToolWindowPackage.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
     </VSCTCompile>
+    <Content Include="Readme.txt" />
     <Content Include="Resources\PerfGraphToolWindowCommand.png" />
     <Content Include="Resources\PerfGraphToolWindowPackage.ico" />
     <Content Include="stylesheet.css" />

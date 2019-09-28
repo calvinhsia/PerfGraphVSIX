@@ -51,7 +51,8 @@
         public bool ScaleByteCounters { get; set; } = false;
         public bool SetMaxGraphTo100 { get; set; } = false;
 
-        public string TipString { get; } = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git Version={typeof(PerfGraphToolWindowControl).Assembly.GetName().Version}    {System.Reflection.Assembly.GetExecutingAssembly().Location}";
+        public string TipString { get; } = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git Version={typeof(PerfGraphToolWindowControl).Assembly.GetName().Version}\r\n" +
+            $"{System.Reflection.Assembly.GetExecutingAssembly().Location}   CurDir={Environment.CurrentDirectory}";
 
         public FontFamily FontFamilyMono { get; set; } = new FontFamily("Consolas");
 
@@ -62,10 +63,6 @@
         public bool TrackTextViews { get; set; } = true;
         public bool TrackProjectObjects { get; set; } = true;
         public bool TrackContainedObjects { get; set; } = true;
-
-        public string CurrentDirectory { get { return Environment.CurrentDirectory; } }
-
-        public string ExtensionDirectory { get { return this.GetType().Assembly.Location; } }
 
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
