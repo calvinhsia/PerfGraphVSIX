@@ -470,7 +470,11 @@
                 DateTime.Now.ToString("hh:mm:ss:fff")
                 //,Thread.CurrentThread.ManagedThreadId
                 );
-            var str = string.Format(dt + msg + "\r\n", args);
+            var str = string.Format(dt + msg, args);
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debug.WriteLine(str);
+            }
             this.LastStatMsg = str;
             if (txtStatus != null)
             {
@@ -481,9 +485,9 @@
                 if (len > statusTextLenThresh)
                 {
                     txtStatus.Text = txtStatus.Text.Substring(statusTextLenThresh - 1000);
-                    str += $"   Truncated Status History {++nTruncated} times\r\n";
+                    str += $"   Truncated Status History {++nTruncated} times";
                 }
-                txtStatus.AppendText(str);
+                txtStatus.AppendText(str + "\r\n");
                 txtStatus.ScrollToEnd();
             }
         }

@@ -27,7 +27,7 @@ namespace PerfGraphVSIX
         ConcurrentQueue<object> _queue = new ConcurrentQueue<object>();
         readonly BindingFlags bFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy;
         internal readonly PerfGraphToolWindowControl _perfGraph;
-            
+
         public ObjTracker(PerfGraphToolWindowControl perfGraph)
         {
             this._perfGraph = perfGraph;
@@ -35,7 +35,8 @@ namespace PerfGraphVSIX
              {
                  var tsk = perfGraph.AddStatusMsgAsync($"Clearing the tracking of {_dictObjsToTrack.Count} tracked objects.");
                  _dictObjsToTrack.Clear();
-                 _queue = new ConcurrentQueue<object>(); // can't clear, so use a new one
+                 var newq = new ConcurrentQueue<object>();
+                 Interlocked.Exchange(ref _queue, newq);
              };
         }
 
