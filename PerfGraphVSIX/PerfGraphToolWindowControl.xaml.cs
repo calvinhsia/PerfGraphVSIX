@@ -61,6 +61,7 @@
         public string ObjectTrackerFilter { get; set; } = ".*";
 
         public bool TrackTextViews { get; set; } = true;
+        public bool TrackTextBuffers { get; set; } = true;
         public bool TrackProjectObjects { get; set; } = true;
         public bool TrackContainedObjects { get; set; } = true;
 
@@ -322,7 +323,14 @@
                     idx++;
                 }
             }
-            await AddDataPointsAsync();
+            try
+            {
+                await AddDataPointsAsync();
+            }
+            catch (Exception ex)
+            {
+                sBuilder = new StringBuilder(ex.ToString());
+            }
             AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
         }
 
@@ -439,9 +447,9 @@
                             entry.Descriptor
                         },
                         new[] { 60, 130, 600 });
+                CntLeakedObjs = $"Leaked Objs: {lstLeakedObjs.Count}";
             }
             CntCreatedObjs = $"Created Objs: #Types = {CreatedObjs.Count} #Instances={nCntInstances}";
-            CntLeakedObjs = $"Leaked Objs: {LeakedObjs.Count}";
         }
 
         void DoGC()

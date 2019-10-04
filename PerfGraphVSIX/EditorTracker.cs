@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.Collections.Generic;
@@ -23,11 +24,27 @@ namespace PerfGraphVSIX
         internal ITextDocumentFactoryService textDocumentFactoryService;
         readonly HashSet<TextViewInstanceData> _hashViews = new HashSet<TextViewInstanceData>();
 
+        //[ImportingConstructor]
+        //[System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
+        //EditorTracker(ITextDocumentFactoryService textDocumentFactoryService)
+        //{
+        //    this.textDocumentFactoryService = textDocumentFactoryService;
+        //}
+
         [ImportingConstructor]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
-        EditorTracker(ITextDocumentFactoryService textDocumentFactoryService)
+        public EditorTracker([Import] ITextBufferFactoryService _textBufferFactoryService,
+                              [Import] IProjectionBufferFactoryService _projectionBufferFactoryService,
+                              [Import] ITextDocumentFactoryService textDocumentFactoryService)
         {
             this.textDocumentFactoryService = textDocumentFactoryService;
+            _textBufferFactoryService.TextBufferCreated += (o, e) =>
+            {
+                _objectTracker.AddObjectToTrack(e.TextBuffer, ObjSource.FromTextBufferFactoryService, description: e.TextBuffer.ContentType.DisplayName);
+            };
+            _projectionBufferFactoryService.ProjectionBufferCreated += (o, e) =>
+            {
+                _objectTracker.AddObjectToTrack(e.TextBuffer, ObjSource.FromProjectionBufferFactoryService, description: e.TextBuffer.ContentType.DisplayName);
+            };
         }
 
         int _nSerialNo;

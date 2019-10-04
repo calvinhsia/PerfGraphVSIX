@@ -11,7 +11,9 @@ namespace PerfGraphVSIX
     {
         FromTextView,
         FromProject,
-        FromTest
+        FromTest,
+        FromTextBufferFactoryService,
+        FromProjectionBufferFactoryService
     }
 
     public class ObjWeakRefData
@@ -44,15 +46,13 @@ namespace PerfGraphVSIX
             var hasBeenClosedOrDisposed = false;
             if (_wr.TryGetTarget(out var obj))
             {
-                var typeName = obj.GetType().Name; //"MyBigData"
+                var typeName = obj.GetType().Name;
                 bool fDidGetSpecialType = false;
                 switch (typeName)
                 {
                     case "Microsoft.VisualStudio.Text.Editor.Implementation.WpfTextView":
                     case "Microsoft.VisualStudio.Text.Implementation.TextBuffer":
-                        var IsClosedProp = obj.GetType().GetProperty("IsClosed");
-                        var valIsClosedProp = IsClosedProp.GetValue(obj);
-                        hasBeenClosedOrDisposed = (bool)valIsClosedProp;
+                        hasBeenClosedOrDisposed = (bool)obj.GetType().GetProperty("IsClosed").GetValue(obj);
                         fDidGetSpecialType = true;
                         break;
                 }
@@ -60,8 +60,8 @@ namespace PerfGraphVSIX
                 {
                     var mems = obj.GetType().GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                     foreach (var mem in mems
-                        .Where(m => m.Name.IndexOf("disposed", comparisonType: StringComparison.OrdinalIgnoreCase) > 0 &&
-                                (m.MemberType.HasFlag(MemberTypes.Field) || m.MemberType.HasFlag(MemberTypes.Property))))
+                        .Where(m => (m.MemberType.HasFlag(MemberTypes.Field) || m.MemberType.HasFlag(MemberTypes.Property)) &&
+                                m.Name.IndexOf("disposed", comparisonType: StringComparison.OrdinalIgnoreCase) > 0 ))
                     {
                         if (mem is PropertyInfo propinfo && propinfo.PropertyType.Name == "Boolean") // the setter has Void PropertyType
                         {

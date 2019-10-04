@@ -33,7 +33,6 @@ namespace PerfGraphVSIX
             var wrkspace = x.CurrentWorkspace;
             if (wrkspace != null)
             {
-                var disposeToken = (wrkspace as Microsoft.VisualStudio.Workspace.IWorkspace2).DisposeToken;
                 _objTracker.AddObjectToTrack(wrkspace, ObjSource.FromProject, $"Open Folder {wrkspace.Location}");
             }
             return Task.CompletedTask;

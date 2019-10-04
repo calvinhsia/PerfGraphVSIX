@@ -73,7 +73,8 @@ namespace PerfGraphVSIX
                 if (wkrefData._wr.TryGetTarget(out var objTracked))
                 { // the obj is still in memory. Has it been closed or disposed?
                     if (_perfGraph.TrackTextViews && wkrefData._objSource == ObjSource.FromTextView ||
-                        _perfGraph.TrackProjectObjects && wkrefData._objSource == ObjSource.FromProject
+                        _perfGraph.TrackProjectObjects && wkrefData._objSource == ObjSource.FromProject ||
+                        _perfGraph.TrackTextBuffers && (wkrefData._objSource == ObjSource.FromTextBufferFactoryService || wkrefData._objSource == ObjSource.FromProjectionBufferFactoryService)
                         )
                     {
                         if (string.IsNullOrEmpty(_perfGraph.ObjectTrackerFilter) ||
@@ -111,9 +112,9 @@ namespace PerfGraphVSIX
         /// <param name="objTracked"></param>
         private void ProcessSpecialTypes(object objTracked)
         {
-            if (objTracked is CancellationToken ctoken)
+            if (objTracked is CancellationTokenSource cts)
             {
-                var (nReg, nLinked) = ProcessCancellationToken(ctoken, (s) =>
+                var (nReg, nLinked) = ProcessCancellationTokenSource(cts, (s) =>
                 {
                 });
                 var tsk = _perfGraph.AddStatusMsgAsync($"# disposeToken callback Registrations = {nReg} Linked = {nLinked}");
@@ -128,36 +129,47 @@ namespace PerfGraphVSIX
             {
                 if (_perfGraph.TrackTextViews)
                 {
-                    var propBag = textView.GetType().GetField("_properties", bFlags).GetValue(textView);
-                    var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
-                    foreach (var val in propList.Values)
+                    void DoPropertyBag(object oTextViewOrTextBuffer)
                     {
-                        if (val != null)
+                        var propBag = oTextViewOrTextBuffer.GetType().GetProperty("Properties", bFlags).GetValue(oTextViewOrTextBuffer);
+                        var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
+                        //var propBag = oTextViewOrTextBuffer.GetType().GetField("_properties", bFlags).GetValue(oTextViewOrTextBuffer);
+                        //var propList = propBag.GetType().GetField("properties", bFlags).GetValue(propBag) as HybridDictionary;
+                        foreach (var val in propList.Values)
                         {
-                            var valType = val.GetType();
-                            foreach (var fld in valType.GetFields(bFlags))
+                            if (val != null)
                             {
-                                var valFld = fld.GetValue(val);
-                                if (fld.FieldType.BaseType?.FullName == "System.Delegate")
+                                var valType = val.GetType();
+                                var flds = valType.GetFields(bFlags);
+                                foreach (var fld in flds)
                                 {
-                                    "".ToString();
+                                    var valFld = fld.GetValue(val);
+                                    if (fld.FieldType.BaseType?.FullName == "System.Delegate")
+                                    {
+                                        "".ToString();
+                                    }
+                                    if (fld.FieldType.BaseType?.FullName == "System.MulticastDelegate")
+                                    {
+                                        HandleEvent(val, fld.Name, "");
+                                        "".ToString();
+                                    }
+                                    else if (fld.FieldType.BaseType?.FullName == "System.Object")
+                                    {
+                                        //                            TryAddObjectVisited(valFld);
+                                        "".ToString();
+                                    }
                                 }
-                                if (fld.FieldType.BaseType?.FullName == "System.MulticastDelegate")
+                                if (valType.Name == "EditorOptions")
                                 {
-                                    HandleEvent(val, fld.Name, "");
-                                    "".ToString();
+                                    HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
                                 }
-                                else if (fld.FieldType.BaseType?.FullName == "System.Object")
-                                {
-                                    //                            TryAddObjectVisited(valFld);
-                                    "".ToString();
-                                }
-                            }
-                            if (valType.Name == "EditorOptions")
-                            {
-                                HandleEvent(val, "OptionChanged", "TextView.EditorOptions+=");
                             }
                         }
+                    }
+                    DoPropertyBag(textView);
+                    if (textView.TextBuffer != null)
+                    {
+                        DoPropertyBag(textView.TextBuffer);
                     }
                     HandleEvent(textView.TextBuffer, "Changed", "TextBuffer+=");
                     HandleEvent(textView.TextBuffer, "ChangedLowPriority", "TextBuffer+=");
@@ -167,15 +179,32 @@ namespace PerfGraphVSIX
                     HandleEvent(textView, "Closed", "TextView.Closed+=");
                 }
             }
+            else if (objTracked.GetType().FullName == "Microsoft.VisualStudio.Workspace.Workspace")
+            {
+                if (_perfGraph.TrackProjectObjects)
+                {
+                    try
+                    {
+                        var disposeToken = (objTracked as Microsoft.VisualStudio.Workspace.IWorkspace2).DisposeToken;
+                        var ctsrc = disposeToken.GetType().GetField("m_source", bFlags).GetValue(disposeToken) as CancellationTokenSource;
+
+                        AddObjectToTrack(ctsrc, ObjSource.FromProject, $"TokenSource");
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        
+                    }
+                }
+            }
         }
 
         // uses reflection to find any referenced linked tokensources or registered callbacks
-        public (int, int) ProcessCancellationToken(CancellationToken token, Action<string> logger)
+        public (int, int) ProcessCancellationTokenSource(CancellationTokenSource cts, Action<string> logger)
         {
             int nRegCallbacks = 0;
             int nLinkedTokens = 0;
-            logger($"Processing tkn {token}");
-            var tks = token.GetType().GetField("m_source", bFlags).GetValue(token) as CancellationTokenSource;
+            logger($"Processing tkn {cts}");
+//            var tks = cts.GetType().GetField("m_source", bFlags).GetValue(cts) as CancellationTokenSource;
             /*
         private int CallbackCount
         {
@@ -206,7 +235,7 @@ namespace PerfGraphVSIX
         }                     private volatile SparselyPopulatedArray<CancellationCallbackInfo>[] m_registeredCallbacksLists;
 */
             // array of SparselyPopulatedArray
-            if (tks.GetType().GetField("m_registeredCallbacksLists", bFlags).GetValue(tks) is Array reglist)
+            if (cts.GetType().GetField("m_registeredCallbacksLists", bFlags).GetValue(cts) is Array reglist)
             {
                 //var elemType = reglist.GetType().GetElementType(); // System.Threading.SparselyPopulatedArray`1[System.Threading.CancellationCallbackInfo]
                 foreach (var oSparselyPopulatedArray in reglist)
@@ -231,21 +260,9 @@ namespace PerfGraphVSIX
                             var m_elements = curCallbacks.GetType().GetField("m_elements", bFlags).GetValue(curCallbacks) as Array; //CancellationCallbackInfo[]
                             foreach (var cancellationCallbackInfo in m_elements)
                             {
-                                if (cancellationCallbackInfo?.GetType().GetField("Callback", bFlags).GetValue(cancellationCallbackInfo) is Delegate callback)
+                                if (cancellationCallbackInfo != null)
                                 {
-                                    var invocationList = callback.GetInvocationList();
-                                    logger($"Got invocationlist len = {invocationList.Length}");
-                                    foreach (var targ in invocationList)
-                                    {
-                                        nRegCallbacks++;
-                                        logger($"  inv list target = {targ.Target}");
-                                        var objTarg = targ.Target;
-                                        if (objTarg != null)
-                                        {
-
-                                        }
-                                        //                                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView, description: desc);
-                                    }
+                                    nRegCallbacks += HandleCancellationCallBackInfo(cancellationCallbackInfo, logger);
                                 }
                             }
 
@@ -257,9 +274,43 @@ namespace PerfGraphVSIX
                 }
 
             }
-            var linkedList = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
+            if (cts.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(cts) is CancellationTokenRegistration[] linkingRegistrations)
+            {
+                foreach (var ctreg in linkingRegistrations)
+                {
+                    var cancellationCallBackInfo = ctreg.GetType().GetField("m_callbackInfo", bFlags).GetValue(ctreg);
+                    nRegCallbacks += HandleCancellationCallBackInfo(cancellationCallBackInfo, logger);
+                }
+            }
             return (nRegCallbacks, nLinkedTokens);
         }
+
+        private int HandleCancellationCallBackInfo(object cancellationCallbackInfo, Action<string> logger)
+        {
+            var nRegCallbacks = 0;
+            if (cancellationCallbackInfo?.GetType().GetField("Callback", bFlags).GetValue(cancellationCallbackInfo) is Delegate callback)
+            {
+                var invocationList = callback.GetInvocationList();
+                logger($"Got invocationlist len = {invocationList.Length}");
+                foreach (var targ in invocationList)
+                {
+                    nRegCallbacks++;
+                    logger($"  inv list target = {targ.Target}");
+                    var objTarg = targ.Target;
+                    if (objTarg != null)
+                    {
+                        AddObjectToTrack(objTarg, ObjSource.FromProject, description: "cts callback");
+                    }
+                    //                                    _objectTracker.AddObjectToTrack(obj, ObjTracker.ObjSource.FromTextView, description: desc);
+                }
+            }
+            if (cancellationCallbackInfo?.GetType().GetField("StateForCallback", bFlags).GetValue(cancellationCallbackInfo) is CancellationTokenSource newCts)
+            {
+                AddObjectToTrack(newCts, ObjSource.FromProject, "FromCTS");
+            }
+            return nRegCallbacks;
+        }
+
 
         // doesn't need to be done if GetCounts is called regularly
         public void Cleanup()
