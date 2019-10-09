@@ -42,7 +42,7 @@ CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo; // can be null
 
 
 class ClrListener :
-	public ICorProfilerCallback9,
+	public ICorProfilerCallback3,
 	public CComObjectRootEx<CComSingleThreadModel>,
 	public CComCoClass<ClrListener, &CLSID_ClrListener>
 {
@@ -51,7 +51,7 @@ public:
 		COM_INTERFACE_ENTRY_IID(CLSID_ClrListener, ClrListener)
 		COM_INTERFACE_ENTRY(ICorProfilerCallback2)
 		COM_INTERFACE_ENTRY(ICorProfilerCallback3)
-		COM_INTERFACE_ENTRY(ICorProfilerCallback4)
+//		COM_INTERFACE_ENTRY(ICorProfilerCallback4)
 	END_COM_MAP()
 	DECLARE_NOT_AGGREGATABLE(ClrListener)
 	DECLARE_NO_REGISTRY()
@@ -100,6 +100,8 @@ public:
 			//| COR_PRF_MONITOR_SUSPENDS //Controls the RuntimeSuspend, RuntimeResume, RuntimeThreadSuspended, and RuntimeThreadResumed callbacks.
 			//| COR_PRF_MONITOR_THREADS // Controls the ThreadCreated, ThreadDestroyed, ThreadAssignedToOSThread, and ThreadNameChanged callbacks
 			;
+		g_pCorProfilerInfo = pICorProfilerInfoUnk;
+
 		g_pCorProfilerInfo->SetEventMask(dwEventMask);
 		return S_OK;
 	}
@@ -259,6 +261,7 @@ public:
 // instantiate a static instance of this class on module load
 CClrProfModule _AtlModule;
 // this gets called by CLR due to env var settings
+_Check_return_
 STDAPI DllGetClassObject(__in REFCLSID rclsid, __in REFIID riid, __deref_out LPVOID FAR* ppv)
 {
 	HRESULT hr = E_FAIL;
