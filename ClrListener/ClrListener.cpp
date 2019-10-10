@@ -74,9 +74,17 @@ class ClrClassData
 {
 public:
 	wstring className;
+	ModuleID moduleId;
 	int nInstances;
 };
 
+
+class ClrModuleData
+{
+public:
+	wstring moduleName;
+	LPCBYTE pBaseLoadAddress;
+};
 
 
 class ClrListener :
@@ -148,8 +156,8 @@ public:
 		HRESULT hr = S_OK;
 		CComCritSecLock<CComAutoCriticalSection> lock(_csectClassMap);
 		ClrClassData* pClrObjStats = nullptr;
-		auto res = _ClassDictionary.find(classID);
-		if (res != _ClassDictionary.end())
+		auto res = _dictClassData.find(classID);
+		if (res != _dictClassData.end())
 		{
 			pClrObjStats = &res->second;
 		}
@@ -202,6 +210,26 @@ public:
 						(LPUNKNOWN*)&pIMetaDataImport) == S_OK)
 					{
 						WCHAR wszClassName[MAXCLASSNAMELEN] = { 0 };
+
+						auto resModule = _dictModuleData.find(moduleID);
+						if (resModule == _dictModuleData.end())
+						{
+							LPCBYTE modAddress;
+							ULONG modlen = 0;
+							AssemblyID asmId;
+							hr = g_pCorProfilerInfo->GetModuleInfo(moduleID, &modAddress, MAXCLASSNAMELEN, &modlen, wszClassName, &asmId);
+							if (hr == S_OK) // 		hr	0x80131351 : The ID is not fully loaded/defined yet.	HRESULT
+							{
+								ClrModuleData moduleData =
+								{
+									wszClassName, //assign WCHAR to wstring
+									modAddress
+								};
+
+								_dictModuleData.insert(pair<ModuleID, ClrModuleData>(moduleID, moduleData));
+							}
+						}
+
 						mdToken tkExtends = NULL;
 						hr = pIMetaDataImport->GetTypeDefProps(
 							tdToken,
@@ -210,11 +238,13 @@ public:
 							0,
 							0,
 							&tkExtends);
+
 						if (hr == S_OK)
 						{
 							ClrClassData classStat =
 							{
-								wszClassName //assign WCHAR to wstring
+								wszClassName, //assign WCHAR to wstring
+								moduleID
 							};
 							if (fIsArrayClass)
 							{
@@ -224,7 +254,7 @@ public:
 							{
 								LogOutput(classStat.className.c_str());
 							}
-							auto res = _ClassDictionary.insert(
+							auto res = _dictClassData.insert(
 								pair<ClassID, ClrClassData>(
 									classID,
 									classStat)
@@ -369,7 +399,8 @@ public:
 	//PROF_NOT_IMP(ReJITCompilationStarted, FunctionID * functionId, ReJITID rejitId, BOOL fIsSafeToBlock);
 
 protected:
-		unordered_map<ClassID, ClrClassData> _ClassDictionary;
+		unordered_map<ClassID, ClrClassData> _dictClassData;
+		unordered_map<ModuleID, ClrModuleData> _dictModuleData;
 		CComAutoCriticalSection _csectClassMap;
 };
 
