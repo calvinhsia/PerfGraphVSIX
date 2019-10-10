@@ -1,6 +1,10 @@
 
 
+
 #include "pch.h"
+#pragma warning(push)
+#pragma warning(disable : 26812) 
+
 #include <cor.h>
 #include <corprof.h>
 #include "atlsafe.h"
@@ -9,7 +13,7 @@
 
 //see https://blogs.msdn.microsoft.com/calvin_hsia/2014/01/30/create-your-own-clr-profiler/
 
-
+//#pragma warning(pop)
 
 #include <initguid.h>
 
@@ -23,7 +27,33 @@ DEFINE_GUID(CLSID_ClrListener,
 // Set COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
 // Set COR_PROFILER_PATH= C:\Users\calvinh\Source\Repos\PerfGraphVSIX\PerfGraphVSIX\bin\Debug\clrlistener.dll
 
+#ifdef ffff
+ClrListener.vcxproj.user:
 
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerEnvironment>COR_ENABLE_PROFILING=1
+COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
+COR_PROFILER_PATH=$(SolutionDir)PerfGraphVSIX\bin\Debug\clrlistener.dll</LocalDebuggerEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>/rootsuffix Exp</LocalDebuggerCommandArguments>
+    <LocalDebuggerDebuggerType>NativeOnly</LocalDebuggerDebuggerType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LocalDebuggerEnvironment>COR_ENABLE_PROFILING=1
+COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
+COR_PROFILER_PATH=$(SolutionDir)PerfGraphVSIX\bin\Release\clrlistener.dll
+    </LocalDebuggerEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>/rootsuffix Exp</LocalDebuggerCommandArguments>
+    <LocalDebuggerDebuggerType>NativeOnly</LocalDebuggerDebuggerType>
+  </PropertyGroup>
+</Project>
+
+#endif
 
 #define PASTE2(x,y) x##y
 #define PASTE(x,y) PASTE2(x,y)
@@ -93,7 +123,7 @@ public:
 	// STARTUP/SHUTDOWN EVENTS
 	STDMETHOD(Initialize)(IUnknown* pICorProfilerInfoUnk)
 	{
-		m_fLoggingOn = true;
+		m_fLoggingOn = false;
 		// tell clr which events we want to be called for
 		DWORD dwEventMask = 
 			//COR_PRF_ENABLE_STACK_SNAPSHOT
