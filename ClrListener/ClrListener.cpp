@@ -10,6 +10,7 @@
 #include "atlsafe.h"
 #include "atlcom.h"
 #include "unordered_map"
+#include "regex"
 
 //see https://blogs.msdn.microsoft.com/calvin_hsia/2014/01/30/create-your-own-clr-profiler/
 
@@ -30,28 +31,28 @@ DEFINE_GUID(CLSID_ClrListener,
 #ifdef ffff
 ClrListener.vcxproj.user:
 
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LocalDebuggerEnvironment>COR_ENABLE_PROFILING=1
-COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
-COR_PROFILER_PATH=$(SolutionDir)PerfGraphVSIX\bin\Debug\clrlistener.dll</LocalDebuggerEnvironment>
-    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommand>C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>/rootsuffix Exp</LocalDebuggerCommandArguments>
-    <LocalDebuggerDebuggerType>NativeOnly</LocalDebuggerDebuggerType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerEnvironment>COR_ENABLE_PROFILING=1
-COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
-COR_PROFILER_PATH=$(SolutionDir)PerfGraphVSIX\bin\Release\clrlistener.dll
-    </LocalDebuggerEnvironment>
-    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommand>C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>/rootsuffix Exp</LocalDebuggerCommandArguments>
-    <LocalDebuggerDebuggerType>NativeOnly</LocalDebuggerDebuggerType>
-  </PropertyGroup>
-</Project>
+< ? xml version = "1.0" encoding = "utf-8" ? >
+<Project ToolsVersion = "Current" xmlns = "http://schemas.microsoft.com/developer/msbuild/2003">
+<PropertyGroup Condition = "'$(Configuration)|$(Platform)'=='Debug|Win32'">
+<LocalDebuggerEnvironment>COR_ENABLE_PROFILING = 1
+COR_PROFILER = { B9A7CD1D - 6780 - 420E-9987 - 1D013F41910F }
+COR_PROFILER_PATH = $(SolutionDir)PerfGraphVSIX\bin\Debug\clrlistener.dll< / LocalDebuggerEnvironment>
+<DebuggerFlavor>WindowsLocalDebugger< / DebuggerFlavor>
+<LocalDebuggerCommand>C:\Program Files(x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe< / LocalDebuggerCommand>
+<LocalDebuggerCommandArguments> / rootsuffix Exp< / LocalDebuggerCommandArguments>
+<LocalDebuggerDebuggerType>NativeOnly< / LocalDebuggerDebuggerType>
+< / PropertyGroup>
+<PropertyGroup Condition = "'$(Configuration)|$(Platform)'=='Release|Win32'">
+<LocalDebuggerEnvironment>COR_ENABLE_PROFILING = 1
+COR_PROFILER = { B9A7CD1D - 6780 - 420E-9987 - 1D013F41910F }
+COR_PROFILER_PATH = $(SolutionDir)PerfGraphVSIX\bin\Release\clrlistener.dll
+< / LocalDebuggerEnvironment>
+<DebuggerFlavor>WindowsLocalDebugger< / DebuggerFlavor>
+<LocalDebuggerCommand>C:\Program Files(x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe< / LocalDebuggerCommand>
+<LocalDebuggerCommandArguments> / rootsuffix Exp< / LocalDebuggerCommandArguments>
+<LocalDebuggerDebuggerType>NativeOnly< / LocalDebuggerDebuggerType>
+< / PropertyGroup>
+< / Project>
 
 #endif
 
@@ -70,12 +71,38 @@ CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo;
 
 using namespace std;
 
+
+wstring regexFilter(L"Microsoft.VisualStudio.Text.Implementation.TextBuffer");
+
 class ClrClassData
 {
 public:
-	wstring className;
-	ModuleID moduleId;
+	wstring _className;
+	ModuleID _moduleId;
 	int nInstances;
+	ClrClassData(WCHAR* className, ModuleID modId, bool fIsArrayClass)
+	{
+
+		_className = className;
+		if (fIsArrayClass)
+		{
+			_className.append(L"[]");
+		}
+		_moduleId = modId;
+		nInstances = 0;
+		wcmatch match;
+		wregex reg(regexFilter, regex_constants::icase);
+		auto res = regex_match(_className.c_str(), match, reg);
+		if (res != 0)
+		{
+			isBeingTracked = true;
+		}
+		else
+		{
+			isBeingTracked = false;
+		}
+	}
+	bool isBeingTracked;
 };
 
 
@@ -97,7 +124,7 @@ public:
 		COM_INTERFACE_ENTRY_IID(CLSID_ClrListener, ClrListener)
 		COM_INTERFACE_ENTRY(ICorProfilerCallback2)
 		COM_INTERFACE_ENTRY(ICorProfilerCallback3)
-//		COM_INTERFACE_ENTRY(ICorProfilerCallback4)
+		//		COM_INTERFACE_ENTRY(ICorProfilerCallback4)
 	END_COM_MAP()
 	DECLARE_NOT_AGGREGATABLE(ClrListener)
 	DECLARE_NO_REGISTRY()
@@ -133,7 +160,7 @@ public:
 	{
 		m_fLoggingOn = false;
 		// tell clr which events we want to be called for
-		DWORD dwEventMask = 
+		DWORD dwEventMask =
 			//COR_PRF_ENABLE_STACK_SNAPSHOT
 			COR_PRF_ENABLE_OBJECT_ALLOCATED
 			//| COR_PRF_MONITOR_GC //GarbageCollectionStarted, GarbageCollectionFinished, MovedReferences, SurvivingReferences, ObjectReferences, ObjectsAllocatedByClass, RootReferences, HandleCreated, HandleDestroyed, and FinalizeableObjectQueued callbacks.
@@ -181,7 +208,7 @@ public:
 				}
 				else
 				{
-					hr = E_FAIL;  // todo
+					hr = E_FAIL;  // todo: e.g. primitive arrays
 				}
 			}
 			if (hr != E_FAIL)// (S_FALSE if not array)
@@ -241,18 +268,14 @@ public:
 
 						if (hr == S_OK)
 						{
-							ClrClassData classStat =
-							{
-								wszClassName, //assign WCHAR to wstring
-								moduleID
-							};
-							if (fIsArrayClass)
-							{
-								classStat.className.append(L"[]");
-							}
+							ClrClassData classStat(wszClassName, moduleID, fIsArrayClass);
+							//{
+							//	wszClassName, //assign WCHAR to wstring
+							//	moduleID
+							//};
 							if (m_fLoggingOn)
 							{
-								LogOutput(classStat.className.c_str());
+								LogOutput(classStat._className.c_str());
 							}
 							auto res = _dictClassData.insert(
 								pair<ClassID, ClrClassData>(
@@ -399,9 +422,10 @@ public:
 	//PROF_NOT_IMP(ReJITCompilationStarted, FunctionID * functionId, ReJITID rejitId, BOOL fIsSafeToBlock);
 
 protected:
-		unordered_map<ClassID, ClrClassData> _dictClassData;
-		unordered_map<ModuleID, ClrModuleData> _dictModuleData;
-		CComAutoCriticalSection _csectClassMap;
+	unordered_map<ClassID, ClrClassData> _dictClassData; // key = classid, isarray
+//		unordered_map<pair<ClassID, bool>, ClrClassData> _dictClassData; // key = classid, isarray
+	unordered_map<ModuleID, ClrModuleData> _dictModuleData;
+	CComAutoCriticalSection _csectClassMap;
 };
 
 OBJECT_ENTRY_AUTO(CLSID_ClrListener, ClrListener)
@@ -436,3 +460,29 @@ STDAPI DllGetClassObject(__in REFCLSID rclsid, __in REFIID riid, __deref_out LPV
 }
 //tell the linker to export the function
 #pragma comment(linker, "/EXPORT:DllGetClassObject=_DllGetClassObject@12,PRIVATE")
+
+
+extern "C" int __declspec(dllexport) CALLBACK TestRegEx(
+	WCHAR * strPattern,
+	WCHAR * strData,
+	BSTR * pstrResult
+)
+{
+
+	wcmatch match;
+	wregex reg(strPattern, regex_constants::icase);
+	auto res = regex_match(strData, match, reg);
+	if (res != 0)
+	{
+		auto bstr = SysAllocString(L"Match");
+		*pstrResult = bstr;
+	}
+	else
+	{
+		*pstrResult = SysAllocString(L"non-zero");
+	}
+	*pstrResult = SysAllocString(L"non-zero");
+	return S_OK;
+}
+
+
