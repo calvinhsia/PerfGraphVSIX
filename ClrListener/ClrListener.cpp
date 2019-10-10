@@ -5,8 +5,7 @@
 #include <corprof.h>
 #include "atlsafe.h"
 #include "atlcom.h"
-
-
+#include "unordered_map"
 
 //see https://blogs.msdn.microsoft.com/calvin_hsia/2014/01/30/create-your-own-clr-profiler/
 
@@ -18,7 +17,7 @@
 DEFINE_GUID(CLSID_ClrListener,
 	0xb9a7cd1d, 0x6780, 0x420e, 0x99, 0x87, 0x1d, 0x1, 0x3f, 0x41, 0x91, 0xf);
 
-
+#define MAXCLASSNAMELEN 1024
 
 // Set COR_ENABLE_PROFILING=1
 // Set COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
@@ -37,7 +36,16 @@ if (m_fLoggingOn)  LogOutput(__WFUNCDNAME__);  \
 	return S_OK;  \
 } \
 
-CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo; // can be null
+CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo;
+
+using namespace std;
+
+class ClrClassData
+{
+public:
+	wstring className;
+	int nInstances;
+};
 
 
 
@@ -108,7 +116,99 @@ public:
 	STDMETHOD(ObjectAllocated)(ObjectID objectID, ClassID classID)
 	{ // gets called whenever a managed obj is created
 		HRESULT hr = S_OK;
-
+		CComCritSecLock<CComAutoCriticalSection> lock(_csectClassMap);
+		ClrClassData* pClrObjStats = nullptr;
+		auto res = _ClassDictionary.find(classID);
+		if (res != _ClassDictionary.end())
+		{
+			pClrObjStats = &res->second;
+		}
+		else
+		{// not found
+			bool fIsArrayClass = false;
+			CorElementType elemType;
+			ClassID arrayClassId;
+			ULONG arrayRank;
+			hr = g_pCorProfilerInfo->IsArrayClass(
+				classID,
+				&elemType,
+				&arrayClassId,
+				&arrayRank);
+			if (hr == S_OK)
+			{
+				if (elemType == ELEMENT_TYPE_CLASS)
+				{
+					fIsArrayClass = true;
+					classID = arrayClassId;
+				}
+				else
+				{
+					hr = E_FAIL;  // todo
+				}
+			}
+			if (hr != E_FAIL)// (S_FALSE if not array)
+			{
+				ModuleID moduleID = 0;
+				mdTypeDef tdToken;
+				ClassID classIdParent;
+				ClassID typeArgs[20]; //generics
+				ULONG32 cNumTypeArgs;
+				cNumTypeArgs = _countof(typeArgs);
+				hr = g_pCorProfilerInfo->GetClassIDInfo2(
+					classID,
+					&moduleID,
+					&tdToken,
+					&classIdParent,
+					cNumTypeArgs,
+					&cNumTypeArgs,
+					typeArgs);
+				if (hr == S_OK && moduleID != 0)
+				{
+					CComPtr<IMetaDataImport> pIMetaDataImport;
+					if (g_pCorProfilerInfo->GetModuleMetaData(
+						moduleID,
+						ofRead,
+						IID_IMetaDataImport,
+						(LPUNKNOWN*)&pIMetaDataImport) == S_OK)
+					{
+						WCHAR wszClassName[MAXCLASSNAMELEN] = { 0 };
+						mdToken tkExtends = NULL;
+						hr = pIMetaDataImport->GetTypeDefProps(
+							tdToken,
+							wszClassName,
+							_countof(wszClassName),
+							0,
+							0,
+							&tkExtends);
+						if (hr == S_OK)
+						{
+							ClrClassData classStat =
+							{
+								wszClassName //assign WCHAR to wstring
+							};
+							if (fIsArrayClass)
+							{
+								classStat.className.append(L"[]");
+							}
+							if (m_fLoggingOn)
+							{
+								LogOutput(classStat.className.c_str());
+							}
+							auto res = _ClassDictionary.insert(
+								pair<ClassID, ClrClassData>(
+									classID,
+									classStat)
+							);
+							pClrObjStats = &res.first->second;
+						}
+					}
+				}
+			}
+		}
+		if (pClrObjStats != nullptr)
+		{
+			pClrObjStats->nInstances++;
+		}
 
 		return S_OK;
 	}
@@ -236,7 +336,11 @@ public:
 
 
 	// ICorProfilerCallback4
-	PROF_NOT_IMP(ReJITCompilationStarted, FunctionID * functionId, ReJITID rejitId, BOOL fIsSafeToBlock);
+	//PROF_NOT_IMP(ReJITCompilationStarted, FunctionID * functionId, ReJITID rejitId, BOOL fIsSafeToBlock);
+
+protected:
+		unordered_map<ClassID, ClrClassData> _ClassDictionary;
+		CComAutoCriticalSection _csectClassMap;
 };
 
 OBJECT_ENTRY_AUTO(CLSID_ClrListener, ClrListener)
