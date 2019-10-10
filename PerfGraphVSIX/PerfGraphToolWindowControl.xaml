@@ -85,7 +85,7 @@
                     </StackPanel>
                     <ListBox ItemsSource="{Binding CreatedObjs}" MaxHeight = "400"/>
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="{Binding CntLeakedObjs}" ToolTip="Views that have Objects.IsClosed or *disposed* ==true, but still in memory. Likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
+                        <Label Content="{Binding CntLeakedObjs}" ToolTip="Objects that have Objects.IsClosed or *disposed* ==true, but are still in memory. If these accumulate, likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
                     </StackPanel>
                     <UserControl Name="BrowLeakedObjects"/>
                 </StackPanel>
@@ -115,6 +115,9 @@
                             <CheckBox Content="TrackTextViews" IsChecked="{Binding TrackTextViews}" ToolTip="Listen for TextView Creation Events and track them"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
+                            <CheckBox Content="TrackTextBuffers" IsChecked="{Binding TrackTextBuffers}" ToolTip="Listen for TextBuffer (and ProjectionBuffer) Creation Events and track them"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
                             <CheckBox Content="Track Project Objects" IsChecked="{Binding TrackProjectObjects}" ToolTip="Listen for Project Creation Events and track them. Currently wors for CPS and C++"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
@@ -131,7 +134,7 @@
         <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
         <StackPanel Grid.Row="2" Orientation="Vertical">
             <StackPanel Orientation="Horizontal">
-                <Button Name="btnDoSample" Content="DoSample" Height="20" VerticalAlignment="Top" ToolTip="Do a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" />
+                <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" ToolTip="Take a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>
             <TextBox Name="txtStatus" Height="200" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 

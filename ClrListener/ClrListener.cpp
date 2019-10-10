@@ -1,16 +1,20 @@
 
 
+
 #include "pch.h"
+#pragma warning(push)
+#pragma warning(disable : 26812) 
+
 #include <cor.h>
 #include <corprof.h>
 #include "atlsafe.h"
 #include "atlcom.h"
-
-
+#include "unordered_map"
+#include "regex"
 
 //see https://blogs.msdn.microsoft.com/calvin_hsia/2014/01/30/create-your-own-clr-profiler/
 
-
+//#pragma warning(pop)
 
 #include <initguid.h>
 
@@ -18,13 +22,39 @@
 DEFINE_GUID(CLSID_ClrListener,
 	0xb9a7cd1d, 0x6780, 0x420e, 0x99, 0x87, 0x1d, 0x1, 0x3f, 0x41, 0x91, 0xf);
 
-
+#define MAXCLASSNAMELEN 1024
 
 // Set COR_ENABLE_PROFILING=1
 // Set COR_PROFILER={B9A7CD1D-6780-420E-9987-1D013F41910F}
 // Set COR_PROFILER_PATH= C:\Users\calvinh\Source\Repos\PerfGraphVSIX\PerfGraphVSIX\bin\Debug\clrlistener.dll
 
+#ifdef ffff
+ClrListener.vcxproj.user:
 
+< ? xml version = "1.0" encoding = "utf-8" ? >
+<Project ToolsVersion = "Current" xmlns = "http://schemas.microsoft.com/developer/msbuild/2003">
+<PropertyGroup Condition = "'$(Configuration)|$(Platform)'=='Debug|Win32'">
+<LocalDebuggerEnvironment>COR_ENABLE_PROFILING = 1
+COR_PROFILER = { B9A7CD1D - 6780 - 420E-9987 - 1D013F41910F }
+COR_PROFILER_PATH = $(SolutionDir)PerfGraphVSIX\bin\Debug\clrlistener.dll< / LocalDebuggerEnvironment>
+<DebuggerFlavor>WindowsLocalDebugger< / DebuggerFlavor>
+<LocalDebuggerCommand>C:\Program Files(x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe< / LocalDebuggerCommand>
+<LocalDebuggerCommandArguments> / rootsuffix Exp< / LocalDebuggerCommandArguments>
+<LocalDebuggerDebuggerType>NativeOnly< / LocalDebuggerDebuggerType>
+< / PropertyGroup>
+<PropertyGroup Condition = "'$(Configuration)|$(Platform)'=='Release|Win32'">
+<LocalDebuggerEnvironment>COR_ENABLE_PROFILING = 1
+COR_PROFILER = { B9A7CD1D - 6780 - 420E-9987 - 1D013F41910F }
+COR_PROFILER_PATH = $(SolutionDir)PerfGraphVSIX\bin\Release\clrlistener.dll
+< / LocalDebuggerEnvironment>
+<DebuggerFlavor>WindowsLocalDebugger< / DebuggerFlavor>
+<LocalDebuggerCommand>C:\Program Files(x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe< / LocalDebuggerCommand>
+<LocalDebuggerCommandArguments> / rootsuffix Exp< / LocalDebuggerCommandArguments>
+<LocalDebuggerDebuggerType>NativeOnly< / LocalDebuggerDebuggerType>
+< / PropertyGroup>
+< / Project>
+
+#endif
 
 #define PASTE2(x,y) x##y
 #define PASTE(x,y) PASTE2(x,y)
@@ -37,12 +67,55 @@ if (m_fLoggingOn)  LogOutput(__WFUNCDNAME__);  \
 	return S_OK;  \
 } \
 
-CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo; // can be null
+CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo;
 
+using namespace std;
+
+
+wstring regexFilter(L"Microsoft.VisualStudio.Text.Implementation.TextBuffer");
+
+class ClrClassData
+{
+public:
+	wstring _className;
+	ModuleID _moduleId;
+	int nInstances;
+	ClrClassData(WCHAR* className, ModuleID modId, bool fIsArrayClass)
+	{
+
+		_className = className;
+		if (fIsArrayClass)
+		{
+			_className.append(L"[]");
+		}
+		_moduleId = modId;
+		nInstances = 0;
+		wcmatch match;
+		wregex reg(regexFilter, regex_constants::icase);
+		auto res = regex_match(_className.c_str(), match, reg);
+		if (res != 0)
+		{
+			isBeingTracked = true;
+		}
+		else
+		{
+			isBeingTracked = false;
+		}
+	}
+	bool isBeingTracked;
+};
+
+
+class ClrModuleData
+{
+public:
+	wstring moduleName;
+	LPCBYTE pBaseLoadAddress;
+};
 
 
 class ClrListener :
-	public ICorProfilerCallback9,
+	public ICorProfilerCallback3,
 	public CComObjectRootEx<CComSingleThreadModel>,
 	public CComCoClass<ClrListener, &CLSID_ClrListener>
 {
@@ -51,7 +124,7 @@ public:
 		COM_INTERFACE_ENTRY_IID(CLSID_ClrListener, ClrListener)
 		COM_INTERFACE_ENTRY(ICorProfilerCallback2)
 		COM_INTERFACE_ENTRY(ICorProfilerCallback3)
-		COM_INTERFACE_ENTRY(ICorProfilerCallback4)
+		//		COM_INTERFACE_ENTRY(ICorProfilerCallback4)
 	END_COM_MAP()
 	DECLARE_NOT_AGGREGATABLE(ClrListener)
 	DECLARE_NO_REGISTRY()
@@ -85,9 +158,9 @@ public:
 	// STARTUP/SHUTDOWN EVENTS
 	STDMETHOD(Initialize)(IUnknown* pICorProfilerInfoUnk)
 	{
-		m_fLoggingOn = true;
+		m_fLoggingOn = false;
 		// tell clr which events we want to be called for
-		DWORD dwEventMask = 
+		DWORD dwEventMask =
 			//COR_PRF_ENABLE_STACK_SNAPSHOT
 			COR_PRF_ENABLE_OBJECT_ALLOCATED
 			//| COR_PRF_MONITOR_GC //GarbageCollectionStarted, GarbageCollectionFinished, MovedReferences, SurvivingReferences, ObjectReferences, ObjectsAllocatedByClass, RootReferences, HandleCreated, HandleDestroyed, and FinalizeableObjectQueued callbacks.
@@ -100,13 +173,125 @@ public:
 			//| COR_PRF_MONITOR_SUSPENDS //Controls the RuntimeSuspend, RuntimeResume, RuntimeThreadSuspended, and RuntimeThreadResumed callbacks.
 			//| COR_PRF_MONITOR_THREADS // Controls the ThreadCreated, ThreadDestroyed, ThreadAssignedToOSThread, and ThreadNameChanged callbacks
 			;
+		g_pCorProfilerInfo = pICorProfilerInfoUnk;
+
 		g_pCorProfilerInfo->SetEventMask(dwEventMask);
 		return S_OK;
 	}
 	STDMETHOD(ObjectAllocated)(ObjectID objectID, ClassID classID)
 	{ // gets called whenever a managed obj is created
 		HRESULT hr = S_OK;
+		CComCritSecLock<CComAutoCriticalSection> lock(_csectClassMap);
+		ClrClassData* pClrObjStats = nullptr;
+		auto res = _dictClassData.find(classID);
+		if (res != _dictClassData.end())
+		{
+			pClrObjStats = &res->second;
+		}
+		else
+		{// not found
+			bool fIsArrayClass = false;
+			CorElementType elemType;
+			ClassID arrayClassId;
+			ULONG arrayRank;
+			hr = g_pCorProfilerInfo->IsArrayClass(
+				classID,
+				&elemType,
+				&arrayClassId,
+				&arrayRank);
+			if (hr == S_OK)
+			{
+				if (elemType == ELEMENT_TYPE_CLASS)
+				{
+					fIsArrayClass = true;
+					classID = arrayClassId;
+				}
+				else
+				{
+					hr = E_FAIL;  // todo: e.g. primitive arrays
+				}
+			}
+			if (hr != E_FAIL)// (S_FALSE if not array)
+			{
+				ModuleID moduleID = 0;
+				mdTypeDef tdToken;
+				ClassID classIdParent;
+				ClassID typeArgs[20]; //generics
+				ULONG32 cNumTypeArgs;
+				cNumTypeArgs = _countof(typeArgs);
+				hr = g_pCorProfilerInfo->GetClassIDInfo2(
+					classID,
+					&moduleID,
+					&tdToken,
+					&classIdParent,
+					cNumTypeArgs,
+					&cNumTypeArgs,
+					typeArgs);
+				if (hr == S_OK && moduleID != 0)
+				{
+					CComPtr<IMetaDataImport> pIMetaDataImport;
+					if (g_pCorProfilerInfo->GetModuleMetaData(
+						moduleID,
+						ofRead,
+						IID_IMetaDataImport,
+						(LPUNKNOWN*)&pIMetaDataImport) == S_OK)
+					{
+						WCHAR wszClassName[MAXCLASSNAMELEN] = { 0 };
 
+						auto resModule = _dictModuleData.find(moduleID);
+						if (resModule == _dictModuleData.end())
+						{
+							LPCBYTE modAddress;
+							ULONG modlen = 0;
+							AssemblyID asmId;
+							hr = g_pCorProfilerInfo->GetModuleInfo(moduleID, &modAddress, MAXCLASSNAMELEN, &modlen, wszClassName, &asmId);
+							if (hr == S_OK) // 		hr	0x80131351 : The ID is not fully loaded/defined yet.	HRESULT
+							{
+								ClrModuleData moduleData =
+								{
+									wszClassName, //assign WCHAR to wstring
+									modAddress
+								};
+
+								_dictModuleData.insert(pair<ModuleID, ClrModuleData>(moduleID, moduleData));
+							}
+						}
+
+						mdToken tkExtends = NULL;
+						hr = pIMetaDataImport->GetTypeDefProps(
+							tdToken,
+							wszClassName,
+							_countof(wszClassName),
+							0,
+							0,
+							&tkExtends);
+
+						if (hr == S_OK)
+						{
+							ClrClassData classStat(wszClassName, moduleID, fIsArrayClass);
+							//{
+							//	wszClassName, //assign WCHAR to wstring
+							//	moduleID
+							//};
+							if (m_fLoggingOn)
+							{
+								LogOutput(classStat._className.c_str());
+							}
+							auto res = _dictClassData.insert(
+								pair<ClassID, ClrClassData>(
+									classID,
+									classStat)
+							);
+							pClrObjStats = &res.first->second;
+						}
+					}
+				}
+			}
+		}
+		if (pClrObjStats != nullptr)
+		{
+			pClrObjStats->nInstances++;
+		}
 
 		return S_OK;
 	}
@@ -234,7 +419,13 @@ public:
 
 
 	// ICorProfilerCallback4
-	PROF_NOT_IMP(ReJITCompilationStarted, FunctionID * functionId, ReJITID rejitId, BOOL fIsSafeToBlock);
+	//PROF_NOT_IMP(ReJITCompilationStarted, FunctionID * functionId, ReJITID rejitId, BOOL fIsSafeToBlock);
+
+protected:
+	unordered_map<ClassID, ClrClassData> _dictClassData; // key = classid, isarray
+//		unordered_map<pair<ClassID, bool>, ClrClassData> _dictClassData; // key = classid, isarray
+	unordered_map<ModuleID, ClrModuleData> _dictModuleData;
+	CComAutoCriticalSection _csectClassMap;
 };
 
 OBJECT_ENTRY_AUTO(CLSID_ClrListener, ClrListener)
@@ -259,6 +450,7 @@ public:
 // instantiate a static instance of this class on module load
 CClrProfModule _AtlModule;
 // this gets called by CLR due to env var settings
+_Check_return_
 STDAPI DllGetClassObject(__in REFCLSID rclsid, __in REFIID riid, __deref_out LPVOID FAR* ppv)
 {
 	HRESULT hr = E_FAIL;
@@ -268,3 +460,29 @@ STDAPI DllGetClassObject(__in REFCLSID rclsid, __in REFIID riid, __deref_out LPV
 }
 //tell the linker to export the function
 #pragma comment(linker, "/EXPORT:DllGetClassObject=_DllGetClassObject@12,PRIVATE")
+
+
+extern "C" int __declspec(dllexport) CALLBACK TestRegEx(
+	WCHAR * strPattern,
+	WCHAR * strData,
+	BSTR * pstrResult
+)
+{
+
+	wcmatch match;
+	wregex reg(strPattern, regex_constants::icase);
+	auto res = regex_match(strData, match, reg);
+	if (res != 0)
+	{
+		auto bstr = SysAllocString(L"Match");
+		*pstrResult = bstr;
+	}
+	else
+	{
+		*pstrResult = SysAllocString(L"non-zero");
+	}
+	*pstrResult = SysAllocString(L"non-zero");
+	return S_OK;
+}
+
+
