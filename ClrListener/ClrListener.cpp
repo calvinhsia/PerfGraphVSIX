@@ -72,7 +72,8 @@ CComQIPtr<ICorProfilerInfo2 > g_pCorProfilerInfo;
 using namespace std;
 
 
-wstring regexFilter(L"Microsoft.VisualStudio.Text.Implementation.TextBuffer");
+//wstring regexFilter(L"Microsoft.VisualStudio.Text.Implementation.TextBuffer"); // module: c:\program files (x86)\microsoft visual studio\2019\preview\common7\ide\commonextensions\microsoft\editor\Microsoft.VisualStudio.Platform.VSEditor.dll
+wstring regexFilter(L"System.WeakReference`1"); // module: c:\program files (x86)\microsoft visual studio\2019\preview\common7\ide\commonextensions\microsoft\editor\Microsoft.VisualStudio.Platform.VSEditor.dll
 
 class ClrClassData
 {
@@ -291,6 +292,10 @@ public:
 		if (pClrObjStats != nullptr)
 		{
 			pClrObjStats->nInstances++;
+			if (pClrObjStats->isBeingTracked)
+			{
+				auto x = 2;
+			}
 		}
 
 		return S_OK;
@@ -463,15 +468,29 @@ STDAPI DllGetClassObject(__in REFCLSID rclsid, __in REFIID riid, __deref_out LPV
 
 
 extern "C" int __declspec(dllexport) CALLBACK TestRegEx(
+	int numIterations,
 	WCHAR * strPattern,
 	WCHAR * strData,
+	bool IsCaseSensitive,
 	BSTR * pstrResult
 )
 {
-
-	wcmatch match;
-	wregex reg(strPattern, regex_constants::icase);
-	auto res = regex_match(strData, match, reg);
+	int res;
+	if (numIterations == 0)
+	{
+		wcmatch match;
+		wregex reg(strPattern, regex_constants::icase);
+		res = regex_match(strData, match, reg);
+	}
+	else
+	{
+		for (int i = 0; i < numIterations; i++)
+		{
+			wcmatch match;
+			wregex reg(strPattern, regex_constants::icase);
+			res = regex_match(strData, match, reg);
+		}
+	}
 	if (res != 0)
 	{
 		auto bstr = SysAllocString(L"Match");
@@ -479,9 +498,8 @@ extern "C" int __declspec(dllexport) CALLBACK TestRegEx(
 	}
 	else
 	{
-		*pstrResult = SysAllocString(L"non-zero");
+		*pstrResult = SysAllocString(L"No Match");
 	}
-	*pstrResult = SysAllocString(L"non-zero");
 	return S_OK;
 }
 

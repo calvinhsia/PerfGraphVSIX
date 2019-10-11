@@ -248,8 +248,8 @@ namespace Tests
                             {
                                 while (queue.TryDequeue(out var item))
                                 {
-                                //                            LogTestMessage($"Deq {item}");
-                                nDequeued++;
+                                    //                            LogTestMessage($"Deq {item}");
+                                    nDequeued++;
                                     coll.Add(item);
                                 }
                                 await Task.Yield();
@@ -330,8 +330,8 @@ namespace Tests
                             {
                                 while (queue.TryDequeue(out var item))
                                 {
-                                //                            LogTestMessage($"Deq {item}");
-                                nDequeued++;
+                                    //                            LogTestMessage($"Deq {item}");
+                                    nDequeued++;
                                     coll.Add(item);
                                 }
                                 await Task.Yield();
@@ -505,6 +505,18 @@ namespace Tests
             });
             Assert.AreEqual(nIter, coll.Count, $" should be equal");
 
+        }
+
+        [TestMethod]
+        public void TestWeakReference()
+        {
+            int nIter = 10000000;
+            var warr = new WeakReference[nIter];
+            for (int i = 0; i < nIter; i++)
+            {
+                warr[i] = new WeakReference(this);
+            }
+            Thread.Sleep(10000);
         }
     }
 }
