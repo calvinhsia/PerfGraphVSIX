@@ -16,7 +16,7 @@ namespace PerfGraphVSIX
         GCBytesInAllHeaps = 0x20,
         GCAllocatedBytesPerSec = 0x40,
         PageFaultsPerSec = 0x80,
-        KernelHandleCount = 0x100,
+        KernelHandleCount = 0x100, // same as Win32api GetProcessHandleCount
         GDIHandleCount = 0x200, //GetGuiResources
         UserHandleCount = 0x400, //GetGuiResources
         ThreadCount = 0x800,

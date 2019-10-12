@@ -95,7 +95,8 @@ namespace Tests
                 }
 
             }
-            var linkedList = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
+
+            _ = tks.GetType().GetField("m_linkingRegistrations", bFlags).GetValue(tks);
         }
 
         private class Someclass
@@ -112,6 +113,31 @@ namespace Tests
             {
             }
         }
+
+        [TestMethod]
+        public async Task TestTaskCompletion()
+        {
+            LogTestMessage($"Starting");
+            tcs = new TaskCompletionSource<int>();
+            await Task.Delay(1);
+            LogTestMessage($"Calling {nameof(DoSomethingAsync)}");
+            var r1 = await DoSomethingAsync();
+            LogTestMessage($"awaiting tcs.task {r1}");
+            await tcs.Task;
+            var res = tcs.Task.Result;
+            LogTestMessage($"done awaiting tcs.task res = {res}" );
+        }
+
+        TaskCompletionSource<int> tcs;
+        async Task<int> DoSomethingAsync()
+        {
+            LogTestMessage($"starting {nameof(DoSomethingAsync)}");
+            await Task.Delay(5000);
+            tcs.SetResult(0);
+            LogTestMessage($"returning {nameof(DoSomethingAsync)}");
+            return 1;
+        }
+
         [TestMethod]
         public void TestCts()
         {

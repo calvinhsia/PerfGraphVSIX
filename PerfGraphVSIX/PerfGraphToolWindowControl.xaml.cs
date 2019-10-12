@@ -1,8 +1,10 @@
 ﻿namespace PerfGraphVSIX
 {
+    using EnvDTE;
     using Microsoft.VisualStudio.PlatformUI;
     using Microsoft.VisualStudio.ProjectSystem.Properties;
     using Microsoft.VisualStudio.Shell;
+    using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Threading;
     using System;
     using System.Collections.Generic;
@@ -51,6 +53,9 @@
         public bool ScaleByteCounters { get; set; } = false;
         public bool SetMaxGraphTo100 { get; set; } = false;
 
+        public string SolutionToLoad { get; set; }
+        public int NumberOfIterations { get; set; } = 7;
+
         public string TipString { get; } = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git Version={typeof(PerfGraphToolWindowControl).Assembly.GetName().Version}\r\n" +
             $"{System.Reflection.Assembly.GetExecutingAssembly().Location}   CurDir={Environment.CurrentDirectory}";
 
@@ -95,6 +100,12 @@
 
         public PerfGraphToolWindowControl()
         {
+            var sln = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+
+            if (System.IO.File.Exists(sln))
+            {
+                SolutionToLoad = sln;
+            }
             this.InitializeComponent();
             try
             {
@@ -104,7 +115,6 @@
                 _editorTracker.Initialize(this, _objTracker);
                 _openFolderTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<OpenFolderTracker>();
                 _openFolderTracker.Initialize(this, _objTracker);
-
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                 {
@@ -290,48 +300,55 @@
 
         async Task DoSampleAsync()
         {
-            var sBuilder = new StringBuilder();
-            lock (_lstPerfCounterDefinitions)
-            {
-                int idx = 0;
-                foreach (var ctr in _lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
-                {
-                    var pcValueAsFloat = ctr.ReadNextValue();
-                    uint pcValue = 0;
-                    uint priorValue = 0;
-                    if (idx < _lstPCData.Count)
-                    {
-                        priorValue = _lstPCData[idx];
-                    }
-                    else
-                    {
-                        _lstPCData.Add(0);
-                    }
-                    if (ctr.perfCounterType.ToString().Contains("Bytes") && !ctr.perfCounterType.ToString().Contains("PerSec") && this.ScaleByteCounters)
-                    {
-                        pcValue = (uint)(pcValueAsFloat * 100 / uint.MaxValue); // '% of 4G
-                        int delta = (int)pcValue - (int)priorValue;
-                        sBuilder.Append($"{ctr.PerfCounterName}= {pcValueAsFloat:n0}  {pcValue:n0}%  Δ = {delta:n0} ");
-                    }
-                    else
-                    {
-                        pcValue = (uint)pcValueAsFloat;
-                        int delta = (int)pcValue - (int)priorValue;
-                        sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
-                    }
-                    _lstPCData[idx] = pcValue;
-                    idx++;
-                }
-            }
             try
             {
-                await AddDataPointsAsync();
+                var sBuilder = new StringBuilder();
+                lock (_lstPerfCounterDefinitions)
+                {
+                    int idx = 0;
+                    foreach (var ctr in _lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
+                    {
+                        var pcValueAsFloat = ctr.ReadNextValue();
+                        uint pcValue = 0;
+                        uint priorValue = 0;
+                        if (idx < _lstPCData.Count)
+                        {
+                            priorValue = _lstPCData[idx];
+                        }
+                        else
+                        {
+                            _lstPCData.Add(0);
+                        }
+                        if (ctr.perfCounterType.ToString().Contains("Bytes") && !ctr.perfCounterType.ToString().Contains("PerSec") && this.ScaleByteCounters)
+                        {
+                            pcValue = (uint)(pcValueAsFloat * 100 / uint.MaxValue); // '% of 4G
+                            int delta = (int)pcValue - (int)priorValue;
+                            sBuilder.Append($"{ctr.PerfCounterName}= {pcValueAsFloat:n0}  {pcValue:n0}%  Δ = {delta:n0} ");
+                        }
+                        else
+                        {
+                            pcValue = (uint)pcValueAsFloat;
+                            int delta = (int)pcValue - (int)priorValue;
+                            sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
+                        }
+                        _lstPCData[idx] = pcValue;
+                        idx++;
+                    }
+                }
+                try
+                {
+                    await AddDataPointsAsync();
+                }
+                catch (Exception ex)
+                {
+                    sBuilder = new StringBuilder(ex.ToString());
+                }
+                AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
             }
             catch (Exception ex)
             {
-                sBuilder = new StringBuilder(ex.ToString());
+                await AddStatusMsgAsync($"Exception in {nameof(DoSampleAsync)}" + ex.ToString());
             }
-            AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
         }
 
         async Task AddDataPointsAsync()
@@ -464,7 +481,7 @@
 
         public void AddStatusMsg(string msg, params object[] args)
         {
-            var tsk = AddStatusMsgAsync(msg, args);
+            _ = AddStatusMsgAsync(msg, args);
         }
 
         const int statusTextLenThresh = 100000;
@@ -500,7 +517,72 @@
             }
         }
 
+        int nTimes = 0;
+        private void BtnDoSample_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            _ = DoSomeWorkAsync();
+        }
+
+        private async Task DoSomeWorkAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (this.UpdateInterval != 0)
+            {
+                this.UpdateInterval = 0;
+                ResetPerfCounterMonitor();
+            }
+            if (nTimes++ == 0)
+            {
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
+            }
+            for (int i = 0; i < NumberOfIterations; i++)
+            {
+                await DoSampleAsync();
+                await AddStatusMsgAsync($"Iter {i} Start {NumberOfIterations - i} left to do");
+                await OpenASolutionAsync();
+                await CloseTheSolutionAsync();
+                await AddStatusMsgAsync($"Iter {i} end");
+            }
+            await AddStatusMsgAsync($"Done all {NumberOfIterations} iterations");
+            await DoSampleAsync();
+        }
+
+        TaskCompletionSource<int> tcs;
+        readonly int delayMultiplier = 1;
+        async Task OpenASolutionAsync()
+        {
+            tcs = new TaskCompletionSource<int>();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            PerfGraphToolWindowCommand.Instance.g_dte.Solution.Open(SolutionToLoad);
+            await tcs.Task;
+            //await AddStatusMsgAsync($"Solution open done");
+            await Task.Delay(5000 * delayMultiplier);
+        }
+
+        async Task CloseTheSolutionAsync()
+        {
+            tcs = new TaskCompletionSource<int>();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await AddStatusMsgAsync($"{nameof(CloseTheSolutionAsync)}");
+            PerfGraphToolWindowCommand.Instance.g_dte.Solution.Close();
+            await Task.Delay(5000 * delayMultiplier);
+            await AddStatusMsgAsync($"{nameof(CloseTheSolutionAsync)}");
+        }
+
+        private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
+        {
+            AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterCloseSolution)}");
+            tcs?.TrySetResult(0);
+        }
+
+        private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
+        {
+            AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterBackgroundSolutionLoadComplete)}");
+            tcs?.TrySetResult(0);
+        }
     }
+
 
     // a textbox that selects all when focused:
     public class MyTextBox : TextBox

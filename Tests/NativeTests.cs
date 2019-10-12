@@ -61,7 +61,7 @@ namespace Tests
                 sw.Restart();
                 foreach (var testStr in testStrings)
                 {
-                    NativeMethods.TestRegEx(100000, testPat, testStr, IsCaseSensitive: true, out string res);
+                    NativeMethods.TestRegEx(100000, testPat, testStr, IsCaseSensitive: true, out _);
                 }
                 sw.Stop();
                 var el = sw.Elapsed;

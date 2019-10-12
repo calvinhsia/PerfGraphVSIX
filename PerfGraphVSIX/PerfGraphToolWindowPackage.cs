@@ -79,7 +79,7 @@ namespace PerfGraphVSIX
 
             ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
             await TaskScheduler.Default;
-            var tsk = SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+            _ = SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
 
         async public Task<string> SendTelemetryAsync(string msg, params object[] args)
