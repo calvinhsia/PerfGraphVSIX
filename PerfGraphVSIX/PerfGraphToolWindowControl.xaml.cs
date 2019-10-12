@@ -55,6 +55,7 @@
 
         public string SolutionToLoad { get; set; }
         public int NumberOfIterations { get; set; } = 7;
+        public int DelayMultiplier { get; set; } = 1;
 
         public string TipString { get; } = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git Version={typeof(PerfGraphToolWindowControl).Assembly.GetName().Version}\r\n" +
             $"{System.Reflection.Assembly.GetExecutingAssembly().Location}   CurDir={Environment.CurrentDirectory}";
@@ -518,9 +519,20 @@
         }
 
         int nTimes = 0;
+        TaskCompletionSource<int> _tcs;
+        CancellationTokenSource _cts;
         private void BtnDoSample_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            _ = DoSomeWorkAsync();
+            if (_cts == null)
+            {
+                _cts = new CancellationTokenSource();
+                _ = DoSomeWorkAsync();
+            }
+            else
+            {
+                AddStatusMsg("cancelling iterations");
+                _cts.Cancel();
+            }
         }
 
         private async Task DoSomeWorkAsync()
@@ -536,50 +548,59 @@
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
             }
-            for (int i = 0; i < NumberOfIterations; i++)
+            for (int i = 0; i < NumberOfIterations && !_cts.IsCancellationRequested; i++)
             {
                 await DoSampleAsync();
                 await AddStatusMsgAsync($"Iter {i} Start {NumberOfIterations - i} left to do");
                 await OpenASolutionAsync();
+                if (_cts.IsCancellationRequested)
+                {
+                    break;
+                }
                 await CloseTheSolutionAsync();
                 await AddStatusMsgAsync($"Iter {i} end");
             }
-            await AddStatusMsgAsync($"Done all {NumberOfIterations} iterations");
+            await AddStatusMsgAsync(_cts.IsCancellationRequested ? "Cancelled" : $"Done all {NumberOfIterations} iterations");
             await DoSampleAsync();
+            _cts = null;
         }
 
-        TaskCompletionSource<int> tcs;
-        readonly int delayMultiplier = 1;
         async Task OpenASolutionAsync()
         {
-            tcs = new TaskCompletionSource<int>();
+            _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             PerfGraphToolWindowCommand.Instance.g_dte.Solution.Open(SolutionToLoad);
-            await tcs.Task;
+            await _tcs.Task;
             //await AddStatusMsgAsync($"Solution open done");
-            await Task.Delay(5000 * delayMultiplier);
+            if (!_cts.IsCancellationRequested)
+            {
+                await Task.Delay(5000 * DelayMultiplier);
+            }
         }
 
         async Task CloseTheSolutionAsync()
         {
-            tcs = new TaskCompletionSource<int>();
+            _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             await AddStatusMsgAsync($"{nameof(CloseTheSolutionAsync)}");
             PerfGraphToolWindowCommand.Instance.g_dte.Solution.Close();
-            await Task.Delay(5000 * delayMultiplier);
+            if (!_cts.IsCancellationRequested)
+            {
+                await Task.Delay(5000 * DelayMultiplier);
+            }
             await AddStatusMsgAsync($"{nameof(CloseTheSolutionAsync)}");
         }
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
             AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterCloseSolution)}");
-            tcs?.TrySetResult(0);
+            _tcs?.TrySetResult(0);
         }
 
         private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
         {
             AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterBackgroundSolutionLoadComplete)}");
-            tcs?.TrySetResult(0);
+            _tcs?.TrySetResult(0);
         }
     }
 

@@ -129,6 +129,10 @@
                             <local:MyTextBox Width="90" ToolTip="# of iterations" Text="{Binding NumberOfIterations}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
+                            <Label Content="Delay Multiplier"/>
+                            <local:MyTextBox Width="90" ToolTip="defaults to 1." Text="{Binding DelayMultiplier}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
                             <Label Content="Solution To Load"/>
                             <local:MyTextBox ToolTip="Solution to load" Text="{Binding SolutionToLoad}"/>
                         </StackPanel>
