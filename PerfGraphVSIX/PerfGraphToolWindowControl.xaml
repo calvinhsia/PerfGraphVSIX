@@ -149,6 +149,9 @@
                 <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" 
                         ToolTip="Take a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" MouseRightButtonUp="BtnDoSample_MouseRightButtonUp" 
                          />
+                <Button Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
+                        ToolTip="" Click="BtnExecCode_Click" 
+                         />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>
             <TextBox Name="txtStatus" Height="200" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 

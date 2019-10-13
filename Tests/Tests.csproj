@@ -51,6 +51,7 @@
   <ItemGroup>
     <Compile Include="NativeTests.cs" />
     <Compile Include="TestCancellationToken.cs" />
+    <Compile Include="TestCompile.cs" />
     <Compile Include="TestRefl.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

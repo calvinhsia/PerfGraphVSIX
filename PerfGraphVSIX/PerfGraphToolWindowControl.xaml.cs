@@ -44,10 +44,11 @@
         private string _CntLeakedObjs;
         public string CntLeakedObjs { get { return _CntLeakedObjs; } set { _CntLeakedObjs = value; RaisePropChanged(); } }
 
+        private int _UpdateInterval = 1000;
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
         /// </summary>
-        public int UpdateInterval { get; set; } = 1000;
+        public int UpdateInterval { get { return _UpdateInterval; } set { _UpdateInterval = value; RaisePropChanged(); } }
         public int NumDataPoints { get; set; } = 100;
 
         public bool ScaleByteCounters { get; set; } = false;
@@ -488,6 +489,7 @@
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
 
+        // we can't use the output window because it will just accumulate and look like a leak
         async public Task AddStatusMsgAsync(string msg, params object[] args)
         {
             // we want to read the threadid 
@@ -516,6 +518,11 @@
                 txtStatus.AppendText(str + "\r\n");
                 txtStatus.ScrollToEnd();
             }
+        }
+
+        private void BtnExecCode_Click(object sender, RoutedEventArgs e)
+        {
+
         }
 
         int nTimes = 0;
