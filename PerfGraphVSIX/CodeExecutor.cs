@@ -25,6 +25,7 @@ namespace PerfGraphVSIX
             logger.LogMessage($"Compiling code");
             try
             {
+                // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
                 using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
                 {
                     var compParams = new CompilerParameters();
@@ -45,6 +46,7 @@ namespace PerfGraphVSIX
                                 refAsm = refAsm.Replace("\"", string.Empty);
                             }
                             var dir = System.IO.Path.GetDirectoryName(refAsm);
+                            logger.LogMessage($"AddRef {refAsm}");
                             if (!string.IsNullOrEmpty(refAsm))
                             {
                                 if (!System.IO.File.Exists(refAsm))
@@ -65,11 +67,14 @@ namespace PerfGraphVSIX
                     if (resCompile.Errors.HasErrors)
                     {
                         var strb = new StringBuilder();
+                        int nErrors = 0;
                         foreach (var err in resCompile.Errors)
                         {
                             strb.AppendLine(err.ToString());
                             logger.LogMessage(err.ToString());
+                            nErrors++;
                         }
+                        strb.AppendLine($"# errors = {nErrors}");
                         throw new InvalidOperationException(strb.ToString());
                     }
                     var asmCompiled = resCompile.CompiledAssembly;

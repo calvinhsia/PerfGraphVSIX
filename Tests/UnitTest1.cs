@@ -17,29 +17,6 @@ using PerfGraphVSIX;
 
 namespace Tests
 {
-    public class BaseTestClass: ILogger
-    {
-        public TestContext TestContext { get; set; }
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            LogMessage($"Starting test {TestContext.TestName}");
-        }
-        public void LogMessage(string str, params object[] args)
-        {
-            var dt = string.Format("[{0}],",
-                DateTime.Now.ToString("hh:mm:ss:fff")
-                );
-            str = string.Format(dt + str, args);
-            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
-
-            this.TestContext.WriteLine(msgstr);
-            if (Debugger.IsAttached)
-            {
-                Debug.WriteLine(msgstr);
-            }
-        }
-    }
 
     [TestClass]
     public class UnitTest1 : BaseTestClass
