@@ -28,6 +28,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [Ignore]
         public void TestRegexManyStrings()
         {
             var testStrings = new[]

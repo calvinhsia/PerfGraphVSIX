@@ -102,6 +102,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [Ignore]
         public async Task TestObjTrackerWithDisposable()
         {
             int nThreads = 10;
@@ -173,6 +174,7 @@ namespace Tests
 
 
         [TestMethod]
+        [Ignore]
         public async Task TestObjTracker()
         {
             int nThreads = 10;
@@ -190,8 +192,10 @@ namespace Tests
                         var tasks = new Task[nThreads];
                         for (int iThread = 0; iThread < nThreads; iThread++)
                         {
+                            var tt = iThread;
                             tasks[iThread] = Task.Run(() =>
                             {
+                                Thread.CurrentThread.Name = $"task {tt}";
                                 for (int i = 0; i < nIter; i++)
                                 {
                                     var obj = new MyBigData(cnt);
@@ -507,16 +511,5 @@ namespace Tests
 
         }
 
-        [TestMethod]
-        public void TestWeakReference()
-        {
-            int nIter = 10000000;
-            var warr = new WeakReference[nIter];
-            for (int i = 0; i < nIter; i++)
-            {
-                warr[i] = new WeakReference(this);
-            }
-            Thread.Sleep(10000);
-        }
     }
 }
