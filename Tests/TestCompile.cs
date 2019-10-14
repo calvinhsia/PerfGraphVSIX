@@ -111,6 +111,8 @@ namespace DoesntMatter
 
     internal class CodeExecutor
     {
+        public const string DoMain = "DoMain"; // not domain
+        public const string refPathPrefix = "//Ref:";
         static public string CompileAndExecute(string strCodeToExecute)
         {
             var result = string.Empty;
@@ -120,9 +122,9 @@ namespace DoesntMatter
                 var compParams = new CompilerParameters();
                 var lstRefDirs = new List<string>();
                 var srcLines = strCodeToExecute.Split("\r\n".ToArray());
-                foreach (var refline in srcLines.Where(s => s.StartsWith("//Ref:")))
+                foreach (var refline in srcLines.Where(s => s.StartsWith(refPathPrefix)))
                 {
-                    var refAsm = refline.Replace("//Ref:", string.Empty).Trim();
+                    var refAsm = refline.Replace(refPathPrefix, string.Empty).Trim();
                     if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
                     {
                         refAsm = refAsm.Replace("\"", string.Empty);
@@ -155,7 +157,7 @@ namespace DoesntMatter
                 var asm = resCompile.CompiledAssembly;
                 foreach (var clas in asm.GetExportedTypes())
                 {
-                    var mainMethod = clas.GetMethod("DoMain");
+                    var mainMethod = clas.GetMethod(DoMain);
                     if (mainMethod != null)
                     {
                         if (!mainMethod.IsStatic)
