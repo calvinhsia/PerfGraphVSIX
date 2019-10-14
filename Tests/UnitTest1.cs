@@ -17,17 +17,22 @@ using PerfGraphVSIX;
 
 namespace Tests
 {
-    public class BaseTestClass
+    public class BaseTestClass: ILogger
     {
         public TestContext TestContext { get; set; }
         [TestInitialize]
         public void TestInitialize()
         {
-            LogTestMessage($"Starting test {TestContext.TestName}");
+            LogMessage($"Starting test {TestContext.TestName}");
         }
-        public void LogTestMessage(string str)
+        public void LogMessage(string str, params object[] args)
         {
+            var dt = string.Format("[{0}],",
+                DateTime.Now.ToString("hh:mm:ss:fff")
+                );
+            str = string.Format(dt + str, args);
             var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+
             this.TestContext.WriteLine(msgstr);
             if (Debugger.IsAttached)
             {
@@ -143,14 +148,14 @@ namespace Tests
                         doneEvent.Set();
                     }
                     var res = objTracker.GetCounts();
-                    LogTestMessage($"Got results: live: {res.Item1.Count}  Leaked: {res.Item2.Count}  HardRefsCount={hashHardRefs.Count}");
+                    LogMessage($"Got results: live: {res.Item1.Count}  Leaked: {res.Item2.Count}  HardRefsCount={hashHardRefs.Count}");
                     foreach (var live in res.Item1)
                     {
-                        LogTestMessage($"  Live {live.Value,3} {live.Key}");
+                        LogMessage($"  Live {live.Value,3} {live.Key}");
                     }
                     foreach (var leak in res.Item2)
                     {
-                        LogTestMessage($"  Leaked {leak._serialNo} {leak.Descriptor}");
+                        LogMessage($"  Leaked {leak._serialNo} {leak.Descriptor}");
                     }
                     cts.Cancel();
                     Assert.AreEqual(1, res.Item1.Count, "only 1 leaking type");
@@ -162,7 +167,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogTestMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex.ToString()}");
                 throw;
             }
             //LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -218,7 +223,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogTestMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex.ToString()}");
                 throw;
             }
             //LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -247,7 +252,7 @@ namespace Tests
                         var queue = new ConcurrentQueue<WeakReference<object>>();
                         var taskDrain = Task.Run(async () =>
                         {
-                            LogTestMessage($"Starting drain");
+                            LogMessage($"Starting drain");
                             while (!doneEvent.IsSet || !queue.IsEmpty)
                             {
                                 while (queue.TryDequeue(out var item))
@@ -258,7 +263,7 @@ namespace Tests
                                 }
                                 await Task.Yield();
                             }
-                            LogTestMessage($"done drain");
+                            LogMessage($"done drain");
                         });
 
                         var tasks = new Task<int>[nThreads];
@@ -293,7 +298,7 @@ namespace Tests
                         lstToDel.Add(itm);
                     }
                 }
-                LogTestMessage($"Removing {lstToDel.Count} items");
+                LogMessage($"Removing {lstToDel.Count} items");
                 foreach (var itm in lstToDel)
                 {
                     coll.Remove(itm);
@@ -301,10 +306,10 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogTestMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex.ToString()}");
                 throw;
             }
-            LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
+            LogMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
             Assert.AreEqual(nIter * nThreads, cnt, $" items added should be equal");
             Assert.IsTrue(nIter * nThreads > coll.Count, $" coll count should be < because GC");
             Assert.IsTrue(coll.Count >= 1, "GC collected some but not hardref");
@@ -329,7 +334,7 @@ namespace Tests
                         var queue = new ConcurrentQueue<WeakReference<MyBigContainer>>();
                         var taskDrain = Task.Run(async () =>
                         {
-                            LogTestMessage($"Starting drain");
+                            LogMessage($"Starting drain");
                             while (!doneEvent.IsSet || !queue.IsEmpty)
                             {
                                 while (queue.TryDequeue(out var item))
@@ -340,7 +345,7 @@ namespace Tests
                                 }
                                 await Task.Yield();
                             }
-                            LogTestMessage($"done drain");
+                            LogMessage($"done drain");
                         });
 
                         var tasks = new Task<int>[nThreads];
@@ -373,7 +378,7 @@ namespace Tests
                         lstToDel.Add(itm);
                     }
                 }
-                LogTestMessage($"Removing {lstToDel.Count} items");
+                LogMessage($"Removing {lstToDel.Count} items");
                 foreach (var itm in lstToDel)
                 {
                     coll.Remove(itm);
@@ -381,10 +386,10 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogTestMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex.ToString()}");
                 throw;
             }
-            LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
+            LogMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
             Assert.AreEqual(nIter * nThreads, cnt, $" items added should be equal");
             Assert.IsTrue(nIter * nThreads > coll.Count, $" coll count should be < because GC");
         }
@@ -407,18 +412,18 @@ namespace Tests
                         var queue = new ConcurrentQueue<MyContainer>();
                         var taskDrain = Task.Run(async () =>
                         {
-                            LogTestMessage($"Starting drain");
+                            LogMessage($"Starting drain");
                             while (!doneEvent.IsSet || queue.Count > 0)
                             {
                                 await Task.Yield();
                                 while (queue.TryDequeue(out var mycont))
                                 {
-                                    LogTestMessage($"Deq {mycont}");
+                                    LogMessage($"Deq {mycont}");
                                     nDequeued++;
                                     coll.Add(mycont);
                                 }
                             }
-                            LogTestMessage($"done drain");
+                            LogMessage($"done drain");
                         });
 
                         var tasks = new Task<int>[nThreads];
@@ -427,7 +432,7 @@ namespace Tests
                             var x = iThread;
                             tasks[iThread] = Task.Run(() =>
                             {
-                                LogTestMessage($"starting {x}");
+                                LogMessage($"starting {x}");
                                 for (int i = 0; i < nIter; i++)
                                 {
                                     queue.Enqueue(new MyContainer(Interlocked.Increment(ref cnt)));
@@ -447,10 +452,10 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogTestMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex.ToString()}");
                 throw;
             }
-            LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
+            LogMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
             Assert.AreEqual(nIter * nThreads, cnt, $" items added should be equal");
             Assert.AreEqual(nIter * nThreads, coll.Count, $" should be equal");
         }
@@ -487,7 +492,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogTestMessage($"got expected exception {ex.ToString()}");
+                LogMessage($"got expected exception {ex.ToString()}");
                 throw;
             }
             Assert.Fail("Should not get here");

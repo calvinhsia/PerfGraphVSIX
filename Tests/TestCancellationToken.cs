@@ -117,24 +117,24 @@ namespace Tests
         [TestMethod]
         public async Task TestTaskCompletion()
         {
-            LogTestMessage($"Starting");
+            LogMessage($"Starting");
             tcs = new TaskCompletionSource<int>();
             await Task.Delay(1);
-            LogTestMessage($"Calling {nameof(DoSomethingAsync)}");
+            LogMessage($"Calling {nameof(DoSomethingAsync)}");
             var r1 = await DoSomethingAsync();
-            LogTestMessage($"awaiting tcs.task {r1}");
+            LogMessage($"awaiting tcs.task {r1}");
             await tcs.Task;
             var res = tcs.Task.Result;
-            LogTestMessage($"done awaiting tcs.task res = {res}" );
+            LogMessage($"done awaiting tcs.task res = {res}" );
         }
 
         TaskCompletionSource<int> tcs;
         async Task<int> DoSomethingAsync()
         {
-            LogTestMessage($"starting {nameof(DoSomethingAsync)}");
+            LogMessage($"starting {nameof(DoSomethingAsync)}");
             await Task.Delay(5000);
             tcs.SetResult(0);
-            LogTestMessage($"returning {nameof(DoSomethingAsync)}");
+            LogMessage($"returning {nameof(DoSomethingAsync)}");
             return 1;
         }
 
@@ -177,7 +177,7 @@ namespace Tests
                 var x3 = new Someclass(tk);
                 ProcessCancellationToken(tk, logger: (str) =>
                 {
-                    LogTestMessage(str);
+                    LogMessage(str);
                 });
             }
             //cancellationTokenRegistration.Dispose(); // must dispose else leaks. CTS Leak Type No. 2

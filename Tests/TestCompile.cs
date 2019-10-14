@@ -1,14 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
-using System;
-using System.CodeDom.Compiler;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Tests
 {
+
     [TestClass]
     public class TestCompile : BaseTestClass
     {
@@ -28,36 +24,25 @@ namespace DoesntMatter
 public class foo {}
     public class SomeClass
     {
-        public static string DoMain(string[] args)
+        public static string DoMain(object [] args)
         {
             var x = 1;
             var y = 100 / x;
-            return ""did main "" + y.ToString() +"" ""+ args[0];
+            return ""did main "" + y.ToString() +"" ""+ args[1];
         }
     }
 }
 ";
-            var res = CodeExecutor.CompileAndExecute(strCodeToExecute);
+            var res = new CodeExecutor(this).CompileAndExecute(strCodeToExecute);
             Assert.AreEqual("did main 100 p1", res);
-        }
-        async Task<string> DoWaitAsync()
-        {
-            //            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            await Task.Delay(100);
-            return "did delay ";
-        }
-        string CallDoWai()
-        {
-            return DoWaitAsync().GetAwaiter().GetResult();
         }
 
         [TestMethod]
         public void TestCompileVSCode()
         {
-            var x = CallDoWai();
-            LogTestMessage($"got x {x}");
             var strCodeToExecute = @"
 // can add the fullpath to an assembly for reference like so:
+//Ref: PerfGraphVSIX
 ////Ref: System.dll
 ////Ref: System.linq.dll
 ////Ref: System.core.dll
@@ -65,6 +50,8 @@ public class foo {}
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using PerfGraphVSIX;
+
 //using Microsoft.VisualStudio.Threading;
 
 namespace DoesntMatter
@@ -74,6 +61,7 @@ namespace DoesntMatter
         int nTimes = 0;
         TaskCompletionSource<int> _tcs;
         CancellationTokenSource _cts;
+        ILogger logger;
         public MyClass()
         {
             _tcs = new TaskCompletionSource<int>();
@@ -87,14 +75,17 @@ namespace DoesntMatter
             return ""did delay"";
         }
 
-        public string DoIt(string[] args)
+        public string DoIt(object[] args)
         {
+            logger = args[0] as ILogger;
+            logger.LogMessage(""in doit"");
             var x = 1;
             var y = 100 / x;
             var str = DoWaitAsync().GetAwaiter().GetResult();
-            return ""did main "" + y.ToString() +"" ""+ args[0] + "" ""+ str;
+
+            return ""did main "" + y.ToString() +"" ""+ args[1] + "" ""+ str;
         }
-        public static string DoMain(string[] args)
+        public static string DoMain(object[] args)
         {
             var oMyClass = new MyClass();
             return oMyClass.DoIt(args);
@@ -102,8 +93,8 @@ namespace DoesntMatter
     }
 }
 ";
-            var res = CodeExecutor.CompileAndExecute(strCodeToExecute);
-            LogTestMessage(res);
+            var res = new CodeExecutor(this).CompileAndExecute(strCodeToExecute);
+            LogMessage(res);
             Assert.AreEqual("did main 100 p1 did delay", res);
             //            Assert.Fail(res);
         }

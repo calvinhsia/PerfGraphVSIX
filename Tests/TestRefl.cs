@@ -35,10 +35,10 @@ namespace Tests
             var objectTracker = new ObjTracker(new PerfGraphToolWindowControl());
             AddObject(this);
 
-            LogTestMessage($"done scanning");
+            LogMessage($"done scanning");
             foreach (var itm in addedObjects)
             {
-                LogTestMessage($"{itm}");
+                LogMessage($"{itm}");
             }
 
         }
@@ -72,7 +72,7 @@ namespace Tests
                         }
                         else
                         {
-                            LogTestMessage($"AAAAAAAAAarray {elemtyp}");
+                            LogMessage($"AAAAAAAAAarray {elemtyp}");
                         }
                     }
                     if (TryAddObjectVisited(obj) && nLevel < 1000)
@@ -95,7 +95,7 @@ namespace Tests
                                             case "System.String":
                                                 break;
                                             default:
-                                                LogTestMessage($"{new string(' ', nLevel)} {nLevel} {objTyp.Name} {fldInfo.Name} {fldInfo.FieldType.BaseType?.Name}  {valFld.GetType().Name}");
+                                                LogMessage($"{new string(' ', nLevel)} {nLevel} {objTyp.Name} {fldInfo.Name} {fldInfo.FieldType.BaseType?.Name}  {valFld.GetType().Name}");
                                                 if (valFld is EventHandler evHandler)
                                                 {
                                                     "".ToString();

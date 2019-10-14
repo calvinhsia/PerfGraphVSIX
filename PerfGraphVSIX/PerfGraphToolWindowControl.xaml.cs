@@ -23,7 +23,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
 
-    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged
+    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger
     {
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
@@ -608,6 +608,11 @@
         {
             AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterBackgroundSolutionLoadComplete)}");
             _tcs?.TrySetResult(0);
+        }
+
+        public void LogMessage(string msg, params object[] args)
+        {
+            AddStatusMsg(msg, args);
         }
     }
 

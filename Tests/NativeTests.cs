@@ -66,7 +66,7 @@ namespace Tests
                 }
                 sw.Stop();
                 var el = sw.Elapsed;
-                LogTestMessage($"{el.TotalMilliseconds:n0} {testPat}");
+                LogMessage($"{el.TotalMilliseconds:n0} {testPat}");
                 //                var xx = NativeMethods.TestRegEx(".*TextBox.*", "Microsoft.VisualStudio.Text.Implementation.TextBuffer", out res);
             }
 

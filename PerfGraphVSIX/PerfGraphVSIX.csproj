@@ -60,6 +60,7 @@
     <Compile Include="Browse.cs" />
     <Compile Include="CodeExecutor.cs" />
     <Compile Include="EditorTracker.cs" />
+    <Compile Include="ILogger.cs" />
     <Compile Include="ObjTracker.cs" />
     <Compile Include="ObjWeakRefData.cs" />
     <Compile Include="OpenFolderTracker.cs" />
