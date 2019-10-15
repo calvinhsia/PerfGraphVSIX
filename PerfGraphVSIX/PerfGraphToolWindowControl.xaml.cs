@@ -538,12 +538,13 @@
                 {
                     _codeExecutor = new CodeExecutor(this);
                 }
-                _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (s) =>
+                var res = _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (s) =>
                 {
                     await DoSampleAsync();
                     AddStatusMsg("DoSampleAsync done");
                     _cts = null;
                 });
+                AddStatusMsg($"CompileAndExecute done: {res}");
             }
             else
             {
