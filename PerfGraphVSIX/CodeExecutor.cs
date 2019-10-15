@@ -232,7 +232,7 @@ namespace MyCustomCode
                             }
                             if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                             {
-                                refAsm = typeof(PerfGraphToolWindowControl).Assembly.Location;
+                                refAsm = this.GetType().Assembly.Location;
                                 var dir = System.IO.Path.GetDirectoryName(refAsm);
                                 if (!_lstRefDirs.Contains(dir))
                                 {
@@ -246,7 +246,7 @@ namespace MyCustomCode
                                     refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
                                 }
                                 var dir = System.IO.Path.GetDirectoryName(refAsm);
-//                                _logger.LogMessage($"AddRef {refAsm}");
+                                //                                _logger.LogMessage($"AddRef {refAsm}");
                                 if (!string.IsNullOrEmpty(refAsm))
                                 {
                                     if (!System.IO.File.Exists(refAsm))
@@ -304,25 +304,32 @@ namespace MyCustomCode
                                   Assembly asm = null;
                                   _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
                                   var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
-                                  foreach (var refDir in _lstRefDirs)
+                                  if (requestName == nameof(PerfGraphVSIX))
                                   {
-                                      foreach (var ext in new[] { ".dll", ".exe" })
+                                      asm = this.GetType().Assembly;
+                                  }
+                                  else
+                                  {
+                                      foreach (var refDir in _lstRefDirs)
                                       {
-                                          var fname = Path.Combine(refDir, requestName, ext);
-                                          if (File.Exists(fname))
+                                          foreach (var ext in new[] { ".dll", ".exe" })
                                           {
-                                              asm = Assembly.Load(fname);
+                                              var fname = Path.Combine(refDir, requestName) + ext;
+                                              if (File.Exists(fname))
+                                              {
+                                                  asm = Assembly.Load(fname);
+                                                  break;
+                                              }
+                                          }
+                                          if (asm != null)
+                                          {
                                               break;
                                           }
                                       }
-                                      if (asm != null)
+                                      if (asm == null)
                                       {
-                                          break;
+                                          _logger.LogMessage($"Couldn't resolve {e.Name}");
                                       }
-                                  }
-                                  if (asm == null)
-                                  {
-                                      _logger.LogMessage($"Couldn't resolve {e.Name}");
                                   }
                                   return asm;
                               };
@@ -345,6 +352,8 @@ namespace MyCustomCode
             catch (Exception ex)
             {
                 result = ex.ToString();
+                _hashOfPriorCodeToExecute = 0;
+                _resCompile = null;
             }
             return result;
         }
