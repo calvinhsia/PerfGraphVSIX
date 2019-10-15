@@ -532,36 +532,42 @@
             }
             if (_cts == null)
             {
+                AddStatusMsg("Starting Code Execution"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
                 _cts = new CancellationTokenSource();
-                var c = new CodeExecutor(this);
-                c.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: (s) =>
+                if (_codeExecutor == null)
                 {
-                    _ = DoSampleAsync();
+                    _codeExecutor = new CodeExecutor(this);
+                }
+                _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (s) =>
+                {
+                    await DoSampleAsync();
+                    AddStatusMsg("DoSampleAsync done");
+                    _cts = null;
                 });
+            }
+            else
+            {
+                AddStatusMsg("cancelling Code Execution");
+                _cts.Cancel();
                 _cts = null;
+            }
+        }
+        CodeExecutor _codeExecutor;
+        int nTimes = 0;
+        TaskCompletionSource<int> _tcs;
+        CancellationTokenSource _cts;
+        private void BtnDoSample_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (_cts == null)
+            {
+                _cts = new CancellationTokenSource();
+                _ = DoSomeWorkAsync();
             }
             else
             {
                 AddStatusMsg("cancelling iterations");
                 _cts.Cancel();
             }
-        }
-
-        int nTimes = 0;
-        TaskCompletionSource<int> _tcs;
-        CancellationTokenSource _cts;
-        private void BtnDoSample_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            //if (_cts == null)
-            //{
-            //    _cts = new CancellationTokenSource();
-            //    _ = DoSomeWorkAsync();
-            //}
-            //else
-            //{
-            //    AddStatusMsg("cancelling iterations");
-            //    _cts.Cancel();
-            //}
         }
 
         private async Task DoSomeWorkAsync()

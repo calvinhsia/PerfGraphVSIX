@@ -129,7 +129,7 @@
                             <CheckBox Content="Track Contained Objects" IsChecked="{Binding TrackContainedObjects}" 
                         ToolTip="For Textviews, delve into propertybag to find subscribers to EditOptions and track those. For Projects, delve..."/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal">
+                        <!--<StackPanel Orientation="Horizontal">
                             <Label Content="Number of Iterations"/>
                             <local:MyTextBox Width="90" ToolTip="# of iterations" Text="{Binding NumberOfIterations}"/>
                         </StackPanel>
@@ -140,7 +140,7 @@
                         <StackPanel Orientation="Horizontal">
                             <Label Content="Solution To Load"/>
                             <local:MyTextBox ToolTip="Solution to load" Text="{Binding SolutionToLoad}"/>
-                        </StackPanel>
+                        </StackPanel>-->
                     </StackPanel>
                     <DockPanel Grid.Column="1">
                         <ListBox Name="lbPCounters" SelectionMode="Multiple" Width="160" MaxHeight = "300" VerticalAlignment="Top" ToolTip="Multiselect various counters" />
@@ -154,8 +154,8 @@
                 <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" 
                         ToolTip="Take a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" MouseRightButtonUp="BtnDoSample_MouseRightButtonUp" 
                          />
-                <Button Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
-                        ToolTip="" Click="BtnExecCode_Click" 
+                <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
+                        ToolTip="Execute the code in the Code tab. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0" 
                          />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>

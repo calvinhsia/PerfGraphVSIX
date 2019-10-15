@@ -85,36 +85,42 @@ namespace MyCustomCode
         private async Task DoSomeWorkAsync()
         {
             logger.LogMessage(""in DoSomeWorkAsync"");
-//            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(); // in tests, this won't work
-            logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
-            logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
-            if (nTimes++ == 0)
+            try
             {
-                logger.LogMessage(""Registering for solution events"");
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
-            }
-            for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
-            {
-                DoSample();
-                logger.LogMessage(""Iter {0}   Start {1} left to do"", i, NumberOfIterations - i);
-                await OpenASolutionAsync();
+                if (nTimes++ == 0)
+                {
+                    logger.LogMessage(""Registering for solution events"");
+                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
+                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
+                }
+                for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
+                {
+                    DoSample();
+                    logger.LogMessage(""Iter {0}   Start {1} left to do"", i, NumberOfIterations - i);
+                    await OpenASolutionAsync();
+                    if (_CancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    await CloseTheSolutionAsync();
+                    logger.LogMessage(""Iter {0} end"", i);
+                }
                 if (_CancellationToken.IsCancellationRequested)
                 {
-                    break;
+                    logger.LogMessage(""Cancelled"");
                 }
-                await CloseTheSolutionAsync();
-                logger.LogMessage(""Iter {0} end"", i);
+                else
+                {
+                    logger.LogMessage(""Done all {0} iterations"", NumberOfIterations);
+                }
+                DoSample();
             }
-            if (_CancellationToken.IsCancellationRequested)
+            finally
             {
-                logger.LogMessage(""Cancelled"");
+                logger.LogMessage(""UnRegistering for solution events"");
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
             }
-            else
-            {
-                logger.LogMessage(""Done all {0} iterations"", NumberOfIterations);
-            }
-            DoSample();
         }
 
         void DoSample()
@@ -176,140 +182,163 @@ namespace MyCustomCode
         public const string DoMain = "DoMain"; // not domain
         public const string VSRootSubstitution = "%VSRoot%";
         public const string refPathPrefix = "//Ref:";
-        bool fDidAddAssemblyResolver;
-        readonly ILogger logger;
+        bool _fDidAddAssemblyResolver;
+        readonly ILogger _logger;
+
+
+        int _hashOfPriorCodeToExecute;
+        CompilerResults _resCompile;
+        HashSet<string> _lstRefDirs = new HashSet<string>();
+
+
         public CodeExecutor(ILogger logger)
         {
-            this.logger = logger;
+            this._logger = logger;
         }
         public string CompileAndExecute(string strCodeToExecute, CancellationToken token, Action<string> actTakeSample = null)
         {
             var result = string.Empty;
-            logger.LogMessage($"Compiling code");
+            var hashofCodeToExecute = strCodeToExecute.GetHashCode();
+            _logger.LogMessage($"Compiling code");
             try
             {
-                //logger.LogMessage($"Main file= { Process.GetCurrentProcess().MainModule.FileName}"); //  C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\Extensions\TestPlatform\testhost.x86.exe
-                var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
-                var ndxCommon7 = curProcMainModule.IndexOf("common7", StringComparison.OrdinalIgnoreCase);
-                if (ndxCommon7 <= 0)
+                if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
                 {
-                    throw new InvalidOperationException("Can't find VSRoot");
+                    _logger.LogMessage($"Using prior compiled assembly");
                 }
-                var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
-                // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
-                using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
+                else
                 {
-                    var compParams = new CompilerParameters();
-                    var lstRefDirs = new HashSet<string>();
-                    var srcLines = strCodeToExecute.Split("\r\n".ToArray());
-                    foreach (var refline in srcLines.Where(s => s.StartsWith(refPathPrefix)))
+                    _lstRefDirs.Clear();
+                    //logger.LogMessage($"Main file= { Process.GetCurrentProcess().MainModule.FileName}"); //  C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\Extensions\TestPlatform\testhost.x86.exe
+                    var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
+                    var ndxCommon7 = curProcMainModule.IndexOf("common7", StringComparison.OrdinalIgnoreCase);
+                    if (ndxCommon7 <= 0)
                     {
-                        var refAsm = refline.Replace(refPathPrefix, string.Empty).Trim();
-                        if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
+                        throw new InvalidOperationException("Can't find VSRoot");
+                    }
+                    var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
+                                                                                 // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
+                    using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
+                    {
+                        var compParams = new CompilerParameters();
+                        _lstRefDirs = new HashSet<string>();
+                        var srcLines = strCodeToExecute.Split("\r\n".ToArray());
+                        foreach (var refline in srcLines.Where(s => s.StartsWith(refPathPrefix)))
                         {
-                            refAsm = refAsm.Replace("\"", string.Empty);
-                        }
-                        if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
-                        {
-                            refAsm = typeof(PerfGraphToolWindowControl).Assembly.Location;
-                            var dir = System.IO.Path.GetDirectoryName(refAsm);
-                            if (!lstRefDirs.Contains(dir))
+                            var refAsm = refline.Replace(refPathPrefix, string.Empty).Trim();
+                            if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
                             {
-                                lstRefDirs.Add(dir);
+                                refAsm = refAsm.Replace("\"", string.Empty);
                             }
-                        }
-                        else
-                        {
-                            if (refAsm.Contains(VSRootSubstitution))
+                            if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                             {
-                                refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
-                            }
-                            var dir = System.IO.Path.GetDirectoryName(refAsm);
-                            logger.LogMessage($"AddRef {refAsm}");
-                            if (!string.IsNullOrEmpty(refAsm))
-                            {
-                                if (!System.IO.File.Exists(refAsm))
+                                refAsm = typeof(PerfGraphToolWindowControl).Assembly.Location;
+                                var dir = System.IO.Path.GetDirectoryName(refAsm);
+                                if (!_lstRefDirs.Contains(dir))
                                 {
-                                    throw new System.IO.FileNotFoundException($"Couldn't find {refAsm}");
+                                    _lstRefDirs.Add(dir);
                                 }
-                                else
+                            }
+                            else
+                            {
+                                if (refAsm.Contains(VSRootSubstitution))
                                 {
-                                    if (!lstRefDirs.Contains(dir))
+                                    refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
+                                }
+                                var dir = System.IO.Path.GetDirectoryName(refAsm);
+//                                _logger.LogMessage($"AddRef {refAsm}");
+                                if (!string.IsNullOrEmpty(refAsm))
+                                {
+                                    if (!System.IO.File.Exists(refAsm))
                                     {
-                                        lstRefDirs.Add(dir);
+                                        throw new System.IO.FileNotFoundException($"Couldn't find {refAsm}");
+                                    }
+                                    else
+                                    {
+                                        if (!_lstRefDirs.Contains(dir))
+                                        {
+                                            _lstRefDirs.Add(dir);
+                                        }
                                     }
                                 }
                             }
+                            compParams.ReferencedAssemblies.Add(refAsm);
                         }
-                        compParams.ReferencedAssemblies.Add(refAsm);
-                    }
-                    compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
-                    compParams.GenerateInMemory = true; // in memory cannot be unloaded
-                    var resCompile = cdProvider.CompileAssemblyFromSource(compParams, strCodeToExecute);
-                    if (resCompile.Errors.HasErrors)
-                    {
-                        var strb = new StringBuilder();
-                        int nErrors = 0;
-                        foreach (var err in resCompile.Errors)
+                        compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
+                        compParams.GenerateInMemory = true; // in memory cannot be unloaded
+                        var resCompile = cdProvider.CompileAssemblyFromSource(compParams, strCodeToExecute);
+                        if (resCompile.Errors.HasErrors)
                         {
-                            strb.AppendLine(err.ToString());
-                            logger.LogMessage(err.ToString());
-                            nErrors++;
-                        }
-                        strb.AppendLine($"# errors = {nErrors}");
-                        throw new InvalidOperationException(strb.ToString());
-                    }
-                    var asmCompiled = resCompile.CompiledAssembly;
-                    foreach (var clas in asmCompiled.GetExportedTypes())
-                    {
-                        var mainMethod = clas.GetMethod(DoMain);
-                        if (mainMethod != null)
-                        {
-                            if (!mainMethod.IsStatic)
+                            var strb = new StringBuilder();
+                            int nErrors = 0;
+                            foreach (var err in resCompile.Errors)
                             {
-                                throw new InvalidOperationException("DoMain must be static");
+                                strb.AppendLine(err.ToString());
+                                _logger.LogMessage(err.ToString());
+                                nErrors++;
                             }
+                            strb.AppendLine($"# errors = {nErrors}");
+                            throw new InvalidOperationException(strb.ToString());
+                        }
+                        _resCompile = resCompile;
+                        _hashOfPriorCodeToExecute = hashofCodeToExecute;
+                    }
+                }
+                var asmCompiled = _resCompile.CompiledAssembly;
+                foreach (var clas in asmCompiled.GetExportedTypes())
+                {
+                    var mainMethod = clas.GetMethod(DoMain);
+                    if (mainMethod != null)
+                    {
+                        if (!mainMethod.IsStatic)
+                        {
+                            throw new InvalidOperationException("DoMain must be static");
+                        }
 
-                            if (!fDidAddAssemblyResolver)
-                            {
-                                fDidAddAssemblyResolver = true;
-                                AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
+                        if (!_fDidAddAssemblyResolver)
+                        {
+                            _fDidAddAssemblyResolver = true;
+                            _logger.LogMessage("Register for AssemblyResolve");
+                            AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
+                              {
+                                  Assembly asm = null;
+                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
+                                  var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
+                                  foreach (var refDir in _lstRefDirs)
                                   {
-                                      Assembly asm = null;
-                                      logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
-                                      var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
-                                      foreach (var refDir in lstRefDirs)
+                                      foreach (var ext in new[] { ".dll", ".exe" })
                                       {
-                                          foreach (var ext in new[] { ".dll", ".exe" })
+                                          var fname = Path.Combine(refDir, requestName, ext);
+                                          if (File.Exists(fname))
                                           {
-                                              var fname = Path.Combine(refDir, requestName, ext);
-                                              if (File.Exists(fname))
-                                              {
-                                                  asm = Assembly.Load(fname);
-                                                  break;
-                                              }
-                                          }
-                                          if (asm != null)
-                                          {
+                                              asm = Assembly.Load(fname);
                                               break;
                                           }
                                       }
-                                      return asm;
-                                  };
-                            }
-                            // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
-                            object[] parms = new object[4];
-                            parms[0] = logger;
-                            parms[1] = token;
-                            parms[2] = PerfGraphToolWindowCommand.Instance?.g_dte;
-                            parms[3] = actTakeSample;
-                            var res = mainMethod.Invoke(null, new object[] { parms });
-                            if (res is string strres)
-                            {
-                                result = strres;
-                            }
-                            break;
+                                      if (asm != null)
+                                      {
+                                          break;
+                                      }
+                                  }
+                                  if (asm == null)
+                                  {
+                                      _logger.LogMessage($"Couldn't resolve {e.Name}");
+                                  }
+                                  return asm;
+                              };
                         }
+                        // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
+                        object[] parms = new object[4];
+                        parms[0] = _logger;
+                        parms[1] = token;
+                        parms[2] = PerfGraphToolWindowCommand.Instance?.g_dte;
+                        parms[3] = actTakeSample;
+                        var res = mainMethod.Invoke(null, new object[] { parms });
+                        if (res is string strres)
+                        {
+                            result = strres;
+                        }
+                        break;
                     }
                 }
             }
