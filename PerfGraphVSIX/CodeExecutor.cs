@@ -232,7 +232,7 @@ namespace MyCustomCode
                             }
                             if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                             {
-                                refAsm = typeof(PerfGraphToolWindowControl).Assembly.Location;
+                                refAsm = this.GetType().Assembly.Location;
                                 var dir = System.IO.Path.GetDirectoryName(refAsm);
                                 if (!_lstRefDirs.Contains(dir))
                                 {
