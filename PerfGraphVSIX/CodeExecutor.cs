@@ -84,9 +84,13 @@ namespace MyCustomCode
 
         private async Task DoSomeWorkAsync()
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            logger.LogMessage(""in DoSomeWorkAsync"");
+//            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(); // in tests, this won't work
+            logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
+            logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
             if (nTimes++ == 0)
             {
+                logger.LogMessage(""Registering for solution events"");
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
             }
@@ -144,7 +148,6 @@ namespace MyCustomCode
             }
         }
 
-
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
             logger.LogMessage(""SolutionEvents_OnAfterCloseSolution"");
@@ -160,7 +163,11 @@ namespace MyCustomCode
         public static string DoMain(object[] args)
         {
             var oMyClass = new MyClass(args);
-            return oMyClass.DoIt();
+
+            var t = oMyClass.DoSomeWorkAsync();
+            return ""did main"";
+
+//            return oMyClass.DoIt();
         }
     }
 }

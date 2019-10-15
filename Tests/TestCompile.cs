@@ -105,11 +105,17 @@ namespace DoesntMatter
         [TestMethod]
         public void TestCompileVSCode()
         {
-           
-            var res = new CodeExecutor(this).CompileAndExecute(CodeExecutor.sampleVSCodeToExecute, CancellationToken.None);
+
+            var codeExecutor = new CodeExecutor(this);
+            var res = codeExecutor.CompileAndExecute(CodeExecutor.sampleVSCodeToExecute, CancellationToken.None, (s)=>
+            {
+                LogMessage("In callback {s}");
+            });
             LogMessage(res);
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("The SVsSolution service is unavailable")).FirstOrDefault());
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
+
+
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Registering for solution events")).FirstOrDefault());
             //            Assert.Fail(res);The SVsSolution service is unavailable.
         }
 
