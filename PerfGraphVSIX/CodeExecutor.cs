@@ -78,8 +78,7 @@ namespace MyCustomCode
             logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
             logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
 
-            Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
-            var str = DoWaitAsync().GetAwaiter().GetResult();
+            var t = DoSomeWorkAsync();
             return ""did main "";
         }
 
@@ -167,8 +166,6 @@ namespace MyCustomCode
 }
 ";
 
-
-
         public const string DoMain = "DoMain"; // not domain
         public const string VSRootSubstitution = "%VSRoot%";
         public const string refPathPrefix = "//Ref:";
@@ -184,11 +181,19 @@ namespace MyCustomCode
             logger.LogMessage($"Compiling code");
             try
             {
+                //logger.LogMessage($"Main file= { Process.GetCurrentProcess().MainModule.FileName}"); //  C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\Extensions\TestPlatform\testhost.x86.exe
+                var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
+                var ndxCommon7 = curProcMainModule.IndexOf("common7", StringComparison.OrdinalIgnoreCase);
+                if (ndxCommon7 <= 0)
+                {
+                    throw new InvalidOperationException("Can't find VSRoot");
+                }
+                var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
                 // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
                 using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
                 {
                     var compParams = new CompilerParameters();
-                    var lstRefDirs = new List<string>();
+                    var lstRefDirs = new HashSet<string>();
                     var srcLines = strCodeToExecute.Split("\r\n".ToArray());
                     foreach (var refline in srcLines.Where(s => s.StartsWith(refPathPrefix)))
                     {
@@ -200,20 +205,16 @@ namespace MyCustomCode
                         if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                         {
                             refAsm = typeof(PerfGraphToolWindowControl).Assembly.Location;
-                            lstRefDirs.Add(System.IO.Path.GetDirectoryName(refAsm));
+                            var dir = System.IO.Path.GetDirectoryName(refAsm);
+                            if (!lstRefDirs.Contains(dir))
+                            {
+                                lstRefDirs.Add(dir);
+                            }
                         }
                         else
                         {
                             if (refAsm.Contains(VSRootSubstitution))
                             {
-                                //logger.LogMessage($"Main file= { Process.GetCurrentProcess().MainModule.FileName}"); //  C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\Extensions\TestPlatform\testhost.x86.exe
-                                var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
-                                var ndxCommon7 = curProcMainModule.IndexOf("common7", StringComparison.OrdinalIgnoreCase);
-                                if (ndxCommon7 <= 0)
-                                {
-                                    throw new InvalidOperationException("Can't find VSRoot");
-                                }
-                                var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
                                 refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
                             }
                             var dir = System.IO.Path.GetDirectoryName(refAsm);
@@ -226,7 +227,10 @@ namespace MyCustomCode
                                 }
                                 else
                                 {
-                                    lstRefDirs.Add(dir);
+                                    if (!lstRefDirs.Contains(dir))
+                                    {
+                                        lstRefDirs.Add(dir);
+                                    }
                                 }
                             }
                         }
@@ -285,9 +289,8 @@ namespace MyCustomCode
                                       }
                                       return asm;
                                   };
-
                             }
-                            // todo add asmresolve
+                            // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                             object[] parms = new object[4];
                             parms[0] = logger;
                             parms[1] = token;

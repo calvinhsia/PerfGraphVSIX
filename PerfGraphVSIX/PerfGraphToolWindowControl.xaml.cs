@@ -552,16 +552,16 @@
         CancellationTokenSource _cts;
         private void BtnDoSample_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (_cts == null)
-            {
-                _cts = new CancellationTokenSource();
-                _ = DoSomeWorkAsync();
-            }
-            else
-            {
-                AddStatusMsg("cancelling iterations");
-                _cts.Cancel();
-            }
+            //if (_cts == null)
+            //{
+            //    _cts = new CancellationTokenSource();
+            //    _ = DoSomeWorkAsync();
+            //}
+            //else
+            //{
+            //    AddStatusMsg("cancelling iterations");
+            //    _cts.Cancel();
+            //}
         }
 
         private async Task DoSomeWorkAsync()
