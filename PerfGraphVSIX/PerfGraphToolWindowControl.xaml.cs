@@ -1,6 +1,7 @@
 ﻿namespace PerfGraphVSIX
 {
     using EnvDTE;
+    using Microsoft.Build.Utilities;
     using Microsoft.VisualStudio.PlatformUI;
     using Microsoft.VisualStudio.ProjectSystem.Properties;
     using Microsoft.VisualStudio.Shell;
@@ -56,6 +57,7 @@
         public bool SetMaxGraphTo100 { get; set; } = false;
 
         public string SolutionToLoad { get; set; }
+        public string CodeToRun { get; set; } = CodeExecutor.sampleVSCodeToExecute;
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
 
@@ -523,7 +525,26 @@
 
         private void BtnExecCode_Click(object sender, RoutedEventArgs e)
         {
-
+            if (this.UpdateInterval != 0)
+            {
+                this.UpdateInterval = 0;
+                ResetPerfCounterMonitor();
+            }
+            if (_cts == null)
+            {
+                _cts = new CancellationTokenSource();
+                var c = new CodeExecutor(this);
+                c.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: (s) =>
+                {
+                    _ = DoSampleAsync();
+                });
+                _cts = null;
+            }
+            else
+            {
+                AddStatusMsg("cancelling iterations");
+                _cts.Cancel();
+            }
         }
 
         int nTimes = 0;
@@ -559,16 +580,23 @@
             for (int i = 0; i < NumberOfIterations && !_cts.IsCancellationRequested; i++)
             {
                 await DoSampleAsync();
-                await AddStatusMsgAsync($"Iter {i} Start {NumberOfIterations - i} left to do");
+                LogMessage("Iter {0} Start {1} left to do", i, NumberOfIterations - i);
                 await OpenASolutionAsync();
                 if (_cts.IsCancellationRequested)
                 {
                     break;
                 }
                 await CloseTheSolutionAsync();
-                await AddStatusMsgAsync($"Iter {i} end");
+                LogMessage("Iter {0} end", i);
             }
-            await AddStatusMsgAsync(_cts.IsCancellationRequested ? "Cancelled" : $"Done all {NumberOfIterations} iterations");
+            if (_cts.IsCancellationRequested)
+            {
+                LogMessage("Cancelled");
+            }
+            else
+            {
+                LogMessage("Done all {0} iterations", NumberOfIterations);
+            }
             await DoSampleAsync();
             _cts = null;
         }
@@ -579,7 +607,6 @@
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             PerfGraphToolWindowCommand.Instance.g_dte.Solution.Open(SolutionToLoad);
             await _tcs.Task;
-            //await AddStatusMsgAsync($"Solution open done");
             if (!_cts.IsCancellationRequested)
             {
                 await Task.Delay(5000 * DelayMultiplier);
@@ -590,13 +617,11 @@
         {
             _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            await AddStatusMsgAsync($"{nameof(CloseTheSolutionAsync)}");
             PerfGraphToolWindowCommand.Instance.g_dte.Solution.Close();
             if (!_cts.IsCancellationRequested)
             {
                 await Task.Delay(5000 * DelayMultiplier);
             }
-            await AddStatusMsgAsync($"{nameof(CloseTheSolutionAsync)}");
         }
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)

@@ -90,6 +90,11 @@
                     <UserControl Name="BrowLeakedObjects"/>
                 </StackPanel>
             </TabItem>
+            <TabItem Header="Code">
+                <DockPanel>
+                    <TextBox Text="{Binding CodeToRun}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                </DockPanel>
+            </TabItem>
             <TabItem Header = "Options" ToolTip="{Binding TipString}">
                 <Grid>
                     <Grid.ColumnDefinitions>
