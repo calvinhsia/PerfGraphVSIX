@@ -59,6 +59,12 @@ namespace MyCustomCode
         ILogger logger;
         Action<string> actTakeSample;
         public EnvDTE.DTE g_dte;
+
+        public static async Task DoMain(object[] args)
+        {
+            var oMyClass = new MyClass(args);
+            await oMyClass.DoSomeWorkAsync();
+        }
         public MyClass(object[] args)
         {
             _tcs = new TaskCompletionSource<int>();
@@ -67,27 +73,9 @@ namespace MyCustomCode
             g_dte= args[2] as EnvDTE.DTE;
             actTakeSample = args[3] as Action<string>;
         }
-
-        async Task<string> DoWaitAsync()
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            await Task.Delay(100);
-            return ""did delay"";
-        }
-
-        public string DoIt()
-        {
-            logger.LogMessage(""in doit"");
-            logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
-            logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
-
-            var t = DoSomeWorkAsync();
-            return ""did main "";
-        }
-
         private async Task DoSomeWorkAsync()
         {
-            logger.LogMessage(""in DoSomeWorkAsync"");
+//            logger.LogMessage(""in DoSomeWorkAsync"");
             try
             {
                 if (nTimes++ == 0)
@@ -103,14 +91,14 @@ namespace MyCustomCode
                     var desc = string.Format(""Iter {0}/{1}"", i, NumberOfIterations - 1);
                     DoSample(desc);
                     await Task.Delay(1000); // wait one second to allow UI thread to catch  up
-                    logger.LogMessage(desc);
+//                    logger.LogMessage(desc);
                     await OpenASolutionAsync();
                     if (_CancellationToken.IsCancellationRequested)
                     {
                         break;
                     }
                     await CloseTheSolutionAsync();
-                    logger.LogMessage(""End of Iter {0}"", i);
+//                    logger.LogMessage(""End of Iter {0}"", i);
                 }
                 if (_CancellationToken.IsCancellationRequested)
                 {
@@ -163,21 +151,14 @@ namespace MyCustomCode
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
-            logger.LogMessage(""SolutionEvents_OnAfterCloseSolution"");
+//            logger.LogMessage(""SolutionEvents_OnAfterCloseSolution"");
             _tcs.TrySetResult(0);
         }
 
         private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
         {
-            logger.LogMessage(""SolutionEvents_OnAfterBackgroundSolutionLoadComplete"");
+//            logger.LogMessage(""SolutionEvents_OnAfterBackgroundSolutionLoadComplete"");
             _tcs.TrySetResult(0);
-        }
-
-        public static async Task DoMain(object[] args)
-        {
-            var oMyClass = new MyClass(args);
-
-            await oMyClass.DoSomeWorkAsync();
         }
     }
 }
@@ -203,7 +184,7 @@ namespace MyCustomCode
         {
             object result = string.Empty;
             var hashofCodeToExecute = strCodeToExecute.GetHashCode();
-            _logger.LogMessage($"Compiling code");
+//            _logger.LogMessage($"Compiling code");
             try
             {
                 if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
@@ -302,7 +283,7 @@ namespace MyCustomCode
                         if (!_fDidAddAssemblyResolver)
                         {
                             _fDidAddAssemblyResolver = true;
-                            _logger.LogMessage("Register for AssemblyResolve");
+  //                          _logger.LogMessage("Register for AssemblyResolve");
                             AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
                               {
                                   Assembly asm = null;
@@ -338,7 +319,7 @@ namespace MyCustomCode
                                   return asm;
                               };
                         }
-                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
+//                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                         object[] parms = new object[4];
                         parms[0] = _logger;
@@ -352,7 +333,6 @@ namespace MyCustomCode
                         }
                         if (res is Task task)
                         {
-                            _logger.LogMessage($"Returned a task {task}");
                             result = res;
                         }
                         break;

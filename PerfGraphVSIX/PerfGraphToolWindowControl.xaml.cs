@@ -227,13 +227,13 @@
                     }
                 };
 
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += (o, e) =>
-                {
-                    if (this.TrackProjectObjects)
-                    {
-                        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution)}");
-                    }
-                };
+                //Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += (o, e) =>
+                //{
+                //    if (this.TrackProjectObjects)
+                //    {
+                //        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution)}");
+                //    }
+                //};
 
                 //var ev = (Events2)PerfGraphToolWindowCommand.Instance.g_dte.Events;
                 //_solutionEvents = ev.SolutionEvents;
@@ -551,6 +551,7 @@
             }
             if (_cts == null)
             {
+                this.btnExecCode.Content = "Cancel Code Execution";
                 await AddStatusMsgAsync("Starting Code Execution"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
                 _cts = new CancellationTokenSource();
                 if (_codeExecutor == null)
@@ -564,10 +565,12 @@
                 });
                 if (res is Task task)
                 {
-                    await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+ //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
                     await task;
-                    await AddStatusMsgAsync($"Task done: {res}");
+//                    await AddStatusMsgAsync($"Task done: {res}");
                     _cts = null;
+                    this.btnExecCode.Content = "ExecCode";
+                    this.btnExecCode.IsEnabled = true;
                 }
                 else
                 {
@@ -578,6 +581,7 @@
             {
                 await AddStatusMsgAsync("cancelling Code Execution");
                 _cts.Cancel();
+                this.btnExecCode.IsEnabled = false;
             }
         }
         CodeExecutor _codeExecutor;
