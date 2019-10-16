@@ -14,7 +14,7 @@ namespace PerfGraphVSIX
     internal class CodeExecutor
     {
         public const string sampleVSCodeToExecute = @"
-// This code will be compiled and run when you hit the ExecCode button
+// This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
 // can add the fullpath to an assembly for reference like so:
