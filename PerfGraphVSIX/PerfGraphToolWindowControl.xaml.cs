@@ -192,13 +192,13 @@
                 chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
 
                 //                _solutionEvents = new Microsoft.VisualStudio.Shell.Events.SolutionEvents();
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution += (o, e) =>
-                {
-                    if (this.TrackProjectObjects)
-                    {
-                        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution)}");
-                    }
-                };
+                //Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution += (o, e) =>
+                //{
+                //    if (this.TrackProjectObjects)
+                //    {
+                //        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution)}");
+                //    }
+                //};
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {
                     Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
@@ -349,6 +349,23 @@
                     sBuilder = new StringBuilder(ex.ToString());
                 }
                 AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
+                {
+                    await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
+                    lock (_lstPerfCounterDefinitions)
+                    {
+                        foreach (var ctr in _lstPerfCounterDefinitions)
+                        {
+                            ctr.ResetCounter();
+                        }
+                        _lstPCData = new List<uint>();
+                        _dataPoints.Clear();
+                        _bufferIndex = 0;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -541,8 +558,7 @@
                 var res = _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (s) =>
                 {
                     await DoSampleAsync();
-                    AddStatusMsg("DoSampleAsync done");
-                    _cts = null;
+                    AddStatusMsg("DoSampleAsync done {s}");
                 });
                 AddStatusMsg($"CompileAndExecute done: {res}");
             }

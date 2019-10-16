@@ -222,8 +222,8 @@ namespace MyCustomCode
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
 
 
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Registering for solution events")).FirstOrDefault());
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("UnRegistering for solution events")).FirstOrDefault());
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Registering solution events")).FirstOrDefault());
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("UnRegistering solution events")).FirstOrDefault());
             //            Assert.Fail(res);The SVsSolution service is unavailable.
         }
 

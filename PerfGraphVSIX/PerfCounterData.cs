@@ -55,6 +55,11 @@ namespace PerfGraphVSIX
             this.PerfCounterCategory = perfCounterCategory;
             this.PerfCounterName = perfCounterName;
             this.PerfCounterInstanceName = perfCounterInstanceName;
+            this.ResetCounter();
+        }
+
+        public void ResetCounter()
+        {
             this.lazyPerformanceCounter = new Lazy<PerformanceCounter>(() =>
             {
                 PerformanceCounter pc = null;
@@ -83,6 +88,7 @@ namespace PerfGraphVSIX
                 return pc;
             });
         }
+
         public override string ToString()
         {
             return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} Enabled = {IsEnabled}";

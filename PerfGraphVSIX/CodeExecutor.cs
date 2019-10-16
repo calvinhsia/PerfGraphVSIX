@@ -14,6 +14,9 @@ namespace PerfGraphVSIX
     internal class CodeExecutor
     {
         public const string sampleVSCodeToExecute = @"
+// This code will be compiled and run when you hit the ExecCode button
+// This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
+
 // can add the fullpath to an assembly for reference like so:
 //  %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
 //  %VSRoot% will be changed to the fullpath to VS: e.g. ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview""
@@ -89,13 +92,16 @@ namespace MyCustomCode
             {
                 if (nTimes++ == 0)
                 {
-                    logger.LogMessage(""Registering for solution events"");
+                    logger.LogMessage(""Registering solution events"");
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
                 }
+                // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
+
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
                 {
                     DoSample();
+                    await Task.Delay(1000); // wait one second to allow UI thread to catch  up
                     logger.LogMessage(""Iter {0}   Start {1} left to do"", i, NumberOfIterations - i);
                     await OpenASolutionAsync();
                     if (_CancellationToken.IsCancellationRequested)
@@ -117,7 +123,7 @@ namespace MyCustomCode
             }
             finally
             {
-                logger.LogMessage(""UnRegistering for solution events"");
+                logger.LogMessage(""UnRegistering solution events"");
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
             }
@@ -172,8 +178,6 @@ namespace MyCustomCode
 
             var t = oMyClass.DoSomeWorkAsync();
             return ""did main"";
-
-//            return oMyClass.DoIt();
         }
     }
 }
