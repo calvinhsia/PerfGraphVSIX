@@ -100,16 +100,17 @@ namespace MyCustomCode
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
                 {
-                    DoSample();
+                    var desc = string.Format(""Iter {0}/{1}"", i, NumberOfIterations - 1);
+                    DoSample(desc);
                     await Task.Delay(1000); // wait one second to allow UI thread to catch  up
-                    logger.LogMessage(""Iter {0}   Start {1} left to do"", i, NumberOfIterations - i);
+                    logger.LogMessage(desc);
                     await OpenASolutionAsync();
                     if (_CancellationToken.IsCancellationRequested)
                     {
                         break;
                     }
                     await CloseTheSolutionAsync();
-                    logger.LogMessage(""Iter {0} end"", i);
+                    logger.LogMessage(""End of Iter {0}"", i);
                 }
                 if (_CancellationToken.IsCancellationRequested)
                 {
@@ -119,7 +120,7 @@ namespace MyCustomCode
                 {
                     logger.LogMessage(""Done all {0} iterations"", NumberOfIterations);
                 }
-                DoSample();
+                DoSample(""Done"");
             }
             finally
             {
@@ -129,11 +130,11 @@ namespace MyCustomCode
             }
         }
 
-        void DoSample()
+        void DoSample(string desc)
         {
             if (actTakeSample != null)
             {
-                actTakeSample(string.Empty);
+                actTakeSample(desc);
             }
         }
 
@@ -172,12 +173,11 @@ namespace MyCustomCode
             _tcs.TrySetResult(0);
         }
 
-        public static string DoMain(object[] args)
+        public static async Task DoMain(object[] args)
         {
             var oMyClass = new MyClass(args);
 
-            var t = oMyClass.DoSomeWorkAsync();
-            return ""did main"";
+            await oMyClass.DoSomeWorkAsync();
         }
     }
 }
@@ -199,9 +199,9 @@ namespace MyCustomCode
         {
             this._logger = logger;
         }
-        public string CompileAndExecute(string strCodeToExecute, CancellationToken token, Action<string> actTakeSample = null)
+        public object CompileAndExecute(string strCodeToExecute, CancellationToken token, Action<string> actTakeSample = null)
         {
-            var result = string.Empty;
+            object result = string.Empty;
             var hashofCodeToExecute = strCodeToExecute.GetHashCode();
             _logger.LogMessage($"Compiling code");
             try
@@ -338,6 +338,7 @@ namespace MyCustomCode
                                   return asm;
                               };
                         }
+                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                         object[] parms = new object[4];
                         parms[0] = _logger;
@@ -348,6 +349,11 @@ namespace MyCustomCode
                         if (res is string strres)
                         {
                             result = strres;
+                        }
+                        if (res is Task task)
+                        {
+                            _logger.LogMessage($"Returned a task {task}");
+                            result = res;
                         }
                         break;
                     }

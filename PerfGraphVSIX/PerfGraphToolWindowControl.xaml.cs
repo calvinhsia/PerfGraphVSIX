@@ -540,7 +540,9 @@
             }
         }
 
-        private void BtnExecCode_Click(object sender, RoutedEventArgs e)
+#pragma warning disable VSTHRD100 // Avoid async void methods
+        private async void BtnExecCode_Click(object sender, RoutedEventArgs e)
+#pragma warning restore VSTHRD100 // Avoid async void methods
         {
             if (this.UpdateInterval != 0)
             {
@@ -549,7 +551,7 @@
             }
             if (_cts == null)
             {
-                AddStatusMsg("Starting Code Execution"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+                await AddStatusMsgAsync("Starting Code Execution"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
                 _cts = new CancellationTokenSource();
                 if (_codeExecutor == null)
                 {
@@ -558,15 +560,24 @@
                 var res = _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (s) =>
                 {
                     await DoSampleAsync();
-                    AddStatusMsg("DoSampleAsync done {s}");
+                    await AddStatusMsgAsync($"DoSampleAsync done {s}");
                 });
-                AddStatusMsg($"CompileAndExecute done: {res}");
+                if (res is Task task)
+                {
+                    await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                    await task;
+                    await AddStatusMsgAsync($"Task done: {res}");
+                    _cts = null;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"expected task return {res}");
+                }
             }
             else
             {
-                AddStatusMsg("cancelling Code Execution");
+                await AddStatusMsgAsync("cancelling Code Execution");
                 _cts.Cancel();
-                _cts = null;
             }
         }
         CodeExecutor _codeExecutor;

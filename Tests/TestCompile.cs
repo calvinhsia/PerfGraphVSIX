@@ -42,6 +42,54 @@ public class foo {}
         }
 
 
+        [TestMethod]
+        public void TestCompileCodeReturnTask()
+        {
+            var strCodeToExecute = @"
+// can add the fullpath to an assembly for reference like so:
+////Ref: c:\progam files \...myAsm.dll
+////Ref: System.dll
+////Ref: System.linq.dll
+////Ref: System.core.dll
+////Ref: <%= asmMemSpectBase.Location %>
+using System;
+using System.Threading.Tasks;
+
+namespace DoesntMatter
+{
+public class foo {}
+    public class SomeClass
+    {
+        async Task<string> DoWaitAsync()
+        {
+            await Task.Delay(100);
+            return ""did delay"";
+        }
+
+        public static async Task<string> DoMain(object [] args)
+        {
+            var x = 1;
+            var y = 100 / x;
+            
+            return ""did main "" + y.ToString() +"" "";
+        }
+    }
+}
+";
+            var codeExecutor = new CodeExecutor(this);
+            var res = codeExecutor.CompileAndExecute(strCodeToExecute, CancellationToken.None);
+            if (res is Task<string> task)
+            {
+                task.Wait();
+                Assert.AreEqual("did main 100 ", task.Result);
+            }
+            else
+            {
+                Assert.Fail();
+            }
+        }
+
+
 
         [TestMethod]
         public void TestCompilePerfGraphCode()
@@ -97,7 +145,7 @@ namespace DoesntMatter
 ";
             var codeExecutor = new CodeExecutor(this);
             var res = codeExecutor.CompileAndExecute(strCodeToExecute, CancellationToken.None);
-            LogMessage(res);
+            LogMessage(res as string);
             Assert.AreEqual("did main 100 did delay", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
 
@@ -202,7 +250,7 @@ namespace MyCustomCode
             {
                 LogMessage($"In callback {s}");
             });
-            LogMessage(res);
+            LogMessage(res as string);
             Assert.AreEqual("did main", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Iter 6   Start 1 left to do")).FirstOrDefault());
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Done all 7 iterations")).FirstOrDefault());
@@ -218,7 +266,12 @@ namespace MyCustomCode
             {
                 LogMessage("In callback {s}");
             });
-            LogMessage(res);
+            var task = res as Task;
+            if (task.IsFaulted)
+            {
+                LogMessage($"Faulted task {task.Exception.ToString()}");
+                Assert.IsTrue(task.Exception.ToString().Contains(" The SVsSolution service is unavailable."));
+            }
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
 
 
@@ -236,14 +289,15 @@ namespace MyCustomCode
             {
                 LogMessage("In callback {s}");
             });
-            LogMessage(res);
+            LogMessage((res as Task).ToString());
 
             res = codeExecutor.CompileAndExecute(CodeExecutor.sampleVSCodeToExecute, CancellationToken.None, (s) =>
             {
                 LogMessage("In callback {s}");
             });
-            LogMessage(res);
+            LogMessage((res as Task).ToString());
 
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
         }
 
 
