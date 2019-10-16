@@ -184,6 +184,29 @@ public:
 		HRESULT hr = S_OK;
 		CComCritSecLock<CComAutoCriticalSection> lock(_csectClassMap);
 		ClrClassData* pClrObjStats = nullptr;
+
+		bool fIsArrayClass = false;
+		CorElementType elemType;
+		ClassID arrayClassId;
+		ULONG arrayRank;
+		hr = g_pCorProfilerInfo->IsArrayClass(
+			classID,
+			&elemType,
+			&arrayClassId,
+			&arrayRank);
+		if (hr == S_OK)
+		{
+			if (elemType == ELEMENT_TYPE_CLASS)
+			{
+				fIsArrayClass = true;
+				classID = arrayClassId;
+			}
+			else
+			{
+				hr = E_FAIL;  // todo: e.g. primitive arrays
+			}
+		}
+
 		auto res = _dictClassData.find(classID);
 		if (res != _dictClassData.end())
 		{
@@ -191,27 +214,6 @@ public:
 		}
 		else
 		{// not found
-			bool fIsArrayClass = false;
-			CorElementType elemType;
-			ClassID arrayClassId;
-			ULONG arrayRank;
-			hr = g_pCorProfilerInfo->IsArrayClass(
-				classID,
-				&elemType,
-				&arrayClassId,
-				&arrayRank);
-			if (hr == S_OK)
-			{
-				if (elemType == ELEMENT_TYPE_CLASS)
-				{
-					fIsArrayClass = true;
-					classID = arrayClassId;
-				}
-				else
-				{
-					hr = E_FAIL;  // todo: e.g. primitive arrays
-				}
-			}
 			if (hr != E_FAIL)// (S_FALSE if not array)
 			{
 				ModuleID moduleID = 0;

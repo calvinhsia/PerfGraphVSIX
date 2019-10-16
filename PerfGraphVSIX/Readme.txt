@@ -4,5 +4,5 @@ Note: this will cause significant delay every UpdateInterval because it does Ful
 
 deploy
 
-xcopy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\Debug\PerfGraphVSIX.vsix \\calvinh6\public
+xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\Debug\PerfGraphVSIX.vsix \\calvinh6\public
 

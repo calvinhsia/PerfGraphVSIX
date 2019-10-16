@@ -39,6 +39,7 @@ namespace PerfGraphVSIX
         }
         /// <summary>
         /// Certain known objects have a flag when they're finished: e.g. IsClosed or _disposed.
+        /// todo: OnceInitializedOnceDisposed
         /// </summary>
         /// <returns></returns>
         public bool HasBeenClosedOrDisposed()
