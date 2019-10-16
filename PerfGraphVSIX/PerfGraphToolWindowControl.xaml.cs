@@ -128,7 +128,7 @@
 
                 btnDoSample.Click += (o, e) =>
                   {
-                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync());
+                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync("Manual"));
                   };
 
 
@@ -303,11 +303,15 @@
             });
         }
 
-        async Task DoSampleAsync()
+        async Task DoSampleAsync(string desc="")
         {
             try
             {
                 var sBuilder = new StringBuilder();
+                if (!string.IsNullOrEmpty(desc))
+                {
+                    sBuilder.Append(desc + " ");
+                }
                 lock (_lstPerfCounterDefinitions)
                 {
                     int idx = 0;
@@ -558,10 +562,9 @@
                 {
                     _codeExecutor = new CodeExecutor(this);
                 }
-                var res = _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (s) =>
+                var res = _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (desc) =>
                 {
-                    await DoSampleAsync();
-                    await AddStatusMsgAsync($"DoSampleAsync done {s}");
+                    await DoSampleAsync(desc);
                 });
                 if (res is Task task)
                 {

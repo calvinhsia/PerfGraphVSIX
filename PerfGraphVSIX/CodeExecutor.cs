@@ -100,15 +100,12 @@ namespace MyCustomCode
                     await CloseTheSolutionAsync();
 //                    logger.LogMessage(""End of Iter {0}"", i);
                 }
-                if (_CancellationToken.IsCancellationRequested)
+                var msg = ""Cancelled"";
+                if (!_CancellationToken.IsCancellationRequested)
                 {
-                    logger.LogMessage(""Cancelled"");
+                    msg = string.Format(""Done all {0} iterations"", NumberOfIterations);
                 }
-                else
-                {
-                    logger.LogMessage(""Done all {0} iterations"", NumberOfIterations);
-                }
-                DoSample(""Done"");
+                DoSample(msg);
             }
             finally
             {

@@ -475,7 +475,7 @@ extern "C" int __declspec(dllexport) CALLBACK TestRegEx(
 	BSTR * pstrResult
 )
 {
-	int res;
+	int res = 0;
 	if (numIterations == 0)
 	{
 		wcmatch match;
