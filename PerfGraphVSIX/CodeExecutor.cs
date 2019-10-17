@@ -17,9 +17,8 @@ namespace PerfGraphVSIX
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
-// can add the fullpath to an assembly for reference like so:
-//  %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
-//  %VSRoot% will be changed to the fullpath to VS: e.g. ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview""
+//  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
+//                      %VSRoot% will be changed to the fullpath to VS: e.g. ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview""
 
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
@@ -88,7 +87,7 @@ namespace MyCustomCode
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
                 {
-                    var desc = string.Format(""Iter {0}/{1}"", i, NumberOfIterations - 1);
+                    var desc = string.Format(""Start of Iter {0}/{1}"", i + 1, NumberOfIterations);
                     DoSample(desc);
                     await Task.Delay(1000); // wait one second to allow UI thread to catch  up
 //                    logger.LogMessage(desc);
@@ -100,7 +99,7 @@ namespace MyCustomCode
                     await CloseTheSolutionAsync();
 //                    logger.LogMessage(""End of Iter {0}"", i);
                 }
-                var msg = ""Cancelled"";
+                var msg = ""Cancelled Code Execution"";
                 if (!_CancellationToken.IsCancellationRequested)
                 {
                     msg = string.Format(""Done all {0} iterations"", NumberOfIterations);
