@@ -57,7 +57,8 @@
         public bool SetMaxGraphTo100 { get; set; } = false;
 
         public string SolutionToLoad { get; set; }
-        public string CodeToRun { get; set; } = CodeExecutor.sampleVSCodeToExecute;
+        private string _CodeToRun = CodeExecutor.sampleVSCodeToExecute;
+        public string CodeToRun { get { return _CodeToRun; } set { _CodeToRun = value; RaisePropChanged(); } }
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
 
@@ -303,7 +304,7 @@
             });
         }
 
-        async Task DoSampleAsync(string desc="")
+        async Task DoSampleAsync(string desc = "")
         {
             try
             {
@@ -568,17 +569,17 @@
                 });
                 if (res is Task task)
                 {
- //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
                     await task;
-//                    await AddStatusMsgAsync($"Task done: {res}");
-                    _cts = null;
-                    this.btnExecCode.Content = "ExecCode";
-                    this.btnExecCode.IsEnabled = true;
+                    //                    await AddStatusMsgAsync($"Task done: {res}");
                 }
                 else
                 {
-                    throw new InvalidOperationException($"expected task return {res}");
+                    await AddStatusMsgAsync(res.ToString());
                 }
+                _cts = null;
+                this.btnExecCode.Content = "ExecCode";
+                this.btnExecCode.IsEnabled = true;
             }
             else
             {
@@ -680,6 +681,16 @@
         public void LogMessage(string msg, params object[] args)
         {
             AddStatusMsg(msg, args);
+        }
+
+        private void BtnExecCode_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var txt = System.Windows.Clipboard.GetText(TextDataFormat.Text);
+            if (!string.IsNullOrEmpty(txt))
+            {
+                AddStatusMsg("Setting code from clipboard");
+                CodeToRun = txt;
+            }
         }
     }
 

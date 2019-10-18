@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace PerfGraphVSIX
 {
@@ -34,6 +35,13 @@ namespace PerfGraphVSIX
 
 //Ref: %PerfGraphVSIX%
 
+//to add .net refs:
+////Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
+////Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
+////Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
+////Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
+////Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
+////Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
 
 using System;
 using System.Threading;
@@ -82,6 +90,63 @@ namespace MyCustomCode
                     logger.LogMessage(""Registering solution events"");
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
+
+                    //foreach (EnvDTE.Window win in g_dte.Windows)
+                    //{
+                    //    logger.LogMessage(""Win "" + win.Kind + "" ""+ win.ToString());
+                    //    if (win.Kind == ""Document"") // ""Tool""
+                    //    {
+                    //        logger.LogMessage(""   "" + win.Document.Name);
+                    //    }
+                    //}
+                    //g_dte.ExecuteCommand(""File.OpenFile"", @""C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs"");
+                    // https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.sendkeys?view=netframework-4.8
+                    //System.Windows.Forms.SendKeys.Send(""asdf""); // SendKeys.Send(""{ENTER}"");
+                    //await Task.Delay(1000);
+
+
+
+                    //var ox = new System.Windows.Window();
+                    //var tb = new System.Windows.Controls.TextBox()
+                    //{
+                    //    AcceptsReturn = true
+                    //};
+                    //ox.Content = tb;
+                    //ox.ShowDialog();
+
+
+                    //g_dte.ExecuteCommand(""File.OpenFile"", @""C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs"");
+                    //g_dte.ExecuteCommand(""File.NewFile"", ""temp.cs"");
+                    //System.Windows.Forms.SendKeys.Send(""using System;{ENTER}"");
+                    //await Task.Delay(1000);
+                    //System.Windows.Forms.SendKeys.Send(""class testing {{}"");
+                    //await Task.Delay(1000);
+                    //Func<Task> undoAll = async () =>
+                    //  {
+                    //      var done = false;
+                    //      logger.LogMessage(""Start undo loop"");
+                    //      while (!done)
+                    //      {
+                    //          try
+                    //          {
+                    //              logger.LogMessage("" in undo loop"");
+                    //              g_dte.ExecuteCommand(""Edit.Undo"");
+                    //              await Task.Delay(100);
+                    //          }
+                    //          catch (Exception)
+                    //          {
+                    //              done = true;
+                    //              logger.LogMessage(""Done undo loop"");
+                    //          }
+                    //      }
+                    //  };
+                    //await undoAll();
+                    //g_dte.ExecuteCommand(""File.Close"", @"""");
+                    //await Task.Delay(1000);
+
+
+
+
                 }
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
 
@@ -105,6 +170,10 @@ namespace MyCustomCode
                     msg = string.Format(""Done all {0} iterations"", NumberOfIterations);
                 }
                 DoSample(msg);
+            }
+            catch (Exception ex)
+            {
+                logger.LogMessage(ex.ToString());
             }
             finally
             {
@@ -245,6 +314,7 @@ namespace MyCustomCode
                             }
                             compParams.ReferencedAssemblies.Add(refAsm);
                         }
+//                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
                         compParams.GenerateInMemory = true; // in memory cannot be unloaded
                         var resCompile = cdProvider.CompileAssemblyFromSource(compParams, strCodeToExecute);
