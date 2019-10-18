@@ -6,7 +6,7 @@
              xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
              xmlns:local="clr-namespace:PerfGraphVSIX"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300"
+             d:DesignHeight="300" d:DesignWidth="600"
              Name="MyToolWindow" DataContext="{Binding Mode=OneWay, RelativeSource={RelativeSource Self}}">
     <UserControl.Resources>
         <ResourceDictionary xmlns:vs_shell="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0">
@@ -91,9 +91,17 @@
                 </StackPanel>
             </TabItem>
             <TabItem Header="Code">
-                <DockPanel>
-                    <TextBox Text="{Binding CodeToRun}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" AcceptsTab="True" />
-                </DockPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width = "300"/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <ListBox Name="lvCodeSamples" 
+                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button"
+                                 ItemsSource="{Binding LstCodeSamples }" MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
+                    </StackPanel>
+                </Grid>
             </TabItem>
             <TabItem Header = "Options" ToolTip="{Binding TipString}">
                 <Grid>
@@ -152,10 +160,10 @@
         <StackPanel Grid.Row="2" Orientation="Vertical">
             <StackPanel Orientation="Horizontal">
                 <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" 
-                        ToolTip="Take a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)" MouseRightButtonUp="BtnDoSample_MouseRightButtonUp" 
+                        ToolTip="Take a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)"  
                          />
                 <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
-                        ToolTip="Execute the code in the Code tab. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0" MouseRightButtonUp="BtnExecCode_MouseRightButtonUp" 
+                        ToolTip="Execute the code in the Code tab. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
                          />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>

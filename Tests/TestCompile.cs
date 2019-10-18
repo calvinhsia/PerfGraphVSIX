@@ -277,7 +277,7 @@ namespace MyCustomCode
 
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Registering solution events")).FirstOrDefault());
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("UnRegistering solution events")).FirstOrDefault());
-            //            Assert.Fail(res);The SVsSolution service is unavailable.
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("The SVsSolution service is unavailable")).FirstOrDefault());
         }
 
 

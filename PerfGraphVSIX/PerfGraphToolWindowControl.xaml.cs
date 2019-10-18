@@ -1,6 +1,7 @@
 ﻿namespace PerfGraphVSIX
 {
     using EnvDTE;
+    using Microsoft;
     using Microsoft.Build.Utilities;
     using Microsoft.VisualStudio.PlatformUI;
     using Microsoft.VisualStudio.ProjectSystem.Properties;
@@ -13,6 +14,7 @@
     using System.Collections.ObjectModel;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
+    using System.IO;
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Text;
@@ -31,8 +33,13 @@
         internal OpenFolderTracker _openFolderTracker;
 
         internal ObjTracker _objTracker;
+
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
+
+        CodeExecutor _codeExecutor;
+        CancellationTokenSource _ctsExecuteCode;
+
         string _LastStatMsg;
         readonly Chart _chart;
 
@@ -56,9 +63,10 @@
         public bool ScaleByteCounters { get; set; } = false;
         public bool SetMaxGraphTo100 { get; set; } = false;
 
-        public string SolutionToLoad { get; set; }
-        private string _CodeToRun = CodeExecutor.sampleVSCodeToExecute;
-        public string CodeToRun { get { return _CodeToRun; } set { _CodeToRun = value; RaisePropChanged(); } }
+
+        public string CodeSampleDirectory { get { return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); } }
+        public ObservableCollection<string> LstCodeSamples { get; set; } = new ObservableCollection<string>();
+
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
 
@@ -106,16 +114,17 @@
 
         public PerfGraphToolWindowControl()
         {
-            var sln = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-
-            if (System.IO.File.Exists(sln))
-            {
-                SolutionToLoad = sln;
-            }
             this.InitializeComponent();
             try
             {
-                AddStatusMsg($"Starting {TipString}");
+                LogMessage($"Starting {TipString}");
+
+                foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs"))
+                {
+                    LstCodeSamples.Add(Path.GetFileName(file));
+                }
+                lvCodeSamples.SelectedItem = LstCodeSamples[1];
+
                 _objTracker = new ObjTracker(this);
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
                 _editorTracker.Initialize(this, _objTracker);
@@ -503,10 +512,7 @@
             PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("Tools.ForceGC");
         }
 
-        //Microsoft.VisualStudio.Shell.Events.SolutionEvents _solutionEvents;
-
-
-        public void AddStatusMsg(string msg, params object[] args)
+        public void LogMessage(string msg, params object[] args)
         {
             _ = AddStatusMsgAsync(msg, args);
         }
@@ -549,147 +555,75 @@
         private async void BtnExecCode_Click(object sender, RoutedEventArgs e)
 #pragma warning restore VSTHRD100 // Avoid async void methods
         {
-            if (this.UpdateInterval != 0)
+            try
             {
-                this.UpdateInterval = 0;
-                ResetPerfCounterMonitor();
-            }
-            if (_cts == null)
-            {
-                this.btnExecCode.Content = "Cancel Code Execution";
-                await AddStatusMsgAsync("Starting Code Execution"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
-                _cts = new CancellationTokenSource();
-                if (_codeExecutor == null)
+                if (this.UpdateInterval != 0)
                 {
-                    _codeExecutor = new CodeExecutor(this);
+                    this.UpdateInterval = 0;
+                    ResetPerfCounterMonitor();
                 }
-                var res = _codeExecutor.CompileAndExecute(this.CodeToRun, _cts.Token, actTakeSample: async (desc) =>
+                if (_ctsExecuteCode == null)
                 {
-                    await DoSampleAsync(desc);
-                });
-                if (res is Task task)
-                {
-                    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
-                    await task;
-                    //                    await AddStatusMsgAsync($"Task done: {res}");
+
+                    var CodeFileToRun = string.Empty;
+                    if (lvCodeSamples.SelectedItem == null)
+                    {
+                        return;
+                    }
+                    CodeFileToRun = Path.Combine(CodeSampleDirectory, lvCodeSamples.SelectedItem.ToString());
+
+                    this.btnExecCode.Content = "Cancel Code Execution";
+                    await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+                    _ctsExecuteCode = new CancellationTokenSource();
+                    if (_codeExecutor == null)
+                    {
+                        _codeExecutor = new CodeExecutor(this);
+                    }
+                    var codeToRun = File.ReadAllText(CodeFileToRun);
+                    var res = _codeExecutor.CompileAndExecute(codeToRun, _ctsExecuteCode.Token, actTakeSample: async (desc) =>
+                    {
+                        await DoSampleAsync(desc);
+                    });
+                    if (res is Task task)
+                    {
+                        //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                        await task;
+                        //                    await AddStatusMsgAsync($"Task done: {res}");
+                    }
+                    else
+                    {
+                        await AddStatusMsgAsync(res.ToString());
+                    }
+                    _ctsExecuteCode = null;
+                    this.btnExecCode.Content = "ExecCode";
+                    this.btnExecCode.IsEnabled = true;
                 }
                 else
                 {
-                    await AddStatusMsgAsync(res.ToString());
+                    await AddStatusMsgAsync("cancelling Code Execution");
+                    _ctsExecuteCode.Cancel();
+                    this.btnExecCode.IsEnabled = false;
                 }
-                _cts = null;
-                this.btnExecCode.Content = "ExecCode";
-                this.btnExecCode.IsEnabled = true;
             }
-            else
+            catch (Exception ex)
             {
-                await AddStatusMsgAsync("cancelling Code Execution");
-                _cts.Cancel();
-                this.btnExecCode.IsEnabled = false;
-            }
-        }
-        CodeExecutor _codeExecutor;
-        int nTimes = 0;
-        TaskCompletionSource<int> _tcs;
-        CancellationTokenSource _cts;
-        private void BtnDoSample_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            if (_cts == null)
-            {
-                _cts = new CancellationTokenSource();
-                _ = DoSomeWorkAsync();
-            }
-            else
-            {
-                AddStatusMsg("cancelling iterations");
-                _cts.Cancel();
+                LogMessage(ex.ToString());
             }
         }
 
-        private async Task DoSomeWorkAsync()
+        private void LvCodeSamples_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            if (this.UpdateInterval != 0)
-            {
-                this.UpdateInterval = 0;
-                ResetPerfCounterMonitor();
-            }
-            if (nTimes++ == 0)
-            {
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
-            }
-            for (int i = 0; i < NumberOfIterations && !_cts.IsCancellationRequested; i++)
-            {
-                await DoSampleAsync();
-                LogMessage("Iter {0} Start {1} left to do", i, NumberOfIterations - i);
-                await OpenASolutionAsync();
-                if (_cts.IsCancellationRequested)
-                {
-                    break;
-                }
-                await CloseTheSolutionAsync();
-                LogMessage("Iter {0} end", i);
-            }
-            if (_cts.IsCancellationRequested)
-            {
-                LogMessage("Cancelled");
-            }
-            else
-            {
-                LogMessage("Done all {0} iterations", NumberOfIterations);
-            }
-            await DoSampleAsync();
-            _cts = null;
-        }
+            //            ThreadHelper.ThrowIfNotOnUIThread();
+            Dispatcher.VerifyAccess();
 
-        async Task OpenASolutionAsync()
-        {
-            _tcs = new TaskCompletionSource<int>();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            PerfGraphToolWindowCommand.Instance.g_dte.Solution.Open(SolutionToLoad);
-            await _tcs.Task;
-            if (!_cts.IsCancellationRequested)
+            if (lvCodeSamples.SelectedItems.Count == 1)
             {
-                await Task.Delay(5000 * DelayMultiplier);
-            }
-        }
-
-        async Task CloseTheSolutionAsync()
-        {
-            _tcs = new TaskCompletionSource<int>();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            PerfGraphToolWindowCommand.Instance.g_dte.Solution.Close();
-            if (!_cts.IsCancellationRequested)
-            {
-                await Task.Delay(5000 * DelayMultiplier);
-            }
-        }
-
-        private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
-        {
-            AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterCloseSolution)}");
-            _tcs?.TrySetResult(0);
-        }
-
-        private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
-        {
-            AddStatusMsg($"Solution {nameof(SolutionEvents_OnAfterBackgroundSolutionLoadComplete)}");
-            _tcs?.TrySetResult(0);
-        }
-
-        public void LogMessage(string msg, params object[] args)
-        {
-            AddStatusMsg(msg, args);
-        }
-
-        private void BtnExecCode_MouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            var txt = System.Windows.Clipboard.GetText(TextDataFormat.Text);
-            if (!string.IsNullOrEmpty(txt))
-            {
-                AddStatusMsg("Setting code from clipboard");
-                CodeToRun = txt;
+                var itm = lvCodeSamples.SelectedItems[0] as string;
+                var pathFile = Path.Combine(
+                    CodeSampleDirectory,
+                    itm.ToString());
+                pathFile = "\"" + pathFile + "\"";
+                PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", pathFile);
             }
         }
     }
