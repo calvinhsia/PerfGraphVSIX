@@ -39,6 +39,7 @@
 
         CodeExecutor _codeExecutor;
         CancellationTokenSource _ctsExecuteCode;
+        readonly FileSystemWatcher _fileSystemWatcher;
 
         string _LastStatMsg;
         readonly Chart _chart;
@@ -64,7 +65,18 @@
         public bool SetMaxGraphTo100 { get; set; } = false;
 
 
-        public string CodeSampleDirectory { get { return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); } }
+        public string CodeSampleDirectory
+        {
+            get
+            {
+                var dirDev = @"C:\Users\calvinh\Source\Repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples";
+                if (Directory.Exists(dirDev)) //while developing, use the source folder 
+                {
+                    return dirDev;
+                }
+                return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
+            }
+        }
         public ObservableCollection<string> LstCodeSamples { get; set; } = new ObservableCollection<string>();
 
         public int NumberOfIterations { get; set; } = 7;
@@ -119,11 +131,31 @@
             {
                 LogMessage($"Starting {TipString}");
 
-                foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs"))
+                async Task RefreshCodeToRunAsync()
                 {
-                    LstCodeSamples.Add(Path.GetFileName(file));
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    LstCodeSamples.Clear();
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f=>new FileInfo(f).LastWriteTime))
+                    {
+                        LstCodeSamples.Add(Path.GetFileName(file));
+                    }
+                    //_ctsExecuteCode?.Cancel();
+                    lvCodeSamples.SelectedItem = LstCodeSamples[0];
                 }
-                lvCodeSamples.SelectedItem = LstCodeSamples[1];
+                _ = RefreshCodeToRunAsync();
+
+                _fileSystemWatcher = new FileSystemWatcher(CodeSampleDirectory);
+                FileSystemEventHandler h = new FileSystemEventHandler(
+                            (o, e) =>
+                            {
+                                //                                LogMessage($"FileWatcher {e.ChangeType} '{e.FullPath}'");
+                                _ = RefreshCodeToRunAsync();
+                            }
+                );
+                _fileSystemWatcher.Changed += h;
+                _fileSystemWatcher.Created += h;
+                _fileSystemWatcher.Deleted += h;
+                _fileSystemWatcher.EnableRaisingEvents = true;
 
                 _objTracker = new ObjTracker(this);
                 _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
@@ -186,29 +218,16 @@
                     }
                 };
 
-                _chart = new Chart()
-                {
-                    //Width = 200,
-                    //Height = 400,
-                    //                    Dock = System.Windows.Forms.DockStyle.Fill
-                };
+                _chart = new Chart();
                 wfhost.Child = _chart;
 
-                var t = Task.Run(() =>
+                _ = Task.Run(() =>
                 {
                     ResetPerfCounterMonitor();
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
                 chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
 
-                //                _solutionEvents = new Microsoft.VisualStudio.Shell.Events.SolutionEvents();
-                //Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution += (o, e) =>
-                //{
-                //    if (this.TrackProjectObjects)
-                //    {
-                //        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenSolution)}");
-                //    }
-                //};
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {
                     Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
@@ -236,31 +255,6 @@
                         }
                     }
                 };
-
-                //Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += (o, e) =>
-                //{
-                //    if (this.TrackProjectObjects)
-                //    {
-                //        var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution)}");
-                //    }
-                //};
-
-                //var ev = (Events2)PerfGraphToolWindowCommand.Instance.g_dte.Events;
-                //_solutionEvents = ev.SolutionEvents;
-                //_solutionEvents.AfterClosing += () =>
-                //{
-                //    var task = AddStatusMsgAsync($"{nameof(_solutionEvents.AfterClosing)}");
-                //};
-                //_solutionEvents.Opened += () =>
-                //{
-                //    var task = AddStatusMsgAsync($"{nameof(_solutionEvents.Opened)}");
-
-                //};
-                //_solutionEvents.ProjectAdded += (o) =>
-                //{
-
-                //};
-
             }
             catch (Exception ex)
             {
@@ -568,6 +562,7 @@
                     var CodeFileToRun = string.Empty;
                     if (lvCodeSamples.SelectedItem == null)
                     {
+                        LogMessage($"No Code file selected");
                         return;
                     }
                     CodeFileToRun = Path.Combine(CodeSampleDirectory, lvCodeSamples.SelectedItem.ToString());

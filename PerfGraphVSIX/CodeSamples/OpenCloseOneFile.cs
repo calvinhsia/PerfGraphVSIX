@@ -44,8 +44,8 @@ namespace MyCustomCode
 {
     public class MyClass
     {
-        string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost";
-        int NumberOfIterations = 7;
+        string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+        int NumberOfIterations = 170;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         int nTimes = 0;
         TaskCompletionSource<int> _tcs;
@@ -75,10 +75,9 @@ namespace MyCustomCode
             {
                 if (nTimes++ == 0)
                 {
-                    logger.LogMessage("Registering Folder events");
-                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder += SolutionEvents_OnAfterOpenFolder;
+                    logger.LogMessage("Registering solution events");
+                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
-
                     //await OpenASolutionAsync();
                     //foreach (EnvDTE.Window win in g_dte.Windows)
                     //{
@@ -88,7 +87,6 @@ namespace MyCustomCode
                     //        logger.LogMessage("   " + win.Document.Name);
                     //    }
                     //}
-                    //g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
                     //g_dte.ExecuteCommand("File.NewFile", "temp.cs");
                     //System.Windows.Forms.SendKeys.Send("using System;{ENTER}");
                     //await Task.Delay(1000);
@@ -127,26 +125,25 @@ namespace MyCustomCode
                     //ox.ShowDialog();
                 }
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
+                logger.LogMessage("Opening Solution");
+                await OpenASolutionAsync();
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
                 {
                     var desc = string.Format("Start of Iter {0}/{1}", i + 1, NumberOfIterations);
                     DoSample(desc);
                     await Task.Delay(1000, _CancellationToken); // wait one second to allow UI thread to catch  up
-                                            //                    logger.LogMessage(desc);
-                    await OpenAFolderAsync();
+                    g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
 
-                    //                    g_dte.ExecuteCommand("File.OpenFolder", @"C:\Users\calvinh\Source\repos\hWndHost");
-
-                    //                    g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
-                    //                    await Task.Delay(2000);
-                    //                    await OpenASolutionAsync();
                     if (_CancellationToken.IsCancellationRequested)
                     {
                         break;
                     }
-                    await CloseTheFolderAsync();
-                    await Task.Delay(5000, _CancellationToken);
+
+                    await Task.Delay(3000, _CancellationToken);
+
+                    g_dte.ExecuteCommand("File.Close", @"");
+
 
                     //                    logger.LogMessage("End of Iter {0}", i);
                 }
@@ -167,8 +164,8 @@ namespace MyCustomCode
             }
             finally
             {
-                logger.LogMessage("UnRegistering Folder events");
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder -= SolutionEvents_OnAfterOpenFolder;
+                logger.LogMessage("UnRegistering solution events");
+                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
             }
         }
@@ -181,11 +178,11 @@ namespace MyCustomCode
             }
         }
 
-        async Task OpenAFolderAsync()
+        async Task OpenASolutionAsync()
         {
             _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.ExecuteCommand("File.OpenFolder", SolutionToLoad);
+            g_dte.Solution.Open(SolutionToLoad);
             await _tcs.Task;
             if (!_CancellationToken.IsCancellationRequested)
             {
@@ -193,35 +190,27 @@ namespace MyCustomCode
             }
         }
 
-        async Task CloseTheFolderAsync()
+        async Task CloseTheSolutionAsync()
         {
             _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             g_dte.Solution.Close();
-
             if (!_CancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
             }
         }
 
-        private void SolutionEvents_OnAfterOpenFolder(object sender, EventArgs e)
-        {
-            logger.LogMessage("SolutionEvents_OnAfterOpenFolder");
-            _tcs.TrySetResult(0);
-        }
-
-        private void SolutionEvents_OnAfterCloseFolder(object sender, EventArgs e)
-        {
-            logger.LogMessage("SolutionEvents_OnAfterCloseFolder");
-            _tcs.TrySetResult(0);
-        }
-
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
-            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
+            //            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
             _tcs.TrySetResult(0);
         }
 
+        private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
+        {
+            logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
+            _tcs.TrySetResult(0);
+        }
     }
 }

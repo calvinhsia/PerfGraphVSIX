@@ -45,7 +45,7 @@ namespace MyCustomCode
     public class MyClass
     {
         string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-        int NumberOfIterations = 70;
+        int NumberOfIterations = 7;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         int nTimes = 0;
         TaskCompletionSource<int> _tcs;
@@ -139,7 +139,7 @@ namespace MyCustomCode
                         break;
                     }
                     await CloseTheSolutionAsync();
-                    g_dte.ExecuteCommand("File.CloseSolution", @"");
+//                    g_dte.ExecuteCommand("File.CloseSolution", @"");
                     await Task.Delay(5000);
                     //                    logger.LogMessage("End of Iter {0}", i);
                 }
@@ -149,6 +149,10 @@ namespace MyCustomCode
                     msg = string.Format("Done all {0} iterations", NumberOfIterations);
                 }
                 DoSample(msg);
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogMessage("Cancelled");
             }
             catch (Exception ex)
             {
@@ -178,7 +182,7 @@ namespace MyCustomCode
             await _tcs.Task;
             if (!_CancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier);
+                await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
             }
         }
 
@@ -189,7 +193,7 @@ namespace MyCustomCode
             g_dte.Solution.Close();
             if (!_CancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier);
+                await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
             }
         }
 
@@ -201,7 +205,7 @@ namespace MyCustomCode
 
         private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
         {
-            logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
+            //logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
             _tcs.TrySetResult(0);
         }
     }

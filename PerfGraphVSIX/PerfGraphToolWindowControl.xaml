@@ -98,7 +98,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <ListBox Name="lvCodeSamples" 
-                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button"
+                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests"
                                  ItemsSource="{Binding LstCodeSamples }" MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
                     </StackPanel>
                 </Grid>
