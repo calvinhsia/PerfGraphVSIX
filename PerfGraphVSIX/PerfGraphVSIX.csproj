@@ -59,11 +59,12 @@
   <ItemGroup>
     <Compile Include="Browse.cs" />
     <Compile Include="CodeExecutor.cs" />
+    <Content Include="CodeSamples\NavOneFile.cs" />
     <Content Include="CodeSamples\OpenCloseFolder.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="CodeSamples\NavOneFile.cs">
+    <Content Include="CodeSamples\NavTwoFiles.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
@@ -90,6 +91,7 @@
   <ItemGroup>
     <Content Include="CodeSamples\OpenCloseOneFile.cs">
       <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="CodeSamples\OpenCloseSln.cs">
       <IncludeInVSIX>true</IncludeInVSIX>

@@ -77,7 +77,8 @@
                 return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
             }
         }
-        public ObservableCollection<string> LstCodeSamples { get; set; } = new ObservableCollection<string>();
+        private ObservableCollection<string> _LstCodeSamples = new ObservableCollection<string>();
+        public ObservableCollection<string> LstCodeSamples { get { return _LstCodeSamples; } set { _LstCodeSamples = value; RaisePropChanged(); } }
 
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
@@ -135,7 +136,7 @@
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     LstCodeSamples.Clear();
-                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f=>new FileInfo(f).LastWriteTime))
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
                         LstCodeSamples.Add(Path.GetFileName(file));
                     }
