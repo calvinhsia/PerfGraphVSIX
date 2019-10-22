@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DumperViewer;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,7 +35,7 @@ namespace PerfGraphVSIX
         {
             object result = string.Empty;
             var hashofCodeToExecute = strCodeToExecute.GetHashCode();
-//            _logger.LogMessage($"Compiling code");
+            //            _logger.LogMessage($"Compiling code");
             try
             {
                 if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
@@ -73,6 +74,8 @@ namespace PerfGraphVSIX
                                 {
                                     _lstRefDirs.Add(dir);
                                 }
+                                compParams.ReferencedAssemblies.Add(refAsm);
+                                refAsm = typeof(ILogger).Assembly.Location;
                             }
                             else
                             {
@@ -99,7 +102,7 @@ namespace PerfGraphVSIX
                             }
                             compParams.ReferencedAssemblies.Add(refAsm);
                         }
-//                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
+                        //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
                         compParams.GenerateInMemory = true; // in memory cannot be unloaded
                         var resCompile = cdProvider.CompileAssemblyFromSource(compParams, strCodeToExecute);
@@ -134,7 +137,7 @@ namespace PerfGraphVSIX
                         if (!_fDidAddAssemblyResolver)
                         {
                             _fDidAddAssemblyResolver = true;
-  //                          _logger.LogMessage("Register for AssemblyResolve");
+                            //                          _logger.LogMessage("Register for AssemblyResolve");
                             AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
                               {
                                   Assembly asm = null;
@@ -143,6 +146,10 @@ namespace PerfGraphVSIX
                                   if (requestName == nameof(PerfGraphVSIX))
                                   {
                                       asm = this.GetType().Assembly;
+                                  }
+                                  else if (requestName == nameof(DumperViewer))
+                                  {
+                                      asm = typeof(ILogger).Assembly;
                                   }
                                   else
                                   {
@@ -153,7 +160,14 @@ namespace PerfGraphVSIX
                                               var fname = Path.Combine(refDir, requestName) + ext;
                                               if (File.Exists(fname))
                                               {
-                                                  asm = Assembly.Load(fname);
+                                                  try
+                                                  {
+                                                      asm = Assembly.Load(fname);
+                                                  }
+                                                  catch (Exception)
+                                                  {
+                                                      asm = Assembly.LoadFrom(fname);
+                                                  }
                                                   break;
                                               }
                                           }
@@ -170,7 +184,7 @@ namespace PerfGraphVSIX
                                   return asm;
                               };
                         }
-//                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
+                        //                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                         object[] parms = new object[4];
                         parms[0] = _logger;

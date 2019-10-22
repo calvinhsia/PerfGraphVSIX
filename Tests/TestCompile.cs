@@ -290,7 +290,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
 using Microsoft.VisualStudio.Shell;
-
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 
@@ -476,17 +475,21 @@ namespace MyCustomCode
         {
 
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(sampleVSCodeToExecute, CancellationToken.None, (s)=>
+            var res = codeExecutor.CompileAndExecute(sampleVSCodeToExecute, CancellationToken.None, (s) =>
             {
                 LogMessage("In callback {s}");
             });
+            if (res is string resString)
+            {
+                Assert.Fail(resString);
+            }
             var task = res as Task;
             if (task.IsFaulted)
             {
                 LogMessage($"Faulted task {task.Exception.ToString()}");
                 Assert.IsTrue(task.Exception.ToString().Contains(" The SVsSolution service is unavailable."));
             }
-//            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
+            //            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
 
 
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Registering solution events")).FirstOrDefault());

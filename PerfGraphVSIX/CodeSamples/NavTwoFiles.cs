@@ -36,6 +36,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
 
+
 using Microsoft.VisualStudio.Shell;
 
 using Microsoft.VisualStudio.Threading;
@@ -88,7 +89,6 @@ namespace MyCustomCode
                     //        logger.LogMessage("   " + win.Document.Name);
                     //    }
                     //}
-                    //g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
                     //g_dte.ExecuteCommand("File.NewFile", "temp.cs");
                     //System.Windows.Forms.SendKeys.Send("using System;{ENTER}");
                     //await Task.Delay(1000);
@@ -127,21 +127,60 @@ namespace MyCustomCode
                     //ox.ShowDialog();
                 }
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
+                logger.LogMessage("Opening Solution");
+                await OpenASolutionAsync();
 
+                var file1 = @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs"; // 1642 lines
+                var file2 = @"C:\Users\calvinh\Source\repos\hWndHost\Fish\FishWindow.xaml.cs"; // 1047 lines
+                g_dte.ExecuteCommand("File.OpenFile", file1);
+                await Task.Delay(500, _CancellationToken); // wait one second to allow UI thread to catch  up
+                g_dte.ExecuteCommand("File.OpenFile", file2);
+                await Task.Delay(500, _CancellationToken); // wait one second to allow UI thread to catch  up
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
                 {
                     var desc = string.Format("Start of Iter {0}/{1}", i + 1, NumberOfIterations);
                     DoSample(desc);
-                    await Task.Delay(1000); // wait one second to allow UI thread to catch  up
+                    await Task.Delay(500, _CancellationToken); // wait one second to allow UI thread to catch  up
 
-                    await OpenASolutionAsync();
+                    Action<string> DoScrolling = async (file) =>
+                    {
+                        try
+                        {
+                            int nScroll = 10;
+
+                            g_dte.ExecuteCommand("File.OpenFile", file);
+                            await Task.Delay(2000, _CancellationToken); // wait one second to allow UI thread to catch  up
+                            g_dte.ExecuteCommand("Edit.DocumentStart", @"");
+                            for (int r = 0; r < nScroll && !_CancellationToken.IsCancellationRequested; r++)
+                            {
+                                //                        g_dte.ExecuteCommand("Edit.CharRight", @"");
+                                g_dte.ExecuteCommand("Edit.ScrollPageDown", @"");
+
+                                await Task.Delay(1000, _CancellationToken); // wait one second to allow UI thread to catch  up
+                            }
+
+                            for (int r = 0; r < nScroll && !_CancellationToken.IsCancellationRequested; r++)
+                            {
+                                //                        g_dte.ExecuteCommand("Edit.CharRight", @"");
+                                g_dte.ExecuteCommand("Edit.ScrollPageUp", @"");
+
+                                await Task.Delay(1000, _CancellationToken); // wait one second to allow UI thread to catch  up
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                        }
+                    };
+                    DoScrolling(file1);
+                    await Task.Delay(2000, _CancellationToken); 
+                    DoScrolling(file2);
                     if (_CancellationToken.IsCancellationRequested)
                     {
                         break;
                     }
-                    await CloseTheSolutionAsync();
-//                    g_dte.ExecuteCommand("File.CloseSolution", @"");
-                    await Task.Delay(5000);
+
+                    //                    await Task.Delay(300, _CancellationToken);
+
                     //                    logger.LogMessage("End of Iter {0}", i);
                 }
                 var msg = "Cancelled Code Execution";
@@ -206,7 +245,7 @@ namespace MyCustomCode
 
         private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
         {
-            //logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
+            logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
             _tcs.TrySetResult(0);
         }
     }

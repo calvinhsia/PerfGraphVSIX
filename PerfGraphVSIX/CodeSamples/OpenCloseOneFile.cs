@@ -35,6 +35,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+
 using Microsoft.VisualStudio.Shell;
 
 using Microsoft.VisualStudio.Threading;

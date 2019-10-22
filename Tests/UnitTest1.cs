@@ -441,6 +441,7 @@ namespace Tests
 
         [TestMethod]
         [ExpectedException(typeof(AggregateException))]
+        [Ignore]
         public async Task TestObsCollThreads()
         {
             ObservableCollection<MyContainer> coll = new ObservableCollection<MyContainer>();

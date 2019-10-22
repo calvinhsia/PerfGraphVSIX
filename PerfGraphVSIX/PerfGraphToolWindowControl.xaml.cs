@@ -1,5 +1,6 @@
 ﻿namespace PerfGraphVSIX
 {
+    using DumperViewer;
     using EnvDTE;
     using Microsoft;
     using Microsoft.Build.Utilities;
@@ -77,7 +78,8 @@
                 return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
             }
         }
-        public ObservableCollection<string> LstCodeSamples { get; set; } = new ObservableCollection<string>();
+        private ObservableCollection<string> _LstCodeSamples = new ObservableCollection<string>();
+        public ObservableCollection<string> LstCodeSamples { get { return _LstCodeSamples; } set { _LstCodeSamples = value; RaisePropChanged(); } }
 
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
@@ -108,22 +110,6 @@
             public string ClassName { get; set; }
         }
 
-        public static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
-        {
-            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
-            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
-            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
-            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
-            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
-            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
-            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
-            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
-            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
-            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
-        };
-
         public PerfGraphToolWindowControl()
         {
             this.InitializeComponent();
@@ -135,7 +121,7 @@
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     LstCodeSamples.Clear();
-                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f=>new FileInfo(f).LastWriteTime))
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
                         LstCodeSamples.Add(Path.GetFileName(file));
                     }
@@ -174,9 +160,9 @@
                   };
 
 
-                lbPCounters.ItemsSource = _lstPerfCounterDefinitions.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitions.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
-                _lstPerfCounterDefinitions.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
+                PerfCounterData._lstPerfCounterDefinitions.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -200,9 +186,9 @@
                         await Task.Run(() =>
                         {
                             // run on threadpool thread
-                            lock (_lstPerfCounterDefinitions)
+                            lock (PerfCounterData._lstPerfCounterDefinitions)
                             {
-                                foreach (var itm in _lstPerfCounterDefinitions)
+                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitions)
                                 {
                                     itm.IsEnabled = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
@@ -270,7 +256,7 @@
         void ResetPerfCounterMonitor()
         {
             _ctsPcounter?.Cancel();
-            lock (_lstPerfCounterDefinitions)
+            lock (PerfCounterData._lstPerfCounterDefinitions)
             {
                 _lstPCData = new List<uint>();
                 _dataPoints.Clear();
@@ -316,10 +302,10 @@
                 {
                     sBuilder.Append(desc + " ");
                 }
-                lock (_lstPerfCounterDefinitions)
+                lock (PerfCounterData._lstPerfCounterDefinitions)
                 {
                     int idx = 0;
-                    foreach (var ctr in _lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
+                    foreach (var ctr in PerfCounterData._lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
                     {
                         var pcValueAsFloat = ctr.ReadNextValue();
                         uint pcValue = 0;
@@ -363,9 +349,9 @@
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (_lstPerfCounterDefinitions)
+                    lock (PerfCounterData._lstPerfCounterDefinitions)
                     {
-                        foreach (var ctr in _lstPerfCounterDefinitions)
+                        foreach (var ctr in PerfCounterData._lstPerfCounterDefinitions)
                         {
                             ctr.ResetCounter();
                         }
