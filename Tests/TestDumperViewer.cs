@@ -16,9 +16,13 @@ namespace Tests
         public void TestDumperViewerArgs()
         {
             var pid = Process.GetProcessesByName("devenv")[0].Id;
+            pid = Process.GetCurrentProcess().Id;
             var args = new[] { "-p", pid.ToString() };
-            var od = new DumperViewer.DumperViewer(args);
-            od._logger = this;
+            var odumper = new DumperViewer.DumperViewer(args)
+            {
+                _logger = this
+            };
+            odumper.DoMain();
 
 
         }

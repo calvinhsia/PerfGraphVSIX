@@ -79,50 +79,9 @@ namespace PerfGraphVSIX
 
             ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
             await TaskScheduler.Default;
-            _ = SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+            _ = DumperViewer.DumperViewer.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
 
-        async public Task<string> SendTelemetryAsync(string msg, params object[] args)
-        {
-            var result = string.Empty;
-            try
-            {
-                //var exe = Process.GetCurrentProcess().ProcessName.ToLowerInvariant(); // like windbg or clrobjexplorer or vstest.executionengine.x86
-                if (Environment.GetEnvironmentVariable("username") != "calvinh")
-                {
-
-                    var mTxt = args != null ? string.Format(msg, args) : msg;
-                    mTxt = System.Web.HttpUtility.UrlEncode(mTxt);
-
-                    var baseurl = "http://calvinh6/PerfGraph.asp?";
-                    var url = string.Format("{0}{1}", baseurl, mTxt);
-                    var wRequest = (HttpWebRequest)WebRequest.Create(url);
-                    wRequest.UseDefaultCredentials = true;
-
-                    await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                    {
-                        await Task.Run(async () =>
-                        {
-                            using (var resp = (HttpWebResponse)await wRequest.GetResponseAsync())
-                            {
-                                using (var respStream = resp.GetResponseStream())
-                                {
-                                    var sr = new System.IO.StreamReader(respStream, System.Text.Encoding.ASCII);
-                                    result = await sr.ReadToEndAsync();
-                                }
-                            }
-
-                        });
-                    });
-                    await Task.Yield();
-                }
-            }
-            catch (Exception)
-            {
-                //                LogString("Telemetry exception {0}", ex);
-            }
-            return result;
-        }
 
         #endregion
     }

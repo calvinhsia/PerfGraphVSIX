@@ -1,7 +1,9 @@
 ﻿using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -10,12 +12,12 @@ using System.Windows.Markup;
 
 namespace DumperViewer
 {
-    public class DumperViewer
+    public class DumperViewer : ILogger
     {
         private readonly string[] args;
         private int _pid;
-        private List<string> regexes = new List<string>();
-        private int _IterNum;
+        private readonly List<string> regexes = new List<string>();
+        private string _DumpFileName;
         internal ILogger _logger;
 
         [STAThread]
@@ -25,7 +27,7 @@ namespace DumperViewer
             oDumper.DoMain();
         }
 
-        private void DoMain()
+        internal void DoMain()
         {
             AsyncPump.Run(async () =>
             {
@@ -36,6 +38,7 @@ namespace DumperViewer
 
         public DumperViewer(string[] args)
         {
+            this._logger = this;
             this.args = args;
         }
 
@@ -47,6 +50,8 @@ namespace DumperViewer
                 DoShowHelp();
                 return;
             }
+            await SendTelemetryAsync($"{nameof(DumperViewer)}");
+            _logger.LogMessage($"in {nameof(DumperViewer)}  args = {string.Join(" ", args)}");
             int iArg = 0;
             var argsGood = true;
             var extraErrInfo = string.Empty;
@@ -54,23 +59,37 @@ namespace DumperViewer
             {
                 while (iArg < args.Length)
                 {
-                    var curArg = args[iArg];
+                    var curArg = args[iArg++];
                     if (curArg.Length > 1 && "-/".IndexOf(curArg[0]) == 0)
                     {
                         switch (curArg[1].ToString().ToLower())
                         {
                             case "p":
-                                this._pid = int.Parse(args[iArg + 1]);
+                                if (iArg == args.Length)
+                                {
+                                    throw new ArgumentException("Expected process id");
+                                }
+                                this._pid = int.Parse(args[iArg++]);
                                 break;
                             case "r":
-                                var splitRegExes = args[iArg + 1].Split(new[] { '|' });
+                                if (iArg == args.Length)
+                                {
+                                    throw new ArgumentException("Expected regex");
+                                }
+                                var splitRegExes = args[iArg++].Split(new[] { '|' });
                                 foreach (var split in splitRegExes)
                                 {
                                     this.regexes.Add(split);
                                 }
                                 break;
-                            case "i":
-                                this._IterNum = int.Parse(args[iArg + 1]);
+                            case "f":
+                                if (iArg == args.Length)
+                                {
+                                    throw new ArgumentException("dump filename");
+                                }
+                                this._DumpFileName = args[iArg++];
+                                break;
+                            case "d":
                                 break;
                         }
                     }
@@ -118,5 +137,45 @@ DumpViewer -p 1234 -t .*TextBuffer.*
             owin.Content = tb;
             owin.ShowDialog();
         }
+
+        public void LogMessage(string msg, params object[] args)
+        {
+            if (!_logger.Equals(this))
+            {
+                _logger.LogMessage(msg, args);
+            }
+
+        }
+        async static  public Task<string> SendTelemetryAsync(string msg, params object[] args)
+        {
+            var result = string.Empty;
+            try
+            {
+                //var exe = Process.GetCurrentProcess().ProcessName.ToLowerInvariant(); // like windbg or clrobjexplorer or vstest.executionengine.x86
+                if (Environment.GetEnvironmentVariable("username") != "calvinhsss")
+                {
+
+                    var mTxt = args != null ? string.Format(msg, args) : msg;
+                    mTxt = System.Web.HttpUtility.UrlEncode(mTxt);
+
+                    var baseurl = "http://calvinh6/PerfGraph.asp?";
+                    var url = string.Format("{0}{1}", baseurl, mTxt);
+
+                    await Task.Run(() =>
+                    {
+                        var wclient = new WebClient();
+                        wclient.UseDefaultCredentials = true;
+                        //                    wclient.Credentials = CredentialCache.DefaultCredentials;
+                        result = wclient.DownloadString(url);
+                    });
+                }
+            }
+            catch (Exception)
+            {
+                //                LogString("Telemetry exception {0}", ex);
+            }
+            return result;
+        }
+
     }
 }
