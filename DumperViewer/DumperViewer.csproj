@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="AsyncPump.cs" />
     <Compile Include="Browse.cs" />
+    <Compile Include="DumpAnalyzer.cs" />
     <Compile Include="Dumper.cs" />
     <Compile Include="DumperViewer.cs" />
     <Compile Include="ILogger.cs" />
