@@ -69,7 +69,6 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Compile Include="EditorTracker.cs" />
-    <Compile Include="ILogger.cs" />
     <Compile Include="ObjTracker.cs" />
     <Compile Include="ObjWeakRefData.cs" />
     <Compile Include="OpenFolderTracker.cs" />

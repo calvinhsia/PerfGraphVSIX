@@ -15,6 +15,7 @@ namespace DumperViewer
         private int _pid;
         private List<string> regexes = new List<string>();
         private int _IterNum;
+        internal ILogger _logger;
 
         [STAThread]
         public static void Main(string[] args)

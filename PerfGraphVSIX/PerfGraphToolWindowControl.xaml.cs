@@ -1,5 +1,6 @@
 ﻿namespace PerfGraphVSIX
 {
+    using DumperViewer;
     using EnvDTE;
     using Microsoft;
     using Microsoft.Build.Utilities;

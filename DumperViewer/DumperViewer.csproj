@@ -60,6 +60,7 @@
     <Compile Include="AsyncPump.cs" />
     <Compile Include="Dumper.cs" />
     <Compile Include="DumperViewer.cs" />
+    <Compile Include="ILogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
