@@ -35,7 +35,7 @@ namespace PerfGraphVSIX
         {
             object result = string.Empty;
             var hashofCodeToExecute = strCodeToExecute.GetHashCode();
-//            _logger.LogMessage($"Compiling code");
+            //            _logger.LogMessage($"Compiling code");
             try
             {
                 if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
@@ -137,7 +137,7 @@ namespace PerfGraphVSIX
                         if (!_fDidAddAssemblyResolver)
                         {
                             _fDidAddAssemblyResolver = true;
-  //                          _logger.LogMessage("Register for AssemblyResolve");
+                            //                          _logger.LogMessage("Register for AssemblyResolve");
                             AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
                               {
                                   Assembly asm = null;
@@ -146,6 +146,10 @@ namespace PerfGraphVSIX
                                   if (requestName == nameof(PerfGraphVSIX))
                                   {
                                       asm = this.GetType().Assembly;
+                                  }
+                                  else if (requestName == nameof(DumperViewer))
+                                  {
+                                      asm = typeof(ILogger).Assembly;
                                   }
                                   else
                                   {
@@ -156,7 +160,14 @@ namespace PerfGraphVSIX
                                               var fname = Path.Combine(refDir, requestName) + ext;
                                               if (File.Exists(fname))
                                               {
-                                                  asm = Assembly.Load(fname);
+                                                  try
+                                                  {
+                                                      asm = Assembly.Load(fname);
+                                                  }
+                                                  catch (Exception)
+                                                  {
+                                                      asm = Assembly.LoadFrom(fname);
+                                                  }
                                                   break;
                                               }
                                           }
@@ -173,7 +184,7 @@ namespace PerfGraphVSIX
                                   return asm;
                               };
                         }
-//                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
+                        //                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                         object[] parms = new object[4];
                         parms[0] = _logger;
