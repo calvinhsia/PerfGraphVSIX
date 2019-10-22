@@ -57,7 +57,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Browse.cs" />
     <Compile Include="CodeExecutor.cs" />
     <Content Include="CodeSamples\NavOneFile.cs" />
     <Content Include="CodeSamples\OpenCloseFolder.cs">
@@ -72,7 +71,6 @@
     <Compile Include="ObjTracker.cs" />
     <Compile Include="ObjWeakRefData.cs" />
     <Compile Include="OpenFolderTracker.cs" />
-    <Compile Include="PerfCounterData.cs" />
     <Compile Include="PerfGraphToolWindow.cs" />
     <Compile Include="PerfGraphToolWindowCommand.cs" />
     <Compile Include="PerfGraphToolWindowControl.xaml.cs">
@@ -144,6 +142,7 @@
       <Name>ClrListener</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="..\DumperViewer\DumperViewer.csproj">
       <Project>{006276CD-726B-4A0D-A6EA-57D99480CE1B}</Project>

@@ -101,7 +101,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using DumperViewer;
 
 //using Microsoft.VisualStudio.Threading;
 
@@ -180,7 +179,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using DumperViewer;
 using Task = System.Threading.Tasks.Task;
 
 namespace MyCustomCode
@@ -292,7 +290,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
 using Microsoft.VisualStudio.Shell;
-using DumperViewer;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 

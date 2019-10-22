@@ -1,5 +1,4 @@
-﻿using DumperViewer;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;

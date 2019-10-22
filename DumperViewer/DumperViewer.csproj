@@ -58,9 +58,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncPump.cs" />
+    <Compile Include="Browse.cs" />
     <Compile Include="Dumper.cs" />
     <Compile Include="DumperViewer.cs" />
     <Compile Include="ILogger.cs" />
+    <Compile Include="PerfCounterData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
