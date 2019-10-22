@@ -35,6 +35,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using DumperViewer;
+
 using Microsoft.VisualStudio.Shell;
 
 using Microsoft.VisualStudio.Threading;

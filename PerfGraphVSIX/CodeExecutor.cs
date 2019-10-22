@@ -74,6 +74,8 @@ namespace PerfGraphVSIX
                                 {
                                     _lstRefDirs.Add(dir);
                                 }
+                                compParams.ReferencedAssemblies.Add(refAsm);
+                                refAsm = typeof(ILogger).Assembly.Location;
                             }
                             else
                             {
@@ -100,7 +102,7 @@ namespace PerfGraphVSIX
                             }
                             compParams.ReferencedAssemblies.Add(refAsm);
                         }
-//                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
+                        //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
                         compParams.GenerateInMemory = true; // in memory cannot be unloaded
                         var resCompile = cdProvider.CompileAssemblyFromSource(compParams, strCodeToExecute);
