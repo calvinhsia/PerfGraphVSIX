@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,10 +19,10 @@ namespace DumperViewer
     public class DumperViewer : ILogger
     {
         private readonly string[] args;
-        private readonly List<string> regexes = new List<string>();
-        private string _DumpFileName;
+        internal readonly List<string> regexes = new List<string>();
+        internal string _DumpFileName;
         internal ILogger _logger;
-        private Process _procTarget;
+        internal Process _procTarget;
 
         [STAThread]
         public static void Main(string[] args)
@@ -129,6 +130,15 @@ namespace DumperViewer
                 {
                     var mdh = new MemoryDumpHelper();
                     _logger.LogMessage($"Starting to create dump {_procTarget.Id} {_procTarget.ProcessName}");
+                    if (_procTarget.Id == Process.GetCurrentProcess().Id)
+                    {
+                        for (int i = 0; i < 5; i++)
+                        {
+                            GC.Collect();
+                            GC.WaitForPendingFinalizers();
+                            Marshal.CleanupUnusedObjectsInCurrentContext();
+                        }
+                    }
                     mdh.CollectDump(process: _procTarget, dumpFilePath: _DumpFileName, fIncludeFullHeap: true);
                 });
                 _logger.LogMessage($"Done creating dump {_procTarget.Id} {_procTarget.ProcessName} {new FileInfo(_DumpFileName).Length:n0}   Secs={sw.Elapsed.TotalSeconds:f3}");
@@ -136,7 +146,8 @@ namespace DumperViewer
                 sw.Restart();
                 await Task.Run(() =>
                 {
-                    var x = new DumpAnalyzer(_DumpFileName);
+                    LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
+                    var x = new DumpAnalyzer(this);
                     x.AnalyzeDump();
 
                 });

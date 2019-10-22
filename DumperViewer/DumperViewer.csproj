@@ -41,6 +41,9 @@
     <AssemblyOriginatorKeyFile>Key.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.Diagnostics.Runtime">
+      <HintPath>..\..\clrmd\artifacts\bin\Microsoft.Diagnostics.Runtime\Release\net45\Microsoft.Diagnostics.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Web" />
