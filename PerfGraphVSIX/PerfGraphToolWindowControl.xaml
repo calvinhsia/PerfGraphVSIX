@@ -165,6 +165,9 @@
                 <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
                         ToolTip="Execute the code in the Code tab. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
                          />
+                <Button x:Name="btnClrObjExplorer" Content="ClrObjExplorer" Height="20" VerticalAlignment="Top" 
+                        ToolTip="Create a dump and start the ClrObjectExplorer process to examine it" Click="BtnClrObjExplorer_Click" Margin="10,0,0,0"
+                         />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>
             <TextBox Name="txtStatus" Height="200" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 

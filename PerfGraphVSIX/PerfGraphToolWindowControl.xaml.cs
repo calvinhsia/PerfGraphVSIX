@@ -14,6 +14,7 @@
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
@@ -364,6 +365,9 @@
             catch (Exception ex)
             {
                 await AddStatusMsgAsync($"Exception in {nameof(DoSampleAsync)}" + ex.ToString());
+                _lstPCData = new List<uint>();
+                _dataPoints.Clear();
+                _bufferIndex = 0;
             }
         }
 
@@ -529,6 +533,37 @@
                 txtStatus.AppendText(str + "\r\n");
                 txtStatus.ScrollToEnd();
             }
+        }
+
+        void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
+        {
+            var dirTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
+            if (!Directory.Exists(dirTemp))
+            {
+                Directory.CreateDirectory(dirTemp);
+            }
+            var pathDumpFile = Path.Combine(
+                dirTemp,
+                "Dump.dmp");
+            LogMessage($"start clrobjexplorer {pathDumpFile}");
+            if (File.Exists(pathDumpFile))
+            {
+                File.Delete(pathDumpFile);
+            }
+            var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
+            var args = new[] {
+                "-p", pid.ToString(),
+                "-f",  "\"" + pathDumpFile + "\""
+            };
+            var odumper = new DumperViewer(args)
+            {
+                _logger = this
+            };
+            odumper.DoMain();
+
+            //var x = new DumpAnalyzer(this);
+            //x.StartClrObjectExplorer(pathDumpFile);
+
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods

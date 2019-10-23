@@ -148,8 +148,8 @@ namespace DumperViewer
                 {
                     LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
                     var x = new DumpAnalyzer(this);
-                    x.AnalyzeDump();
-
+//                    x.AnalyzeDump();
+                    x.StartClrObjectExplorer(_DumpFileName);
                 });
                 _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
             }
