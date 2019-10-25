@@ -16,7 +16,7 @@ using System.Windows.Markup;
 
 namespace DumperViewer
 {
-    public class DumperViewer : ILogger
+    public class DumperViewerMain : ILogger
     {
         private readonly string[] args;
         internal readonly List<string> regexes = new List<string>();
@@ -27,7 +27,7 @@ namespace DumperViewer
         [STAThread]
         public static void Main(string[] args)
         {
-            var oDumper = new DumperViewer(args);
+            var oDumper = new DumperViewerMain(args);
             oDumper.DoMain();
         }
 
@@ -40,22 +40,21 @@ namespace DumperViewer
             );
         }
 
-        public DumperViewer(string[] args)
+        public DumperViewerMain(string[] args)
         {
             this._logger = this;
             this.args = args;
         }
 
-        private async Task DoitAsync()
+        internal async Task DoitAsync()
         {
             if (args.Length == 0)
             {
-                await Task.Delay(1);
                 DoShowHelp();
                 return;
             }
-            await SendTelemetryAsync($"{nameof(DumperViewer)}");
-            _logger.LogMessage($"in {nameof(DumperViewer)}  LoggerObj={_logger.ToString()} args = {string.Join(" ", args)}");
+            await SendTelemetryAsync($"{nameof(DumperViewerMain)}");
+            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = {string.Join(" ", args)}");
             int iArg = 0;
             var argsGood = true;
             var extraErrInfo = string.Empty;
@@ -167,21 +166,22 @@ namespace DumperViewer
                 Text = $@"DumperViewer: 
 {extrainfo}
 
-Create a dump of the speficied process, analyze the dump for the counts of the specified types, 
-This EXE will optionally show UI. 
-
+This Program can
+ - Create a dump of a specified process
+ - analyze a dump for the counts of the specified types
+ - show UI of the counts in ClrObjectExporer, allowing interactive exploration of objects, counts, references.
+ 
 Command line:
 DumpViewer -p 1234 -t .*TextBuffer.*
 -p <pid>   Process id of process. Will take a dump of the specified process (e.g. Devenv). Devenv cannot take a dump of itself because it will result in deadlock 
         (creating a dump involves freezing threads) and continue executing launch DumperViewer
         (The creation of the dump and the subsequent analysis needs to be fast)
--i  <n>    iteration #. The dump and the results will be tagged with the iteration prefix. E.G. iterating 700 times will yield dump0.dmp, dump1.dmp,...dump700.dmp.
 -t <regex><|regex>  a '|' separated list of regular expressions that specify what types the caller is 'interested in'. e.g. '.*textbuffer.*'|'.*codelens.*'
      can be '|' separated or there can be multiple '-t' arguments
 
--f <FileDumpname>  Base path of output. Will change Extension to '.dmp' for dump output, '.log' for log output. Can be quoted.
+-f <FileDumpname>  Base path of output '.dmp' for dump output. If exists, will add numerical suffix. Can be quoted.
 
--u  UI: Show the WPF UI treeview for the dump (ClrObjectExplorer). 
+-u  UI: Show the WPF UI. If a dumpfile is specified,  open a treeview for the dump (ClrObjectExplorer). Else just show generic UI that will allow the user to choose a target process for which to view memory
 
 
 "

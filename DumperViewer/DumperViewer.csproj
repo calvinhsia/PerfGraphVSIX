@@ -62,7 +62,7 @@
     <Compile Include="Browse.cs" />
     <Compile Include="DumpAnalyzer.cs" />
     <Compile Include="Dumper.cs" />
-    <Compile Include="DumperViewer.cs" />
+    <Compile Include="DumperViewerMain.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">

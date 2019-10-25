@@ -141,7 +141,7 @@ namespace PerfGraphVSIX
                             AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
                               {
                                   Assembly asm = null;
-                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
+//                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
                                   var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
                                   if (requestName == nameof(PerfGraphVSIX))
                                   {

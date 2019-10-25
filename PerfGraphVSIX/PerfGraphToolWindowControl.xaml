@@ -90,23 +90,11 @@
                     <UserControl Name="BrowLeakedObjects"/>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="Code">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width = "300"/>
-                        <ColumnDefinition/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <ListBox Name="lvCodeSamples" 
-                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests"
-                                 ItemsSource="{Binding LstCodeSamples }" MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
-                    </StackPanel>
-                </Grid>
-            </TabItem>
             <TabItem Header = "Options" ToolTip="{Binding TipString}">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width = "600"/>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
                         <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation = "Vertical" Grid.Column="0">
@@ -150,9 +138,16 @@
                             <local:MyTextBox ToolTip="Solution to load" Text="{Binding SolutionToLoad}"/>
                         </StackPanel>-->
                     </StackPanel>
-                    <DockPanel Grid.Column="1">
+                    <StackPanel Grid.Column="1">
+                        <Label Content="Counters to track:"/>
                         <ListBox Name="lbPCounters" SelectionMode="Multiple" Width="160" MaxHeight = "300" VerticalAlignment="Top" ToolTip="Multiselect various counters" />
-                    </DockPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <Label Content="Code Samples:"/>
+                        <ListBox Name="lvCodeSamples" 
+                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests. These are sorted by LastWriteTime and the 1st one is selected when the directory changes content."
+                                 ItemsSource="{Binding LstCodeSamples }" MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
+                    </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>
@@ -163,7 +158,7 @@
                         ToolTip="Take a Sample, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)"  
                          />
                 <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
-                        ToolTip="Execute the code in the Code tab. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
+                        ToolTip="Execute the code file selected in the Options Tab Code samples. This code typically iterates a scenario. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
                          />
                 <Button x:Name="btnClrObjExplorer" Content="ClrObjExplorer" Height="20" VerticalAlignment="Top" 
                         ToolTip="Create a dump and start the ClrObjectExplorer process to examine it" Click="BtnClrObjExplorer_Click" Margin="10,0,0,0"

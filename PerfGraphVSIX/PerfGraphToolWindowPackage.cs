@@ -79,7 +79,7 @@ namespace PerfGraphVSIX
 
             ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
             await TaskScheduler.Default;
-            _ = DumperViewer.DumperViewer.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+            _ = DumperViewer.DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
 
 

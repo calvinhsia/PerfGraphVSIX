@@ -235,7 +235,7 @@
                             }
                             if (context != null)
                             {
-                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+//                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
                                 _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
                                 //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
                             }
@@ -535,31 +535,51 @@
             }
         }
 
-        void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
+#pragma warning disable VSTHRD100 // Avoid async void methods
+        async void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
+#pragma warning restore VSTHRD100 // Avoid async void methods
         {
-            var dirTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
-            if (!Directory.Exists(dirTemp))
+            try
             {
-                Directory.CreateDirectory(dirTemp);
-            }
-            var pathDumpFile = Path.Combine(
-                dirTemp,
-                "Dump.dmp");
-            LogMessage($"start clrobjexplorer {pathDumpFile}");
-            if (File.Exists(pathDumpFile))
-            {
-                File.Delete(pathDumpFile);
-            }
-            var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
-            var args = new[] {
+                btnClrObjExplorer.IsEnabled = false;
+                var dirMyTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
+                if (!Directory.Exists(dirMyTemp))
+                {
+                    Directory.CreateDirectory(dirMyTemp);
+                }
+                var baseDumpName = "Dump";
+                var pathDumpFile = string.Empty;
+                int nIter = 0;
+                while (true) // we want to let the user have multiple dumps open for comparison
+                {
+                    pathDumpFile = Path.Combine(
+                        dirMyTemp,
+                        $"{baseDumpName}{nIter++}.dmp");
+                    if (!File.Exists(pathDumpFile))
+                    {
+                        break;
+                    }
+                }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                DoGC();
+                LogMessage($"start clrobjexplorer {pathDumpFile}");
+                var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
+                var args = new[] {
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\""
             };
-            var odumper = new DumperViewer(args)
+                var odumper = new DumperViewerMain(args)
+                {
+                    _logger = this
+                };
+                await odumper.DoitAsync();
+                btnClrObjExplorer.IsEnabled = true;
+            }
+            catch (Exception ex)
             {
-                _logger = this
-            };
-            odumper.DoMain();
+                LogMessage(ex.ToString());
+                btnClrObjExplorer.IsEnabled = true;
+            }
 
             //var x = new DumpAnalyzer(this);
             //x.StartClrObjectExplorer(pathDumpFile);
@@ -624,6 +644,8 @@
             catch (Exception ex)
             {
                 LogMessage(ex.ToString());
+                this.btnExecCode.Content = "ExecCode";
+                this.btnExecCode.IsEnabled = true;
             }
         }
 
