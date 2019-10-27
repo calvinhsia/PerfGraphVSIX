@@ -235,7 +235,7 @@
                             }
                             if (context != null)
                             {
-//                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                                //                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
                                 _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
                                 //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
                             }
@@ -542,31 +542,15 @@
             try
             {
                 btnClrObjExplorer.IsEnabled = false;
-                var dirMyTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
-                if (!Directory.Exists(dirMyTemp))
-                {
-                    Directory.CreateDirectory(dirMyTemp);
-                }
-                var baseDumpName = "Dump";
-                var pathDumpFile = string.Empty;
-                int nIter = 0;
-                while (true) // we want to let the user have multiple dumps open for comparison
-                {
-                    pathDumpFile = Path.Combine(
-                        dirMyTemp,
-                        $"{baseDumpName}{nIter++}.dmp");
-                    if (!File.Exists(pathDumpFile))
-                    {
-                        break;
-                    }
-                }
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: "devenv");
                 DoGC();
                 LogMessage($"start clrobjexplorer {pathDumpFile}");
                 var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
                 var args = new[] {
                 "-p", pid.ToString(),
-                "-f",  "\"" + pathDumpFile + "\""
+                "-f",  "\"" + pathDumpFile + "\"",
+                "-c"
             };
                 var odumper = new DumperViewerMain(args)
                 {

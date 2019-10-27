@@ -1,6 +1,7 @@
 ﻿using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
@@ -23,6 +24,7 @@ namespace DumperViewer
         internal string _DumpFileName;
         internal ILogger _logger;
         internal Process _procTarget;
+        private bool _StartClrObjectExplorer;
 
         [STAThread]
         public static void Main(string[] args)
@@ -48,83 +50,99 @@ namespace DumperViewer
 
         internal async Task DoitAsync()
         {
-            if (args.Length == 0)
-            {
-                DoShowHelp();
-                return;
-            }
             await SendTelemetryAsync($"{nameof(DumperViewerMain)}");
             _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = {string.Join(" ", args)}");
-            int iArg = 0;
-            var argsGood = true;
-            var extraErrInfo = string.Empty;
-            try
+
+            if (args.Length == 0)
             {
-                while (iArg < args.Length)
+                _procTarget = ChooseProcess("Choose a process to dump/analyze", fShow32BitOnly: true);
+                _StartClrObjectExplorer = true;
+                if (_procTarget == null)
                 {
-                    var curArg = args[iArg++];
-                    if (curArg.Length > 1 && "-/".IndexOf(curArg[0]) == 0)
-                    {
-                        switch (curArg[1].ToString().ToLower())
-                        {
-                            case "p":
-                                if (iArg == args.Length)
-                                {
-                                    throw new ArgumentException("Expected process id");
-                                }
-                                var pid = int.Parse(args[iArg++]);
-                                _procTarget = Process.GetProcessById(pid);
-                                break;
-                            case "r":
-                                if (iArg == args.Length)
-                                {
-                                    throw new ArgumentException("Expected regex");
-                                }
-                                var splitRegExes = args[iArg++].Split(new[] { '|' });
-                                foreach (var split in splitRegExes)
-                                {
-                                    this.regexes.Add(split);
-                                }
-                                break;
-                            case "f":
-                                if (iArg == args.Length)
-                                {
-                                    throw new ArgumentException("dump filename");
-                                }
-                                this._DumpFileName = args[iArg++];
-                                if (this._DumpFileName.StartsWith("\"") && this._DumpFileName.EndsWith("\""))
-                                {
-                                    this._DumpFileName = this._DumpFileName.Replace("\"", string.Empty);
-                                }
-                                this._DumpFileName = Path.ChangeExtension(this._DumpFileName, "dmp");
-                                if (File.Exists(this._DumpFileName))
-                                {
-                                    throw new InvalidOperationException($"{this._DumpFileName} already exists. Aborting");
-                                }
-                                break;
-                            case "d":
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        argsGood = false;
-                    }
+                    DoShowHelp();
+                    return;
                 }
             }
-            catch (Exception ex)
+            else
             {
-                argsGood = false;
-                extraErrInfo = ex.ToString();
-            }
-            if (!argsGood)
-            {
-                DoShowHelp(extraErrInfo);
-                return;
+                int iArg = 0;
+                var argsGood = true;
+                var extraErrInfo = string.Empty;
+                try
+                {
+                    while (iArg < args.Length)
+                    {
+                        var curArg = args[iArg++];
+                        if (curArg.Length > 1 && "-/".IndexOf(curArg[0]) == 0)
+                        {
+                            switch (curArg[1].ToString().ToLower())
+                            {
+                                case "?":
+                                    DoShowHelp();
+                                    return;
+                                case "p":
+                                    if (iArg == args.Length)
+                                    {
+                                        throw new ArgumentException("Expected process id");
+                                    }
+                                    var pid = int.Parse(args[iArg++]);
+                                    _procTarget = Process.GetProcessById(pid);
+                                    break;
+                                case "r":
+                                    if (iArg == args.Length)
+                                    {
+                                        throw new ArgumentException("Expected regex");
+                                    }
+                                    var splitRegExes = args[iArg++].Split(new[] { '|' });
+                                    foreach (var split in splitRegExes)
+                                    {
+                                        this.regexes.Add(split);
+                                    }
+                                    break;
+                                case "c": // start
+                                    this._StartClrObjectExplorer = true;
+                                    break;
+                                case "f":
+                                    if (iArg == args.Length)
+                                    {
+                                        throw new ArgumentException("dump filename");
+                                    }
+                                    this._DumpFileName = args[iArg++];
+                                    if (this._DumpFileName.StartsWith("\"") && this._DumpFileName.EndsWith("\""))
+                                    {
+                                        this._DumpFileName = this._DumpFileName.Replace("\"", string.Empty);
+                                    }
+                                    this._DumpFileName = Path.ChangeExtension(this._DumpFileName, "dmp");
+                                    if (File.Exists(this._DumpFileName))
+                                    {
+                                        throw new InvalidOperationException($"{this._DumpFileName} already exists. Aborting");
+                                    }
+                                    break;
+                                case "d":
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            argsGood = false;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    argsGood = false;
+                    extraErrInfo = ex.ToString();
+                }
+                if (!argsGood)
+                {
+                    DoShowHelp(extraErrInfo);
+                    return;
+                }
             }
             try
             {
                 var sw = Stopwatch.StartNew();
+                _DumpFileName = GetNewDumpFileName(Path.GetFileNameWithoutExtension(_procTarget.ProcessName));
                 await Task.Run(() =>
                 {
                     var mdh = new MemoryDumpHelper();
@@ -142,21 +160,128 @@ namespace DumperViewer
                 });
                 _logger.LogMessage($"Done creating dump {_procTarget.Id} {_procTarget.ProcessName} {new FileInfo(_DumpFileName).Length:n0}   Secs={sw.Elapsed.TotalSeconds:f3}");
 
-                sw.Restart();
-                await Task.Run(() =>
+                if (_StartClrObjectExplorer)
                 {
-                    LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
-                    var x = new DumpAnalyzer(this);
-//                    x.AnalyzeDump();
-                    x.StartClrObjectExplorer(_DumpFileName);
-                });
-                _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
+                    sw.Restart();
+                    await Task.Run(() =>
+                    {
+                        LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
+                        var x = new DumpAnalyzer(this);
+                        //                    x.AnalyzeDump();
+                        x.StartClrObjectExplorer(_DumpFileName);
+                    });
+                    _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogMessage($"exception creating dump {ex.ToString()}");
             }
         }
+
+        public static string GetNewDumpFileName(string baseName)
+        {
+            var dirMyTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
+            if (!Directory.Exists(dirMyTemp))
+            {
+                Directory.CreateDirectory(dirMyTemp);
+            }
+            var baseDumpName = baseName;
+            var pathDumpFile = string.Empty;
+            int nIter = 0;
+            while (true) // we want to let the user have multiple dumps open for comparison
+            {
+                pathDumpFile = Path.Combine(
+                    dirMyTemp,
+                    $"{baseDumpName}{nIter++}.dmp");
+                if (!File.Exists(pathDumpFile))
+                {
+                    break;
+                }
+            }
+            return pathDumpFile;
+        }
+
+        private Process ChooseProcess(string desc, bool fShow32BitOnly = true)
+        {
+            Process procChosen = null;
+            var q = from proc in Process.GetProcesses()
+                    orderby proc.ProcessName
+                    where fShow32BitOnly ? ProcessType(proc)=="32" : true
+                    select new
+                    {
+                        proc.Id,
+                        proc.ProcessName,
+                        proc.MainWindowTitle,
+                        proc.WorkingSet64,
+                        proc.PrivateMemorySize64,
+                        Is64 = ProcessType(proc),
+                        _proc = proc
+                    };
+
+            var brPanel = new BrowsePanel(q, new[] { 40, 220, 400 });
+            var w = new Window
+            {
+                Content = brPanel,
+                Title = desc
+            };
+            brPanel.BrowseList.MouseDoubleClick += (o, e) =>
+            {
+                w.Close();
+            };
+            brPanel.BrowseList.KeyUp += (o, e) =>
+              {
+                  if (e.Key == System.Windows.Input.Key.Return)
+                  {
+                      w.Close();
+                  }
+              };
+            w.Closed += (o, e) =>
+              {
+                  var p = brPanel.BrowseList.SelectedItem;
+                  if (p != null)
+                  {
+                      var proc = TypeDescriptor.GetProperties(p)["_proc"].GetValue(p) as Process;
+                      if (!fShow32BitOnly || ProcessType(proc) == "32")
+                      {
+                          procChosen = proc;
+                      }
+                  }
+              };
+            w.ShowDialog();
+            return procChosen;
+        }
+
+        private string ProcessType(Process proc)
+        {
+            var typ = string.Empty;
+            try
+            {
+                var IsRunningUnderWow64 = false;
+                if (IsWow64Process(Process.GetCurrentProcess().Handle, ref IsRunningUnderWow64) && IsRunningUnderWow64)
+                {
+                    if (IsWow64Process(proc.Handle, ref IsRunningUnderWow64) && IsRunningUnderWow64)
+                    {
+                        typ = "32";
+                    }
+                    else
+                    {
+                        typ = "64";
+                    }
+                }
+                else
+                {
+                    typ = "32";
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return typ;
+        }
+        [DllImport("Kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        public static extern bool IsWow64Process(IntPtr hProcess, ref bool wow64Process);
+        //<MarshalAs(UnmanagedType.Bool)> ByRef wow64Process As Boolean) As<MarshalAs(UnmanagedType.Bool)> Boolean
 
         private void DoShowHelp(string extrainfo = "")
         {
@@ -173,6 +298,7 @@ This Program can
  
 Command line:
 DumpViewer -p 1234 -t .*TextBuffer.*
+-?  Show this help
 -p <pid>   Process id of process. Will take a dump of the specified process (e.g. Devenv). Devenv cannot take a dump of itself because it will result in deadlock 
         (creating a dump involves freezing threads) and continue executing launch DumperViewer
         (The creation of the dump and the subsequent analysis needs to be fast)
@@ -180,6 +306,8 @@ DumpViewer -p 1234 -t .*TextBuffer.*
      can be '|' separated or there can be multiple '-t' arguments
 
 -f <FileDumpname>  Base path of output '.dmp' for dump output. If exists, will add numerical suffix. Can be quoted.
+
+-c Start ClrObjectExlorer after creating dump
 
 -u  UI: Show the WPF UI. If a dumpfile is specified,  open a treeview for the dump (ClrObjectExplorer). Else just show generic UI that will allow the user to choose a target process for which to view memory
 
