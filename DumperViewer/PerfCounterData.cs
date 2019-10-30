@@ -25,8 +25,10 @@ namespace PerfGraphVSIX
 
     public class PerfCounterData
     {
-
-        public static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
+        /// <summary>
+        /// these are used to provider interactive user counters from which to choose in VSIX
+        /// </summary>
+        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForVSIX = new List<PerfCounterData>()
         {
             {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
             {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
@@ -49,6 +51,7 @@ namespace PerfGraphVSIX
         public string PerfCounterInstanceName;
         public bool IsEnabled = false;
         public Lazy<PerformanceCounter> lazyPerformanceCounter;
+        public static Process ProcToMonitor;
 
         public float LastValue;
         public float ReadNextValue()
@@ -76,6 +79,7 @@ namespace PerfGraphVSIX
             this.PerfCounterName = perfCounterName;
             this.PerfCounterInstanceName = perfCounterInstanceName;
             this.ResetCounter();
+            ProcToMonitor = Process.GetCurrentProcess(); // this will be changed by stress tests
         }
 
         public void ResetCounter()
@@ -83,7 +87,6 @@ namespace PerfGraphVSIX
             this.lazyPerformanceCounter = new Lazy<PerformanceCounter>(() =>
             {
                 PerformanceCounter pc = null;
-                var vsPid = Process.GetCurrentProcess().Id;
                 var category = new PerformanceCounterCategory(PerfCounterCategory);
 
                 foreach (var instanceName in category.GetInstanceNames()) // exception if you're not admin or "Performance Monitor Users" group (must re-login)
@@ -93,7 +96,7 @@ namespace PerfGraphVSIX
                         try
                         {
                             var val = (int)cntr.NextValue();
-                            if (val == vsPid)
+                            if (val == ProcToMonitor.Id)
                             {
                                 pc = new PerformanceCounter(PerfCounterCategory, PerfCounterName, instanceName);
                                 break;
@@ -125,12 +128,12 @@ namespace PerfGraphVSIX
 
         public static int GetGuiResourcesGDICount()
         {
-            return GetGuiResources(Process.GetCurrentProcess().Handle, 0);
+            return GetGuiResources(ProcToMonitor.Handle, 0);
         }
 
         public static int GetGuiResourcesUserCount()
         {
-            return GetGuiResources(Process.GetCurrentProcess().Handle, 1);
+            return GetGuiResources(ProcToMonitor.Handle, 1);
         }
     }
 }

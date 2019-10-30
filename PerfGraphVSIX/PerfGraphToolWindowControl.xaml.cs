@@ -14,6 +14,7 @@
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
@@ -160,9 +161,9 @@
                   };
 
 
-                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitions.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
-                PerfCounterData._lstPerfCounterDefinitions.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
+                PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -186,9 +187,9 @@
                         await Task.Run(() =>
                         {
                             // run on threadpool thread
-                            lock (PerfCounterData._lstPerfCounterDefinitions)
+                            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                             {
-                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitions)
+                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                                 {
                                     itm.IsEnabled = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
@@ -234,7 +235,7 @@
                             }
                             if (context != null)
                             {
-                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                                //                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
                                 _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
                                 //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
                             }
@@ -256,7 +257,7 @@
         void ResetPerfCounterMonitor()
         {
             _ctsPcounter?.Cancel();
-            lock (PerfCounterData._lstPerfCounterDefinitions)
+            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
             {
                 _lstPCData = new List<uint>();
                 _dataPoints.Clear();
@@ -302,10 +303,10 @@
                 {
                     sBuilder.Append(desc + " ");
                 }
-                lock (PerfCounterData._lstPerfCounterDefinitions)
+                lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                 {
                     int idx = 0;
-                    foreach (var ctr in PerfCounterData._lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
+                    foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(pctr => pctr.IsEnabled))
                     {
                         var pcValueAsFloat = ctr.ReadNextValue();
                         uint pcValue = 0;
@@ -349,9 +350,9 @@
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (PerfCounterData._lstPerfCounterDefinitions)
+                    lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                     {
-                        foreach (var ctr in PerfCounterData._lstPerfCounterDefinitions)
+                        foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                         {
                             ctr.ResetCounter();
                         }
@@ -364,6 +365,9 @@
             catch (Exception ex)
             {
                 await AddStatusMsgAsync($"Exception in {nameof(DoSampleAsync)}" + ex.ToString());
+                _lstPCData = new List<uint>();
+                _dataPoints.Clear();
+                _bufferIndex = 0;
             }
         }
 
@@ -532,6 +536,41 @@
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods
+        async void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
+#pragma warning restore VSTHRD100 // Avoid async void methods
+        {
+            try
+            {
+                btnClrObjExplorer.IsEnabled = false;
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: "devenv");
+                DoGC();
+                LogMessage($"start clrobjexplorer {pathDumpFile}");
+                var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
+                var args = new[] {
+                "-p", pid.ToString(),
+                "-f",  "\"" + pathDumpFile + "\"",
+                "-c"
+            };
+                var odumper = new DumperViewerMain(args)
+                {
+                    _logger = this
+                };
+                await odumper.DoitAsync();
+                btnClrObjExplorer.IsEnabled = true;
+            }
+            catch (Exception ex)
+            {
+                LogMessage(ex.ToString());
+                btnClrObjExplorer.IsEnabled = true;
+            }
+
+            //var x = new DumpAnalyzer(this);
+            //x.StartClrObjectExplorer(pathDumpFile);
+
+        }
+
+#pragma warning disable VSTHRD100 // Avoid async void methods
         private async void BtnExecCode_Click(object sender, RoutedEventArgs e)
 #pragma warning restore VSTHRD100 // Avoid async void methods
         {
@@ -589,6 +628,8 @@
             catch (Exception ex)
             {
                 LogMessage(ex.ToString());
+                this.btnExecCode.Content = "ExecCode";
+                this.btnExecCode.IsEnabled = true;
             }
         }
 

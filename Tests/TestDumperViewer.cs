@@ -27,7 +27,7 @@ namespace Tests
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\""
             };
-            var odumper = new DumperViewer.DumperViewer(args)
+            var odumper = new DumperViewer.DumperViewerMain(args)
             {
                 _logger = this
             };
@@ -59,7 +59,7 @@ namespace Tests
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\""
             };
-            var odumper = new DumperViewer.DumperViewer(args)
+            var odumper = new DumperViewer.DumperViewerMain(args)
             {
                 _logger = this
             };

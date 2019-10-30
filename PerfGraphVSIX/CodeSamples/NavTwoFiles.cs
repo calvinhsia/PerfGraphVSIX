@@ -47,7 +47,7 @@ namespace MyCustomCode
     public class MyClass
     {
         string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-        int NumberOfIterations = 7;
+        int NumberOfIterations = 1999;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         int nTimes = 0;
         TaskCompletionSource<int> _tcs;
