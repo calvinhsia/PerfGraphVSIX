@@ -31,12 +31,13 @@ namespace TestStress
         public async Task StressIterateManually()
         {
             int NumIterations = 2;
+            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             try
             {
                 LogMessage($"{nameof(StressIterateManually)} # iterations = {NumIterations}");
                 for (int i = 0; i < NumIterations; i++)
                 {
-                    await OpenCloseSolutionOnce();
+                    await OpenCloseSolutionOnce(SolutionToLoad);
                     LogMessage($"  Iter # {i}/{NumIterations}");
                 }
             }

@@ -64,9 +64,8 @@ namespace TestStress
             _tcsSolution.TrySetResult(0);
         }
 
-        public async Task OpenCloseSolutionOnce()
+        public async Task OpenCloseSolutionOnce(string SolutionToLoad)
         {
-            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Open(SolutionToLoad);
             await _tcsSolution.Task;
@@ -87,7 +86,7 @@ namespace TestStress
                 LogMessage($"{nameof(IterationsFinishedAsync)}");
                 var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{TestContext.TestName}");
                 _vsDTE.ExecuteCommand("Tools.ForceGC");
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
                 LogMessage($"start clrobjexplorer {pathDumpFile}");
                 var pid = _vsProc.Id;
