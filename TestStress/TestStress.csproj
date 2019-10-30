@@ -54,6 +54,7 @@
     <Compile Include="IterWithAttr.cs" />
     <Compile Include="IterManual.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StressWithNoInheritance.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

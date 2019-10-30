@@ -35,10 +35,11 @@ namespace TestStress
             try
             {
                 LogMessage($"{nameof(StressIterateManually)} # iterations = {NumIterations}");
-                for (int i = 0; i < NumIterations; i++)
+                for (int iteration = 0; iteration < NumIterations; iteration++)
                 {
                     await OpenCloseSolutionOnce(SolutionToLoad);
-                    LogMessage($"  Iter # {i}/{NumIterations}");
+                    await TakeMeasurementAsync(this, iteration);
+                    LogMessage($"  Iter # {iteration}/{NumIterations}");
                 }
             }
             finally
@@ -46,7 +47,7 @@ namespace TestStress
 
             }
 
-            await IterationsFinishedAsync();
+            await AllIterationsFinishedAsync(this);
         }
     }
 }

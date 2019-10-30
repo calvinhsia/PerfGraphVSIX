@@ -4,6 +4,7 @@ using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text.RegularExpressions;
@@ -23,6 +24,7 @@ namespace TestStress
 
         internal Task InitializeBaseAsync()
         {
+            _lstMeasurements = new List<Measurements>();
             return Task.FromResult(0);
         }
 
@@ -66,6 +68,7 @@ namespace TestStress
 
         public async Task OpenCloseSolutionOnce(string SolutionToLoad)
         {
+            LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Open(SolutionToLoad);
             await _tcsSolution.Task;
@@ -73,23 +76,45 @@ namespace TestStress
             _tcsSolution = new TaskCompletionSource<int>();
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
+            LogMessage($"Closing solution");
             _vsDTE.Solution.Close();
             await _tcsSolution.Task;
 
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
         }
 
-        public async Task IterationsFinishedAsync()
+
+        public class Measurements
+        {
+
+        }
+
+        public List<Measurements> _lstMeasurements;
+        /// <summary>
+        /// after each iteration, take measurements
+        /// </summary>
+        /// <param name="nIteration">iteration #. -1 means before starting iterations for initial measurements</param>
+        /// <returns></returns>
+        public static async Task TakeMeasurementAsync(BaseStressTestClass test, int nIteration)
+        {
+            test.LogMessage($"{nameof(TakeMeasurementAsync)} {nIteration}");
+            if (nIteration >= 0)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
+            }
+        }
+
+        public static async Task AllIterationsFinishedAsync(BaseStressTestClass test)
         {
             try
             {
-                LogMessage($"{nameof(IterationsFinishedAsync)}");
-                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{TestContext.TestName}");
-                _vsDTE.ExecuteCommand("Tools.ForceGC");
-                await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+                test.LogMessage($"{nameof(AllIterationsFinishedAsync)}");
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{test.TestContext.TestName}");
+                test._vsDTE.ExecuteCommand("Tools.ForceGC");
+                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
 
-                LogMessage($"start clrobjexplorer {pathDumpFile}");
-                var pid = _vsProc.Id;
+                test.LogMessage($"start clrobjexplorer {pathDumpFile}");
+                var pid = test._vsProc.Id;
                 var args = new[] {
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\"",
@@ -97,13 +122,13 @@ namespace TestStress
                     };
                 var odumper = new DumperViewerMain(args)
                 {
-                    _logger = this
+                    _logger = test
                 };
                 await odumper.DoitAsync();
             }
             catch (Exception ex)
             {
-                LogMessage(ex.ToString());
+                test.LogMessage(ex.ToString());
             }
         }
 
@@ -207,5 +232,25 @@ namespace TestStress
         [DllImport("ole32.dll")]
         private static extern int CreateBindCtx(uint reserved, out IBindCtx ppbc);
 
+        /// <summary>
+        /// Do it all: tests need only add a single line to TestInitialize to turn a normal test into a stress test
+        /// </summary>
+        /// <param name="stressWithNoInheritance"></param>
+        /// <param name="NumIterations"></param>
+        /// <returns></returns>
+        public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations)
+        {
+            test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
+            await TakeMeasurementAsync(test, nIteration: -1);
+            var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
+
+            for (int iteration = 0; iteration < NumIterations; iteration++)
+            {
+                var ret = _theTestMethod.Invoke(test, parameters: null);
+                await BaseStressTestClass.TakeMeasurementAsync(test, iteration);
+            }
+            await BaseStressTestClass.AllIterationsFinishedAsync(test);
+
+        }
     }
 }
