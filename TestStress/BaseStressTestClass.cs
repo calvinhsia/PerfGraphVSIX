@@ -1,0 +1,121 @@
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PerfGraphVSIX;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace TestStress
+{
+    public class BaseStressTestClass : ILogger
+    {
+        protected Process _vsProc;
+        protected EnvDTE.DTE _vsDTE;
+
+        public TestContext TestContext { get; set; }
+        public List<string> _lstLoggedStrings = new List<string>();
+
+        public void LogMessage(string str, params object[] args)
+        {
+            var dt = string.Format("[{0}],",
+                DateTime.Now.ToString("hh:mm:ss:fff")
+                );
+            str = string.Format(dt + str, args);
+            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+
+            this.TestContext.WriteLine(msgstr);
+            if (Debugger.IsAttached)
+            {
+                Debug.WriteLine(msgstr);
+            }
+            _lstLoggedStrings.Add(msgstr);
+
+        }
+
+        public async Task<EnvDTE.DTE> GetDTEAsync(int processId, TimeSpan timeout)
+        {
+            EnvDTE.DTE dte = null;
+            var sw = Stopwatch.StartNew();
+            while ((dte = GetDTE(processId)) == null)
+            {
+                if (sw.Elapsed > timeout)
+                {
+                    break;
+                }
+                await Task.Delay(1000);
+            }
+            return dte;
+        }
+
+        private EnvDTE.DTE GetDTE(int processId)
+        {
+            object runningObject = null;
+
+            IBindCtx bindCtx = null;
+            IRunningObjectTable rot = null;
+            IEnumMoniker enumMonikers = null;
+
+            try
+            {
+                Marshal.ThrowExceptionForHR(CreateBindCtx(reserved: 0, ppbc: out bindCtx));
+                bindCtx.GetRunningObjectTable(out rot);
+                rot.EnumRunning(out enumMonikers);
+
+                IMoniker[] moniker = new IMoniker[1];
+                IntPtr numberFetched = IntPtr.Zero;
+                while (enumMonikers.Next(1, moniker, numberFetched) == 0)
+                {
+                    IMoniker runningObjectMoniker = moniker[0];
+
+                    string name = null;
+
+                    try
+                    {
+                        if (runningObjectMoniker != null)
+                        {
+                            runningObjectMoniker.GetDisplayName(bindCtx, null, out name);
+                        }
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Do nothing, there is something in the ROT that we do not have access to.
+                    }
+
+                    Regex monikerRegex = new Regex(@"!VisualStudio.DTE\.\d+\.\d+\:" + processId, RegexOptions.IgnoreCase); // VisualStudio.DTE.16.0:56668
+                    if (!string.IsNullOrEmpty(name) && monikerRegex.IsMatch(name))
+                    {
+                        Marshal.ThrowExceptionForHR(rot.GetObject(runningObjectMoniker, out runningObject));
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                if (enumMonikers != null)
+                {
+                    Marshal.ReleaseComObject(enumMonikers);
+                }
+
+                if (rot != null)
+                {
+                    Marshal.ReleaseComObject(rot);
+                }
+
+                if (bindCtx != null)
+                {
+                    Marshal.ReleaseComObject(bindCtx);
+                }
+            }
+
+            return runningObject as EnvDTE.DTE;
+        }
+
+        [DllImport("ole32.dll")]
+        private static extern int CreateBindCtx(uint reserved, out IBindCtx ppbc);
+
+    }
+}
