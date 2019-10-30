@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using DumperViewer;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
@@ -35,6 +36,35 @@ namespace TestStress
             _lstLoggedStrings.Add(msgstr);
 
         }
+
+        public async Task IterationsFinishedAsync()
+        {
+            try
+            {
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: "devenv");
+                _vsDTE.ExecuteCommand("Tools.ForceGC");
+                await Task.Delay(TimeSpan.FromSeconds(5));
+
+                LogMessage($"start clrobjexplorer {pathDumpFile}");
+                var pid = _vsProc.Id;
+                var args = new[] {
+                "-p", pid.ToString(),
+                "-f",  "\"" + pathDumpFile + "\"",
+                "-c"
+                    };
+                var odumper = new DumperViewerMain(args)
+                {
+                    _logger = this
+                };
+                await odumper.DoitAsync();
+            }
+            catch (Exception ex)
+            {
+                LogMessage(ex.ToString());
+            }
+
+        }
+
 
         public async Task<EnvDTE.DTE> GetDTEAsync(int processId, TimeSpan timeout)
         {

@@ -22,7 +22,7 @@ namespace DumperViewer
         private readonly string[] args;
         internal readonly List<string> regexes = new List<string>();
         internal string _DumpFileName;
-        internal ILogger _logger;
+        public ILogger _logger;
         internal Process _procTarget;
         private bool _StartClrObjectExplorer;
 
@@ -48,7 +48,7 @@ namespace DumperViewer
             this.args = args;
         }
 
-        internal async Task DoitAsync()
+        public async Task DoitAsync()
         {
             await SendTelemetryAsync($"{nameof(DumperViewerMain)}");
             _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = {string.Join(" ", args)}");
