@@ -30,7 +30,7 @@ namespace TestStress
         [TestMethod]
         public async Task StressIterateManually()
         {
-            int NumIterations = 2;
+            int NumIterations = 3;
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             try
             {

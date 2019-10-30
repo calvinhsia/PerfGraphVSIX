@@ -161,9 +161,9 @@
                   };
 
 
-                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitions.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
-                PerfCounterData._lstPerfCounterDefinitions.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
+                PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -187,9 +187,9 @@
                         await Task.Run(() =>
                         {
                             // run on threadpool thread
-                            lock (PerfCounterData._lstPerfCounterDefinitions)
+                            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                             {
-                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitions)
+                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                                 {
                                     itm.IsEnabled = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
@@ -257,7 +257,7 @@
         void ResetPerfCounterMonitor()
         {
             _ctsPcounter?.Cancel();
-            lock (PerfCounterData._lstPerfCounterDefinitions)
+            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
             {
                 _lstPCData = new List<uint>();
                 _dataPoints.Clear();
@@ -303,10 +303,10 @@
                 {
                     sBuilder.Append(desc + " ");
                 }
-                lock (PerfCounterData._lstPerfCounterDefinitions)
+                lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                 {
                     int idx = 0;
-                    foreach (var ctr in PerfCounterData._lstPerfCounterDefinitions.Where(pctr => pctr.IsEnabled))
+                    foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(pctr => pctr.IsEnabled))
                     {
                         var pcValueAsFloat = ctr.ReadNextValue();
                         uint pcValue = 0;
@@ -350,9 +350,9 @@
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (PerfCounterData._lstPerfCounterDefinitions)
+                    lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                     {
-                        foreach (var ctr in PerfCounterData._lstPerfCounterDefinitions)
+                        foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                         {
                             ctr.ResetCounter();
                         }

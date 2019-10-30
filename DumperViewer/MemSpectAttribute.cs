@@ -42,6 +42,11 @@ namespace DumperViewer
         /// The test is run once normally, after which the the Cleannup runs the test "numIterations" times to test for leaks
         /// </summary>
         public int NumIterations { get; set; }
+
+        /// <summary>
+        /// Measurement is taken before and after all iterations. If any perfcounter exceeds this percent threshold, test fails
+        /// </summary>
+        public int PercentThreshold { get; set; }
         /// <summary>
         /// Normally leave at 1, but when testing infrastructure 0 is faster
         /// </summary>

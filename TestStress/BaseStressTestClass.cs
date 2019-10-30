@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,8 +25,7 @@ namespace TestStress
 
         internal Task InitializeBaseAsync()
         {
-            _lstMeasurements = new List<Measurements>();
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         public async Task StartVSAsync()
@@ -37,8 +37,12 @@ namespace TestStress
             LogMessage($"Started VS PID= {_vsProc.Id}");
 
             _vsDTE = await GetDTEAsync(_vsProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
-            _vsDTE.Events.SolutionEvents.Opened += SolutionEvents_Opened;
-            _vsDTE.Events.SolutionEvents.AfterClosing += SolutionEvents_AfterClosing;
+            
+            var solEvents = _vsDTE.Events.SolutionEvents;
+            solEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
+            solEvents.AfterClosing += SolutionEvents_AfterClosing;
+            PerfCounterData.ProcToMonitor = _vsProc;
+
             LogMessage($"done {nameof(StartVSAsync)}");
         }
         internal async Task ShutDownVSAsync()
@@ -68,28 +72,50 @@ namespace TestStress
 
         public async Task OpenCloseSolutionOnce(string SolutionToLoad)
         {
+            var timeoutVSSlnEventsSecs = 15;
             LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Open(SolutionToLoad);
-            await _tcsSolution.Task;
+            if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
+            {
+                LogMessage($"Solution Open event not fired in {timeoutVSSlnEventsSecs} seconds");
+            }
 
             _tcsSolution = new TaskCompletionSource<int>();
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
             LogMessage($"Closing solution");
             _vsDTE.Solution.Close();
-            await _tcsSolution.Task;
+            if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
+            {
+                LogMessage($"Solution Close event not fired in {timeoutVSSlnEventsSecs} seconds");
+            }
 
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
         }
 
-
-        public class Measurements
+        /// <summary>
+        /// These are the counters used for stress test measurements
+        /// </summary>
+        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForStressTest = new List<PerfCounterData>()
         {
+//            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
+            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
+//            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
+//            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
+//            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
+//            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
+//            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
+//            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
+        };
 
-        }
 
-        public List<Measurements> _lstMeasurements;
+
+        public Dictionary<string, List<uint>> _measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
         /// <summary>
         /// after each iteration, take measurements
         /// </summary>
@@ -100,7 +126,37 @@ namespace TestStress
             test.LogMessage($"{nameof(TakeMeasurementAsync)} {nIteration}");
             if (nIteration >= 0)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
+                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
+            }
+            try
+            {
+                test._vsDTE?.ExecuteCommand("Tools.ForceGC");
+
+                var sBuilder = new StringBuilder();
+                foreach (var ctr in _lstPerfCounterDefinitionsForStressTest)
+                {
+                    if (!test._measurements.TryGetValue(ctr.PerfCounterName, out var lst))
+                    {
+                        lst = new List<uint>();
+                        test._measurements[ctr.PerfCounterName] = lst;
+                    }
+                    var pcValueAsFloat = ctr.ReadNextValue();
+                    uint pcValue = 0;
+                    uint priorValue = 0;
+                    if (lst.Count > 0)
+                    {
+                        priorValue = lst[0];
+                    }
+                    pcValue = (uint)pcValueAsFloat;
+                    int delta = (int)pcValue - (int)priorValue;
+                    sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
+                    lst.Add(pcValue);
+                }
+                test.LogMessage($"{sBuilder.ToString()}");
+            }
+            catch (Exception ex)
+            {
+                test.LogMessage($"Exception in {nameof(TakeMeasurementAsync)}" + ex.ToString());
             }
         }
 
@@ -110,7 +166,6 @@ namespace TestStress
             {
                 test.LogMessage($"{nameof(AllIterationsFinishedAsync)}");
                 var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{test.TestContext.TestName}");
-                test._vsDTE.ExecuteCommand("Tools.ForceGC");
                 await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
 
                 test.LogMessage($"start clrobjexplorer {pathDumpFile}");
@@ -241,7 +296,6 @@ namespace TestStress
         public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations)
         {
             test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
-            await TakeMeasurementAsync(test, nIteration: -1);
             var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
 
             for (int iteration = 0; iteration < NumIterations; iteration++)
