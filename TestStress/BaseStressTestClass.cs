@@ -17,31 +17,75 @@ namespace TestStress
         protected Process _vsProc;
         protected EnvDTE.DTE _vsDTE;
 
+        protected int DelayMultiplier = 1;
+
         public TestContext TestContext { get; set; }
-        public List<string> _lstLoggedStrings = new List<string>();
 
-        public void LogMessage(string str, params object[] args)
+        internal Task InitializeBaseAsync()
         {
-            var dt = string.Format("[{0}],",
-                DateTime.Now.ToString("hh:mm:ss:fff")
-                );
-            str = string.Format(dt + str, args);
-            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+            return Task.FromResult(0);
+        }
 
-            this.TestContext.WriteLine(msgstr);
-            if (Debugger.IsAttached)
+        public async Task StartVSAsync()
+        {
+            LogMessage($"{nameof(StartVSAsync)}");
+            var vsPath = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
+            LogMessage($"Starting VS");
+            _vsProc = Process.Start(vsPath);
+            LogMessage($"Started VS PID= {_vsProc.Id}");
+
+            _vsDTE = await GetDTEAsync(_vsProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
+            _vsDTE.Events.SolutionEvents.Opened += SolutionEvents_Opened;
+            _vsDTE.Events.SolutionEvents.AfterClosing += SolutionEvents_AfterClosing;
+            LogMessage($"done {nameof(StartVSAsync)}");
+        }
+        internal async Task ShutDownVSAsync()
+        {
+            await Task.Yield();
+            if (_vsDTE != null)
             {
-                Debug.WriteLine(msgstr);
+                _vsDTE.Events.SolutionEvents.Opened -= SolutionEvents_Opened;
+                _vsDTE.Events.SolutionEvents.AfterClosing -= SolutionEvents_AfterClosing;
+                _vsDTE.Quit();
+                _vsDTE = null;
             }
-            _lstLoggedStrings.Add(msgstr);
+        }
 
+        TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
+        private void SolutionEvents_AfterClosing()
+        {
+            //            LogMessage($"{nameof(SolutionEvents_AfterClosing)}");
+            _tcsSolution.TrySetResult(0);
+        }
+
+        private void SolutionEvents_Opened()
+        {
+            //            LogMessage($"{nameof(SolutionEvents_Opened)}");
+            _tcsSolution.TrySetResult(0);
+        }
+
+        public async Task OpenCloseSolutionOnce()
+        {
+            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+            _tcsSolution = new TaskCompletionSource<int>();
+            _vsDTE.Solution.Open(SolutionToLoad);
+            await _tcsSolution.Task;
+
+            _tcsSolution = new TaskCompletionSource<int>();
+            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+
+            _vsDTE.Solution.Close();
+            await _tcsSolution.Task;
+
+            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
         }
 
         public async Task IterationsFinishedAsync()
         {
             try
             {
-                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: "devenv");
+                LogMessage($"{nameof(IterationsFinishedAsync)}");
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{TestContext.TestName}");
                 _vsDTE.ExecuteCommand("Tools.ForceGC");
                 await Task.Delay(TimeSpan.FromSeconds(5));
 
@@ -62,13 +106,30 @@ namespace TestStress
             {
                 LogMessage(ex.ToString());
             }
+        }
 
+        public List<string> _lstLoggedStrings = new List<string>();
+
+        public void LogMessage(string str, params object[] args)
+        {
+            var dt = string.Format("[{0}],",
+                DateTime.Now.ToString("hh:mm:ss:fff")
+                );
+            str = string.Format(dt + str, args);
+            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+
+            this.TestContext.WriteLine(msgstr);
+            if (Debugger.IsAttached)
+            {
+                Debug.WriteLine(msgstr);
+            }
+            _lstLoggedStrings.Add(msgstr);
         }
 
 
-        public async Task<EnvDTE.DTE> GetDTEAsync(int processId, TimeSpan timeout)
+        public async static Task<EnvDTE.DTE> GetDTEAsync(int processId, TimeSpan timeout)
         {
-            EnvDTE.DTE dte = null;
+            EnvDTE.DTE dte;
             var sw = Stopwatch.StartNew();
             while ((dte = GetDTE(processId)) == null)
             {
@@ -81,7 +142,7 @@ namespace TestStress
             return dte;
         }
 
-        private EnvDTE.DTE GetDTE(int processId)
+        private static EnvDTE.DTE GetDTE(int processId)
         {
             object runningObject = null;
 

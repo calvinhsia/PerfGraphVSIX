@@ -142,11 +142,14 @@ namespace DumperViewer
             try
             {
                 var sw = Stopwatch.StartNew();
-                _DumpFileName = GetNewDumpFileName(Path.GetFileNameWithoutExtension(_procTarget.ProcessName));
+                if (string.IsNullOrEmpty(_DumpFileName))
+                {
+                    _DumpFileName = GetNewDumpFileName(Path.GetFileNameWithoutExtension(_procTarget.ProcessName));
+                }
                 await Task.Run(() =>
                 {
                     var mdh = new MemoryDumpHelper();
-                    _logger.LogMessage($"Starting to create dump {_procTarget.Id} {_procTarget.ProcessName}");
+                    _logger.LogMessage($"Starting to create dump {_procTarget.Id} {_procTarget.ProcessName} {_DumpFileName}");
                     if (_procTarget.Id == Process.GetCurrentProcess().Id)
                     {
                         for (int i = 0; i < 5; i++)
@@ -186,14 +189,13 @@ namespace DumperViewer
             {
                 Directory.CreateDirectory(dirMyTemp);
             }
-            var baseDumpName = baseName;
             var pathDumpFile = string.Empty;
             int nIter = 0;
             while (true) // we want to let the user have multiple dumps open for comparison
             {
                 pathDumpFile = Path.Combine(
                     dirMyTemp,
-                    $"{baseDumpName}{nIter++}.dmp");
+                    $"{baseName}_{nIter++}.dmp");
                 if (!File.Exists(pathDumpFile))
                 {
                     break;

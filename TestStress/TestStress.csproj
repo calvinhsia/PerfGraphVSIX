@@ -50,7 +50,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseStressTestClass.cs" />
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="MemSpectAttribute.cs" />
+    <Compile Include="MessageFilter.cs" />
+    <Compile Include="IterWithAttr.cs" />
+    <Compile Include="IterManual.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
