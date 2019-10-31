@@ -16,7 +16,10 @@ namespace TestStress
 {
     public class BaseStressTestClass : ILogger
     {
-        protected Process _vsProc;
+        /// <summary>
+        /// The process we're monitoring
+        /// </summary>
+        public Process _targetProc;
         protected EnvDTE.DTE _vsDTE;
 
         protected int DelayMultiplier = 1;
@@ -33,15 +36,17 @@ namespace TestStress
             LogMessage($"{nameof(StartVSAsync)}");
             var vsPath = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
             LogMessage($"Starting VS");
-            _vsProc = Process.Start(vsPath);
-            LogMessage($"Started VS PID= {_vsProc.Id}");
+            _targetProc = Process.Start(vsPath);
+            LogMessage($"Started VS PID= {_targetProc.Id}");
 
-            _vsDTE = await GetDTEAsync(_vsProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
-            
+            _vsDTE = await GetDTEAsync(_targetProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
+
             var solEvents = _vsDTE.Events.SolutionEvents;
+            await TakeMeasurementAsync(this, nIteration: -2);
+
             solEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
             solEvents.AfterClosing += SolutionEvents_AfterClosing;
-            PerfCounterData.ProcToMonitor = _vsProc;
+            PerfCounterData.ProcToMonitor = _targetProc;
 
             LogMessage($"done {nameof(StartVSAsync)}");
         }
@@ -60,13 +65,13 @@ namespace TestStress
         TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         private void SolutionEvents_AfterClosing()
         {
-            //            LogMessage($"{nameof(SolutionEvents_AfterClosing)}");
+            LogMessage($"{nameof(SolutionEvents_AfterClosing)}");
             _tcsSolution.TrySetResult(0);
         }
 
         private void SolutionEvents_Opened()
         {
-            //            LogMessage($"{nameof(SolutionEvents_Opened)}");
+            LogMessage($"{nameof(SolutionEvents_Opened)}");
             _tcsSolution.TrySetResult(0);
         }
 
@@ -169,7 +174,7 @@ namespace TestStress
                 await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
 
                 test.LogMessage($"start clrobjexplorer {pathDumpFile}");
-                var pid = test._vsProc.Id;
+                var pid = test._targetProc.Id;
                 var args = new[] {
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\"",
@@ -195,7 +200,7 @@ namespace TestStress
                 DateTime.Now.ToString("hh:mm:ss:fff")
                 );
             str = string.Format(dt + str, args);
-            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
 
             this.TestContext.WriteLine(msgstr);
             if (Debugger.IsAttached)

@@ -335,7 +335,7 @@ DumpViewer -p 1234 -t .*TextBuffer.*
                     DateTime.Now.ToString("hh:mm:ss:fff")
                     );
                 str = string.Format(dt + str, args);
-                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
 
                 if (Debugger.IsAttached)
                 {

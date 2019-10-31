@@ -128,12 +128,12 @@ namespace PerfGraphVSIX
 
         public static int GetGuiResourcesGDICount()
         {
-            return GetGuiResources(ProcToMonitor.Handle, 0);
+            return GetGuiResources(ProcToMonitor.Handle, uiFlags: 0);
         }
 
         public static int GetGuiResourcesUserCount()
         {
-            return GetGuiResources(ProcToMonitor.Handle, 1);
+            return GetGuiResources(ProcToMonitor.Handle, uiFlags: 1);
         }
     }
 }

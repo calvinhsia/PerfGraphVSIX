@@ -21,7 +21,6 @@ namespace TestStress
             MemSpectAttribute attr = (MemSpectAttribute)_theTestMethod.GetCustomAttribute(typeof(MemSpectAttribute));
             test.LogMessage($"Got attr {attr}");
             testContext.Properties.Add("TestIterationCount", 0);
-            await TakeMeasurementAsync(test, nIteration: -1);
 
             for (int iteration = 0; iteration < attr.NumIterations; iteration++)
             {

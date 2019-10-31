@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using DumperViewer;
 
 namespace TestStress
 {
@@ -30,11 +31,17 @@ namespace TestStress
         [TestMethod]
         public async Task StressIterateManually()
         {
+            AsyncPump.Run(async () =>
+            {
+                await Task.Yield();
+            });
+
             int NumIterations = 3;
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             try
             {
                 LogMessage($"{nameof(StressIterateManually)} # iterations = {NumIterations}");
+                await TakeMeasurementAsync(this, -1);
                 for (int iteration = 0; iteration < NumIterations; iteration++)
                 {
                     await OpenCloseSolutionOnce(SolutionToLoad);
@@ -46,7 +53,6 @@ namespace TestStress
             {
 
             }
-
             await AllIterationsFinishedAsync(this);
         }
     }
