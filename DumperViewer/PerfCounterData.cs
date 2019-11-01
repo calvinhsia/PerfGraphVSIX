@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace PerfGraphVSIX
@@ -56,7 +57,7 @@ namespace PerfGraphVSIX
         public float LastValue;
         public float ReadNextValue()
         {
-            float retVal;
+            float retVal = 0;
             switch (perfCounterType)
             {
                 case PerfCounterType.UserHandleCount:
@@ -66,7 +67,10 @@ namespace PerfGraphVSIX
                     retVal = GetGuiResourcesUserCount();
                     break;
                 default:
-                    retVal = lazyPerformanceCounter.Value.NextValue();
+                    if (lazyPerformanceCounter.Value != null)
+                    {
+                        retVal = lazyPerformanceCounter.Value.NextValue();
+                    }
                     break;
             }
             LastValue = retVal;
@@ -88,8 +92,7 @@ namespace PerfGraphVSIX
             {
                 PerformanceCounter pc = null;
                 var category = new PerformanceCounterCategory(PerfCounterCategory);
-
-                foreach (var instanceName in category.GetInstanceNames()) // exception if you're not admin or "Performance Monitor Users" group (must re-login)
+                foreach (var instanceName in category.GetInstanceNames().Where(p => p.StartsWith(ProcToMonitor.ProcessName))) //'devenv'
                 {
                     using (var cntr = new PerformanceCounter(category.CategoryName, PerfCounterInstanceName, instanceName, readOnly: true))
                     {
@@ -102,7 +105,7 @@ namespace PerfGraphVSIX
                                 break;
                             }
                         }
-                        catch (Exception)
+                        catch (Exception) //. Could get exception if you're not admin or "Performance Monitor Users" group (must re-login)
                         {
                             // System.InvalidOperationException: Instance 'IntelliTrace' does not exist in the specified Category.
                         }

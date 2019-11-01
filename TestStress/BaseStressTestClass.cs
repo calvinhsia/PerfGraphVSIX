@@ -38,15 +38,15 @@ namespace TestStress
             LogMessage($"Starting VS");
             _targetProc = Process.Start(vsPath);
             LogMessage($"Started VS PID= {_targetProc.Id}");
+            PerfCounterData.ProcToMonitor = _targetProc;
 
             _vsDTE = await GetDTEAsync(_targetProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
 
             var solEvents = _vsDTE.Events.SolutionEvents;
-            await TakeMeasurementAsync(this, nIteration: -2);
+            //            await TakeMeasurementAsync(this, nIteration: -2);
 
             solEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
             solEvents.AfterClosing += SolutionEvents_AfterClosing;
-            PerfCounterData.ProcToMonitor = _targetProc;
 
             LogMessage($"done {nameof(StartVSAsync)}");
         }
@@ -57,8 +57,32 @@ namespace TestStress
             {
                 _vsDTE.Events.SolutionEvents.Opened -= SolutionEvents_Opened;
                 _vsDTE.Events.SolutionEvents.AfterClosing -= SolutionEvents_AfterClosing;
+                var tcs = new TaskCompletionSource<int>();
+                _targetProc.Exited += (o, e) => // doesn't fire reliably
+                 {
+                     tcs.SetResult(0);
+                 };
                 _vsDTE.Quit();
+                var timeoutForClose = 15 * DelayMultiplier;
+                var taskOneSecond = Task.Delay(1000);
+
+                while (timeoutForClose > 0)
+                {
+                    if (await Task.WhenAny(tcs.Task, taskOneSecond) != tcs.Task)
+                    {
+                        if (_targetProc.HasExited)
+                        {
+                            break;
+                        }
+                        taskOneSecond = Task.Delay(1000);
+                    }
+                }
+                if (!_targetProc.HasExited)
+                {
+                    LogMessage($"******************Did not close in {timeoutForClose} secs");
+                }
                 _vsDTE = null;
+
             }
         }
 
@@ -83,7 +107,7 @@ namespace TestStress
             _vsDTE.Solution.Open(SolutionToLoad);
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
-                LogMessage($"Solution Open event not fired in {timeoutVSSlnEventsSecs} seconds");
+                LogMessage($"******************Solution Open event not fired in {timeoutVSSlnEventsSecs} seconds");
             }
 
             _tcsSolution = new TaskCompletionSource<int>();
@@ -93,7 +117,7 @@ namespace TestStress
             _vsDTE.Solution.Close();
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
-                LogMessage($"Solution Close event not fired in {timeoutVSSlnEventsSecs} seconds");
+                LogMessage($"******************Solution Close event not fired in {timeoutVSSlnEventsSecs} seconds");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
@@ -105,15 +129,15 @@ namespace TestStress
         public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForStressTest = new List<PerfCounterData>()
         {
 //            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
-            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
-            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
+//x            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
+//x            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
 //            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
 //            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
 //            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
 //            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
 //            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
 //            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
+//x            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
             {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
             {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
         };
@@ -165,26 +189,33 @@ namespace TestStress
             }
         }
 
-        public static async Task AllIterationsFinishedAsync(BaseStressTestClass test)
+        public static async Task AllIterationsFinishedAsync(BaseStressTestClass test, bool createDump = false, bool startClrObjExplorer = false)
         {
             try
             {
                 test.LogMessage($"{nameof(AllIterationsFinishedAsync)}");
-                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{test.TestContext.TestName}");
-                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
-
-                test.LogMessage($"start clrobjexplorer {pathDumpFile}");
-                var pid = test._targetProc.Id;
-                var args = new[] {
-                "-p", pid.ToString(),
-                "-f",  "\"" + pathDumpFile + "\"",
-                "-c"
-                    };
-                var odumper = new DumperViewerMain(args)
+                if (createDump)
                 {
-                    _logger = test
+                    var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{test.TestContext.TestName}");
+                    await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
+
+                    test.LogMessage($"start clrobjexplorer {pathDumpFile}");
+                    var pid = test._targetProc.Id;
+                    var args = new List<string>
+                {
+                    $" -p {pid}"
                 };
-                await odumper.DoitAsync();
+                    args.Add($" -f \"{pathDumpFile}\"");
+                    if (startClrObjExplorer)
+                    {
+                        args.Add($"-c");
+                    }
+                    var odumper = new DumperViewerMain(args.ToArray())
+                    {
+                        _logger = test
+                    };
+                    await odumper.DoitAsync();
+                }
             }
             catch (Exception ex)
             {

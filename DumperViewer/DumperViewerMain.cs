@@ -209,7 +209,7 @@ namespace DumperViewer
             Process procChosen = null;
             var q = from proc in Process.GetProcesses()
                     orderby proc.ProcessName
-                    where fShow32BitOnly ? ProcessType(proc)=="32" : true
+                    where fShow32BitOnly ? ProcessType(proc) == "32" : true
                     select new
                     {
                         proc.Id,
@@ -287,10 +287,13 @@ namespace DumperViewer
 
         private void DoShowHelp(string extrainfo = "")
         {
-            var owin = new Window();
-            var tb = new TextBlock()
+            try
             {
-                Text = $@"DumperViewer: 
+
+                var owin = new Window();
+                var tb = new TextBlock()
+                {
+                    Text = $@"DumperViewer: 
 {extrainfo}
 
 This Program can
@@ -315,10 +318,14 @@ DumpViewer -p 1234 -t .*TextBuffer.*
 
 
 "
-            };
+                };
 
-            owin.Content = tb;
-            owin.ShowDialog();
+                owin.Content = tb;
+                owin.ShowDialog();
+            }
+            catch (InvalidOperationException) //System.InvalidOperationException: The calling thread must be STA, because many UI components require this.
+            {
+            }
         }
 
         readonly List<string> _lstLoggedStrings = new List<string>();
