@@ -104,6 +104,27 @@
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         }
+
+
+        /// <summary>
+        /// these are used to provider interactive user counters from which to choose in VSIX
+        /// </summary>
+        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForVSIX = new List<PerfCounterData>()
+        {
+            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
+            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
+            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
+            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
+            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
+            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
+            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
+        };
+
         public class LeakedObject
         {
             public int SerialNo { get; set; }
@@ -161,9 +182,9 @@
                   };
 
 
-                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = _lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
-                PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
+                _lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -187,9 +208,9 @@
                         await Task.Run(() =>
                         {
                             // run on threadpool thread
-                            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                            lock (_lstPerfCounterDefinitionsForVSIX)
                             {
-                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                                foreach (var itm in _lstPerfCounterDefinitionsForVSIX)
                                 {
                                     itm.IsEnabled = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
@@ -257,7 +278,7 @@
         void ResetPerfCounterMonitor()
         {
             _ctsPcounter?.Cancel();
-            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+            lock (_lstPerfCounterDefinitionsForVSIX)
             {
                 _lstPCData = new List<uint>();
                 _dataPoints.Clear();
@@ -303,10 +324,10 @@
                 {
                     sBuilder.Append(desc + " ");
                 }
-                lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                lock (_lstPerfCounterDefinitionsForVSIX)
                 {
                     int idx = 0;
-                    foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(pctr => pctr.IsEnabled))
+                    foreach (var ctr in _lstPerfCounterDefinitionsForVSIX.Where(pctr => pctr.IsEnabled))
                     {
                         var pcValueAsFloat = ctr.ReadNextValue();
                         uint pcValue = 0;
@@ -350,9 +371,9 @@
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                    lock (_lstPerfCounterDefinitionsForVSIX)
                     {
-                        foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                        foreach (var ctr in _lstPerfCounterDefinitionsForVSIX)
                         {
                             ctr.ResetCounter();
                         }
@@ -600,6 +621,7 @@
                         _codeExecutor = new CodeExecutor(this);
                     }
                     var codeToRun = File.ReadAllText(CodeFileToRun);
+                    var sw = Stopwatch.StartNew();
                     var res = _codeExecutor.CompileAndExecute(codeToRun, _ctsExecuteCode.Token, actTakeSample: async (desc) =>
                     {
                         await DoSampleAsync(desc);
@@ -609,6 +631,7 @@
                         //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
                         await task;
                         //                    await AddStatusMsgAsync($"Task done: {res}");
+                        await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension( CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
                     }
                     else
                     {

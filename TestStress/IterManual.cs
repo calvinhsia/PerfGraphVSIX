@@ -34,7 +34,7 @@ namespace TestStress
             await Task.Yield();
             AsyncPump.Run(async () =>
             {
-                int NumIterations = 1;
+                int NumIterations = 7;
                 string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
                 try
                 {

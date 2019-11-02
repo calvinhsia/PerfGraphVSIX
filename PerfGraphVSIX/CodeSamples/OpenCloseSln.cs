@@ -49,8 +49,8 @@ namespace MyCustomCode
         int NumberOfIterations = 7;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         int nTimes = 0;
-        TaskCompletionSource<int> _tcs;
-        CancellationToken _CancellationToken;
+        TaskCompletionSource<int> _tcsSolution;
+        CancellationToken _CancellationTokenExecuteCode;
         JoinableTask _tskDoPerfMonitoring;
         ILogger logger;
         Action<string> actTakeSample;
@@ -63,9 +63,9 @@ namespace MyCustomCode
         }
         public MyClass(object[] args)
         {
-            _tcs = new TaskCompletionSource<int>();
+            _tcsSolution = new TaskCompletionSource<int>();
             logger = args[0] as ILogger;
-            _CancellationToken = (CancellationToken)args[1]; // value type
+            _CancellationTokenExecuteCode = (CancellationToken)args[1]; // value type
             g_dte = args[2] as EnvDTE.DTE;
             actTakeSample = args[3] as Action<string>;
         }
@@ -128,14 +128,14 @@ namespace MyCustomCode
                 }
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
 
-                for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
+                for (int i = 0; i < NumberOfIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; i++)
                 {
                     var desc = string.Format("Start of Iter {0}/{1}", i + 1, NumberOfIterations);
                     DoSample(desc);
                     await Task.Delay(1000); // wait one second to allow UI thread to catch  up
 
                     await OpenASolutionAsync();
-                    if (_CancellationToken.IsCancellationRequested)
+                    if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         break;
                     }
@@ -145,7 +145,7 @@ namespace MyCustomCode
                     //                    logger.LogMessage("End of Iter {0}", i);
                 }
                 var msg = "Cancelled Code Execution";
-                if (!_CancellationToken.IsCancellationRequested)
+                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
                 {
                     msg = string.Format("Done all {0} iterations", NumberOfIterations);
                 }
@@ -177,37 +177,37 @@ namespace MyCustomCode
 
         async Task OpenASolutionAsync()
         {
-            _tcs = new TaskCompletionSource<int>();
+            _tcsSolution = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             g_dte.Solution.Open(SolutionToLoad);
-            await _tcs.Task;
-            if (!_CancellationToken.IsCancellationRequested)
+            await _tcsSolution.Task;
+            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
+                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
             }
         }
 
         async Task CloseTheSolutionAsync()
         {
-            _tcs = new TaskCompletionSource<int>();
+            _tcsSolution = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             g_dte.Solution.Close();
-            if (!_CancellationToken.IsCancellationRequested)
+            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
+                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
             }
         }
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
             //            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
-            _tcs.TrySetResult(0);
+            _tcsSolution.TrySetResult(0);
         }
 
         private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
         {
             //logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
-            _tcs.TrySetResult(0);
+            _tcsSolution.TrySetResult(0);
         }
     }
 }

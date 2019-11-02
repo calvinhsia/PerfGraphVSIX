@@ -21,6 +21,7 @@ namespace TestStress
         /// </summary>
         public Process _targetProc;
         protected EnvDTE.DTE _vsDTE;
+        protected EnvDTE.SolutionEvents _solutionEvents; // need a strong ref to survive GCs
 
         protected int DelayMultiplier = 1;
 
@@ -30,6 +31,7 @@ namespace TestStress
         {
             return Task.CompletedTask;
         }
+
 
         public async Task StartVSAsync()
         {
@@ -41,12 +43,10 @@ namespace TestStress
             PerfCounterData.ProcToMonitor = _targetProc;
 
             _vsDTE = await GetDTEAsync(_targetProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
+            _solutionEvents = _vsDTE.Events.SolutionEvents;
 
-            var solEvents = _vsDTE.Events.SolutionEvents;
-            //            await TakeMeasurementAsync(this, nIteration: -2);
-
-            solEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
-            solEvents.AfterClosing += SolutionEvents_AfterClosing;
+            _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
+            _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
 
             LogMessage($"done {nameof(StartVSAsync)}");
         }
@@ -89,20 +89,20 @@ namespace TestStress
         TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         private void SolutionEvents_AfterClosing()
         {
-            LogMessage($"{nameof(SolutionEvents_AfterClosing)}");
+            //LogMessage($"{nameof(SolutionEvents_AfterClosing)}");
             _tcsSolution.TrySetResult(0);
         }
 
         private void SolutionEvents_Opened()
         {
-            LogMessage($"{nameof(SolutionEvents_Opened)}");
+            //LogMessage($"{nameof(SolutionEvents_Opened)}");
             _tcsSolution.TrySetResult(0);
         }
 
         public async Task OpenCloseSolutionOnce(string SolutionToLoad)
         {
             var timeoutVSSlnEventsSecs = 15;
-            LogMessage($"Opening solution {SolutionToLoad}");
+            //LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Open(SolutionToLoad);
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
@@ -113,7 +113,7 @@ namespace TestStress
             _tcsSolution = new TaskCompletionSource<int>();
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
-            LogMessage($"Closing solution");
+            //LogMessage($"Closing solution");
             _vsDTE.Solution.Close();
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
@@ -129,15 +129,15 @@ namespace TestStress
         public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForStressTest = new List<PerfCounterData>()
         {
 //            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
-//x            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
-//x            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
 //            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
 //            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
 //            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
 //            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
 //            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
 //            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
-//x            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
             {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
             {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
         };
@@ -152,7 +152,7 @@ namespace TestStress
         /// <returns></returns>
         public static async Task TakeMeasurementAsync(BaseStressTestClass test, int nIteration)
         {
-            test.LogMessage($"{nameof(TakeMeasurementAsync)} {nIteration}");
+            //test.LogMessage($"{nameof(TakeMeasurementAsync)} {nIteration}");
             if (nIteration >= 0)
             {
                 await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
@@ -221,6 +221,26 @@ namespace TestStress
             {
                 test.LogMessage(ex.ToString());
             }
+        }
+
+        /// <summary>
+        /// Do it all: tests need only add a single line to TestInitialize to turn a normal test into a stress test
+        /// </summary>
+        /// <param name="stressWithNoInheritance"></param>
+        /// <param name="NumIterations"></param>
+        /// <returns></returns>
+        public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations)
+        {
+            test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
+            var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
+
+            for (int iteration = 0; iteration < NumIterations; iteration++)
+            {
+                var ret = _theTestMethod.Invoke(test, parameters: null);
+                await BaseStressTestClass.TakeMeasurementAsync(test, iteration);
+            }
+            await BaseStressTestClass.AllIterationsFinishedAsync(test);
+
         }
 
         public List<string> _lstLoggedStrings = new List<string>();
@@ -322,25 +342,5 @@ namespace TestStress
 
         [DllImport("ole32.dll")]
         private static extern int CreateBindCtx(uint reserved, out IBindCtx ppbc);
-
-        /// <summary>
-        /// Do it all: tests need only add a single line to TestInitialize to turn a normal test into a stress test
-        /// </summary>
-        /// <param name="stressWithNoInheritance"></param>
-        /// <param name="NumIterations"></param>
-        /// <returns></returns>
-        public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations)
-        {
-            test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
-            var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
-
-            for (int iteration = 0; iteration < NumIterations; iteration++)
-            {
-                var ret = _theTestMethod.Invoke(test, parameters: null);
-                await BaseStressTestClass.TakeMeasurementAsync(test, iteration);
-            }
-            await BaseStressTestClass.AllIterationsFinishedAsync(test);
-
-        }
     }
 }
