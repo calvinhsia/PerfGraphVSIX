@@ -31,9 +31,8 @@ namespace TestStress
                     await resultTask;
                 }
                 //                await OpenCloseSolutionOnce(SolutionToLoad);
-                test.LogMessage($"  Iter # {iteration}/{attr.NumIterations}");
                 testContext.Properties["TestIterationCount"] = ((int)testContext.Properties["TestIterationCount"]) + 1;
-                await TakeMeasurementAsync(test, iteration);
+                await TakeMeasurementAsync(test, $"Start of Iter {iteration + 1}/{attr.NumIterations}");
             }
             await AllIterationsFinishedAsync(test);
         }

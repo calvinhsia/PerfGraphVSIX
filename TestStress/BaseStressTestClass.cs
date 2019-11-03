@@ -148,20 +148,16 @@ namespace TestStress
         /// <summary>
         /// after each iteration, take measurements
         /// </summary>
-        /// <param name="nIteration">iteration #. -1 means before starting iterations for initial measurements</param>
         /// <returns></returns>
-        public static async Task TakeMeasurementAsync(BaseStressTestClass test, int nIteration)
+        public static async Task TakeMeasurementAsync(BaseStressTestClass test, string desc)
         {
             //test.LogMessage($"{nameof(TakeMeasurementAsync)} {nIteration}");
-            if (nIteration >= 0)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
-            }
+            //                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
             try
             {
                 test._vsDTE?.ExecuteCommand("Tools.ForceGC");
-
-                var sBuilder = new StringBuilder();
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                var sBuilder = new StringBuilder(desc + " ");
                 foreach (var ctr in _lstPerfCounterDefinitionsForStressTest)
                 {
                     if (!test._measurements.TryGetValue(ctr.PerfCounterName, out var lst))
@@ -237,7 +233,7 @@ namespace TestStress
             for (int iteration = 0; iteration < NumIterations; iteration++)
             {
                 var ret = _theTestMethod.Invoke(test, parameters: null);
-                await BaseStressTestClass.TakeMeasurementAsync(test, iteration);
+                await BaseStressTestClass.TakeMeasurementAsync(test, $"Start of Iter {iteration + 1}/{NumIterations}");
             }
             await BaseStressTestClass.AllIterationsFinishedAsync(test);
 

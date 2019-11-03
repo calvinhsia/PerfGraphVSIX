@@ -34,7 +34,7 @@ namespace TestStress
             await Task.Yield();
             AsyncPump.Run(async () =>
             {
-                int NumIterations = 7;
+                int NumIterations = 3;
                 string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
                 try
                 {
@@ -44,8 +44,7 @@ namespace TestStress
                     for (int iteration = 0; iteration < NumIterations; iteration++)
                     {
                         await OpenCloseSolutionOnce(SolutionToLoad);
-                        await TakeMeasurementAsync(this, iteration);
-                        LogMessage($"  Iter # {iteration}/{NumIterations}");
+                        await TakeMeasurementAsync(this, $"Start of Iter {iteration + 1}/{NumIterations}");
                     }
                 }
                 finally
