@@ -606,9 +606,9 @@
                 {
 
                     var CodeFileToRun = string.Empty;
-                    if (lvCodeSamples.SelectedItem == null)
+                    if (lvCodeSamples.SelectedItem == null || lvCodeSamples.SelectedItems.Count != 1)
                     {
-                        LogMessage($"No Code file selected");
+                        LogMessage($"No single Code file selected");
                         return;
                     }
                     CodeFileToRun = Path.Combine(CodeSampleDirectory, lvCodeSamples.SelectedItem.ToString());
@@ -620,9 +620,8 @@
                     {
                         _codeExecutor = new CodeExecutor(this);
                     }
-                    var codeToRun = File.ReadAllText(CodeFileToRun);
                     var sw = Stopwatch.StartNew();
-                    var res = _codeExecutor.CompileAndExecute(codeToRun, _ctsExecuteCode.Token, actTakeSample: async (desc) =>
+                    var res = _codeExecutor.CompileAndExecute(CodeFileToRun, _ctsExecuteCode.Token, actTakeSample: async (desc) =>
                     {
                         await DoSampleAsync(desc);
                     });
@@ -630,12 +629,11 @@
                     {
                         //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
                         await task;
-                        //                    await AddStatusMsgAsync($"Task done: {res}");
-                        await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension( CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                        await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
                     }
                     else
                     {
-                        await AddStatusMsgAsync(res.ToString());
+                        await AddStatusMsgAsync($"Result of CompileAndExecute\r\n" + res.ToString());
                     }
                     _ctsExecuteCode = null;
                     this.btnExecCode.Content = "ExecCode";

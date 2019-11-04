@@ -48,6 +48,7 @@ namespace MyCustomCode
         string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
         int NumberOfIterations = 97;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
+        string TestName;
         int nTimes = 0;
         TaskCompletionSource<int> _tcsSolution;
         TaskCompletionSource<int> _tcsProject;
@@ -70,9 +71,11 @@ namespace MyCustomCode
             logger = args[0] as ILogger;
             _CancellationTokenExecuteCode = (CancellationToken)args[1]; // value type
             g_dte = args[2] as EnvDTE.DTE;
+            TestName = args[3] as string;
+            actTakeSample = args[4] as Action<string>;
             BuildEvents = g_dte.Events.BuildEvents;
             DebuggerEvents = g_dte.Events.DebuggerEvents;
-            actTakeSample = args[3] as Action<string>;
+
         }
         private async Task DoSomeWorkAsync()
         {
@@ -82,7 +85,7 @@ namespace MyCustomCode
             {
                 if (nTimes++ == 0)
                 {
-                    logger.LogMessage("Registering solution events");
+                    logger.LogMessage("Registering events");
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                     Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
 
@@ -138,7 +141,7 @@ namespace MyCustomCode
             finally
             {
                 //                await CloseTheSolutionAsync();
-                logger.LogMessage("UnRegistering solution events");
+                logger.LogMessage("UnRegistering events");
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
                 BuildEvents.OnBuildBegin -= BuildEvents_OnBuildBegin;
@@ -204,12 +207,12 @@ namespace MyCustomCode
         }
         void DebuggerEvents_OnEnterRunMode(dbgEventReason Reason)
         {
-            logger.LogMessage("DebuggerEvents_OnEnterRunMode " + Reason.ToString());
+            //logger.LogMessage("DebuggerEvents_OnEnterRunMode " + Reason.ToString()); // dbgEventReasonLaunchProgram
             _tcsDebug.TrySetResult(0);
         }
         void DebuggerEvents_OnEnterDesignMode(dbgEventReason Reason)
         {
-            logger.LogMessage("DebuggerEvents_OnEnterDesignMode " + Reason.ToString());
+            //logger.LogMessage("DebuggerEvents_OnEnterDesignMode " + Reason.ToString()); //dbgEventReasonStopDebugging
             _tcsDebug.TrySetResult(0);
         }
     }

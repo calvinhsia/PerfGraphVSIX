@@ -1,5 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
+using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,9 +39,71 @@ public class foo {}
 }
 ";
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(strCodeToExecute, CancellationToken.None);
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             Assert.AreEqual("did main 100 ", res);
         }
+
+        [TestMethod]
+        public void TestCompileIncludeCodeFile()
+        {
+            var strCodeToExecute = @"
+// can add the fullpath to an assembly for reference like so:
+////Ref: c:\progam files \...myAsm.dll
+////Ref: System.dll
+////Ref: System.linq.dll
+////Ref: System.core.dll
+////Ref: <%= asmMemSpectBase.Location %>
+//Include: TBase.cs
+using System;
+
+namespace DoesntMatter
+{
+public class foo {}
+    public class SomeClass:BaseClass
+    {
+        public int NumberOfIterations = 97;
+
+        public static string DoMain(object [] args)
+        {
+            var x = 1;
+            var y = new SomeClass();
+            return ""did main "" + y.BaseMethod() +"" NumIter= "" + y.NumberOfIterations.ToString();
+        }
+    }
+}
+";
+            var strCodeToExecuteBaseClass = @"
+using System;
+
+namespace DoesntMatter
+{
+    public class BaseClass
+    {
+        public int NumberOfIterations = 98;
+        public string BaseMethod()
+        {
+            return ""In Base Method"";
+        }
+    }
+}
+";
+
+            var codeExecutor = new CodeExecutor(this);
+            var tempFile1 = Path.Combine(Environment.CurrentDirectory, //C:\Users\calvinh\Source\repos\PerfGraphVSIX\Tests\bin\Debug
+                "T1.cs");
+
+            File.WriteAllText(tempFile1, strCodeToExecute);
+            var tempFile2 = Path.Combine(Environment.CurrentDirectory, //C:\Users\calvinh\Source\repos\PerfGraphVSIX\Tests\bin\Debug
+                "TBase.cs");
+            File.WriteAllText(tempFile2, strCodeToExecuteBaseClass);
+
+            var res = codeExecutor.CompileAndExecute(tempFile1, CancellationToken.None);
+            LogMessage($"Got output {res}");
+            Assert.AreEqual("did main In Base Method NumIter= 97", res);
+        }
+
 
 
         [TestMethod]
@@ -77,7 +141,9 @@ public class foo {}
 }
 ";
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(strCodeToExecute, CancellationToken.None);
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             if (res is Task<string> task)
             {
                 task.Wait();
@@ -125,7 +191,7 @@ namespace DoesntMatter
 
         public string DoIt(object[] args)
         {
-            logger = args[0] as ILogger;
+            logger = args[1] as ILogger;
             logger.LogMessage(""in doit"");
             logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
             logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
@@ -144,7 +210,9 @@ namespace DoesntMatter
 }
 ";
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(strCodeToExecute, CancellationToken.None);
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             LogMessage(res as string);
             Assert.AreEqual("did main 100 did delay", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
@@ -194,9 +262,9 @@ namespace MyCustomCode
         Action<string> actTakeSample;
         public MyClass(object[] args)
         {
-            logger = args[0] as ILogger;
-            _CancellationToken = (CancellationToken)args[1]; // value type
-            actTakeSample = args[3] as Action<string>;
+            logger = args[1] as ILogger;
+            _CancellationToken = (CancellationToken)args[2]; // value type
+            actTakeSample = args[4] as Action<string>;
         }
 
         private void DoSomeWork()
@@ -246,7 +314,10 @@ namespace MyCustomCode
 }
 ";
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(strCodeToExecute, CancellationToken.None, (s) =>
+
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None, (s) =>
             {
                 LogMessage($"In callback {s}");
             });
@@ -316,10 +387,10 @@ namespace MyCustomCode
         public MyClass(object[] args)
         {
             _tcs = new TaskCompletionSource<int>();
-            logger = args[0] as ILogger;
-            _CancellationToken = (CancellationToken)args[1]; // value type
-            g_dte= args[2] as EnvDTE.DTE;
-            actTakeSample = args[3] as Action<string>;
+            logger = args[1] as ILogger;
+            _CancellationToken = (CancellationToken)args[2]; // value type
+            g_dte= args[3] as EnvDTE.DTE;
+            actTakeSample = args[4] as Action<string>;
         }
         private async Task DoSomeWorkAsync()
         {
@@ -473,9 +544,10 @@ namespace MyCustomCode
         [TestMethod]
         public void TestCompileVSCode()
         {
-
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(sampleVSCodeToExecute, CancellationToken.None, (s) =>
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, sampleVSCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None, (s) =>
             {
                 LogMessage("In callback {s}");
             });
@@ -502,13 +574,15 @@ namespace MyCustomCode
         public void TestCompileVSCodeRunMulti()
         {
             var codeExecutor = new CodeExecutor(this);
-            var res = codeExecutor.CompileAndExecute(sampleVSCodeToExecute, CancellationToken.None, (s) =>
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, sampleVSCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None, (s) =>
             {
                 LogMessage("In callback {s}");
             });
             LogMessage((res as Task).ToString());
 
-            res = codeExecutor.CompileAndExecute(sampleVSCodeToExecute, CancellationToken.None, (s) =>
+            res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None, (s) =>
             {
                 LogMessage("In callback {s}");
             });

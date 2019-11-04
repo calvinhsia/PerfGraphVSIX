@@ -29,7 +29,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
-
+//Include: ExecCodeBase.cs
 
 using System;
 using System.Threading;
@@ -41,99 +41,32 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 
-namespace MyCustomCode
+namespace MyCodeToExecute
 {
-    public class MyClass
+    public class MyClass : BaseExecCodeClass
     {
-        string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
         int NumberOfIterations = 7;
-        int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
-        int nTimes = 0;
-        TaskCompletionSource<int> _tcsSolution;
-        CancellationToken _CancellationTokenExecuteCode;
-        JoinableTask _tskDoPerfMonitoring;
-        ILogger logger;
-        Action<string> actTakeSample;
-        public EnvDTE.DTE g_dte;
-
+ 
         public static async Task DoMain(object[] args)
         {
             var oMyClass = new MyClass(args);
             await oMyClass.DoSomeWorkAsync();
         }
-        public MyClass(object[] args)
+        public MyClass(object[] args): base(args)
         {
-            _tcsSolution = new TaskCompletionSource<int>();
-            logger = args[0] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[1]; // value type
-            g_dte = args[2] as EnvDTE.DTE;
-            actTakeSample = args[3] as Action<string>;
+            SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
         }
         private async Task DoSomeWorkAsync()
         {
-            //            logger.LogMessage("in DoSomeWorkAsync");
             try
             {
-                if (nTimes++ == 0)
-                {
-                    logger.LogMessage("Registering solution events");
-                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
-                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
-                    //await OpenASolutionAsync();
-                    //foreach (EnvDTE.Window win in g_dte.Windows)
-                    //{
-                    //    logger.LogMessage("Win " + win.Kind + " " + win.ToString());
-                    //    if (win.Kind == "Document") // "Tool"
-                    //    {
-                    //        logger.LogMessage("   " + win.Document.Name);
-                    //    }
-                    //}
-                    //g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
-                    //g_dte.ExecuteCommand("File.NewFile", "temp.cs");
-                    //System.Windows.Forms.SendKeys.Send("using System;{ENTER}");
-                    //await Task.Delay(1000);
-                    //System.Windows.Forms.SendKeys.Send("class testing {{}");
-                    //await Task.Delay(1000);
-                    //Func<Task> undoAll = async () =>
-                    //  {
-                    //      var done = false;
-                    //      logger.LogMessage("Start undo loop");
-                    //      while (!done)
-                    //      {
-                    //          try
-                    //          {
-                    //              logger.LogMessage(" in undo loop");
-                    //              g_dte.ExecuteCommand("Edit.Undo");
-                    //              await Task.Delay(100);
-                    //          }
-                    //          catch (Exception)
-                    //          {
-                    //              done = true;
-                    //              logger.LogMessage("Done undo loop");
-                    //          }
-                    //      }
-                    //  };
-                    //await undoAll();
-                    //g_dte.ExecuteCommand("File.Close", @"");
-                    //await Task.Delay(1000);
-
-
-                    //var ox = new System.Windows.Window();
-                    //var tb = new System.Windows.Controls.TextBox()
-                    //{
-                    //    AcceptsReturn = true
-                    //};
-                    //ox.Content = tb;
-                    //ox.ShowDialog();
-                }
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; i++)
                 {
                     var desc = string.Format("Start of Iter {0}/{1}", i + 1, NumberOfIterations);
-                    DoSample(desc);
+                    TakeSample(desc);
                     await Task.Delay(1000); // wait one second to allow UI thread to catch  up
-
                     await OpenASolutionAsync();
                     if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
@@ -161,53 +94,8 @@ namespace MyCustomCode
             }
             finally
             {
-                logger.LogMessage("UnRegistering solution events");
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
+                UnregisterEvents();
             }
-        }
-
-        void DoSample(string desc)
-        {
-            if (actTakeSample != null)
-            {
-                actTakeSample(desc);
-            }
-        }
-
-        async Task OpenASolutionAsync()
-        {
-            _tcsSolution = new TaskCompletionSource<int>();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.Solution.Open(SolutionToLoad);
-            await _tcsSolution.Task;
-            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
-            {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
-            }
-        }
-
-        async Task CloseTheSolutionAsync()
-        {
-            _tcsSolution = new TaskCompletionSource<int>();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.Solution.Close();
-            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
-            {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
-            }
-        }
-
-        private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
-        {
-            //            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
-            _tcsSolution.TrySetResult(0);
-        }
-
-        private void SolutionEvents_OnAfterBackgroundSolutionLoadComplete(object sender, EventArgs e)
-        {
-            //logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
-            _tcsSolution.TrySetResult(0);
         }
     }
 }

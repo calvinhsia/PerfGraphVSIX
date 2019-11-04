@@ -13,11 +13,18 @@ using System.Windows;
 
 namespace PerfGraphVSIX
 {
-    internal class CodeExecutor
+    /// <summary>
+    /// Given a path to a single file (the main file), compile and execute it. 
+    /// A source line starting with '//Ref:' means add a reference to the asm. (possibly quoted) e.g. //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
+    ///    Some special macros like '%VSROOT%' and %PerfGraphVSIX% can be used
+    /// A source line starting with "//Include:" means include the file (in same dir as main file)
+    /// </summary>
+    public class CodeExecutor
     {
         public const string DoMain = "DoMain"; // not domain
         public const string VSRootSubstitution = "%VSRoot%";
         public const string refPathPrefix = "//Ref:";
+        public const string includePathPrefix = "//Include:";
         bool _fDidAddAssemblyResolver;
         readonly ILogger _logger;
 
@@ -31,16 +38,18 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileAndExecute(string strCodeToExecute, CancellationToken token, Action<string> actTakeSample = null)
+        public object CompileAndExecute(string pathFileToExecute, CancellationToken token, Action<string> actTakeSample = null)
         {
             object result = string.Empty;
+            var strCodeToExecute = File.ReadAllText(pathFileToExecute);
+            var lstFilesToCompile = new List<string>() { pathFileToExecute };
             var hashofCodeToExecute = strCodeToExecute.GetHashCode();
             //            _logger.LogMessage($"Compiling code");
             try
             {
                 if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
                 {
-                    _logger.LogMessage($"Using prior compiled assembly");
+                    _logger.LogMessage($"Using prior compiled assembly for {pathFileToExecute}");
                 }
                 else
                 {
@@ -59,53 +68,67 @@ namespace PerfGraphVSIX
                         var compParams = new CompilerParameters();
                         _lstRefDirs = new HashSet<string>();
                         var srcLines = strCodeToExecute.Split("\r\n".ToArray());
-                        foreach (var refline in srcLines.Where(s => s.StartsWith(refPathPrefix)))
+                        foreach (var srcline in srcLines.Where(s => s.StartsWith(refPathPrefix) || s.StartsWith(includePathPrefix)))
                         {
-                            var refAsm = refline.Replace(refPathPrefix, string.Empty).Trim();
-                            if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
+                            if (srcline.StartsWith(refPathPrefix))
                             {
-                                refAsm = refAsm.Replace("\"", string.Empty);
-                            }
-                            if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
-                            {
-                                refAsm = this.GetType().Assembly.Location;
-                                var dir = System.IO.Path.GetDirectoryName(refAsm);
-                                if (!_lstRefDirs.Contains(dir))
+                                var refAsm = srcline.Replace(refPathPrefix, string.Empty).Trim();
+                                if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
                                 {
-                                    _lstRefDirs.Add(dir);
+                                    refAsm = refAsm.Replace("\"", string.Empty);
                                 }
-                                compParams.ReferencedAssemblies.Add(refAsm);
-                                refAsm = typeof(ILogger).Assembly.Location;
-                            }
-                            else
-                            {
-                                if (refAsm.Contains(VSRootSubstitution))
+                                if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                                 {
-                                    refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
-                                }
-                                var dir = System.IO.Path.GetDirectoryName(refAsm);
-                                //                                _logger.LogMessage($"AddRef {refAsm}");
-                                if (!string.IsNullOrEmpty(refAsm))
-                                {
-                                    if (!System.IO.File.Exists(refAsm))
+                                    refAsm = this.GetType().Assembly.Location;
+                                    var dir = System.IO.Path.GetDirectoryName(refAsm);
+                                    if (!_lstRefDirs.Contains(dir))
                                     {
-                                        throw new System.IO.FileNotFoundException($"Couldn't find {refAsm}");
+                                        _lstRefDirs.Add(dir);
                                     }
-                                    else
+                                    compParams.ReferencedAssemblies.Add(refAsm);
+                                    refAsm = typeof(ILogger).Assembly.Location;
+                                }
+                                else
+                                {
+                                    if (refAsm.Contains(VSRootSubstitution))
                                     {
-                                        if (!_lstRefDirs.Contains(dir))
+                                        refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
+                                    }
+                                    var dir = System.IO.Path.GetDirectoryName(refAsm);
+                                    //                                _logger.LogMessage($"AddRef {refAsm}");
+                                    if (!string.IsNullOrEmpty(refAsm))
+                                    {
+                                        if (!System.IO.File.Exists(refAsm))
                                         {
-                                            _lstRefDirs.Add(dir);
+                                            throw new System.IO.FileNotFoundException($"Couldn't find {refAsm}");
+                                        }
+                                        else
+                                        {
+                                            if (!_lstRefDirs.Contains(dir))
+                                            {
+                                                _lstRefDirs.Add(dir);
+                                            }
                                         }
                                     }
                                 }
+                                compParams.ReferencedAssemblies.Add(refAsm);
                             }
-                            compParams.ReferencedAssemblies.Add(refAsm);
+                            else if (srcline.StartsWith(includePathPrefix))
+                            {
+                                var include = srcline.Replace(includePathPrefix, string.Empty).Trim();
+                                if (include.StartsWith("\"") && include.EndsWith("\""))
+                                {
+                                    include = include.Replace("\"", string.Empty);
+                                }
+                                include = Path.Combine(Path.GetDirectoryName(pathFileToExecute), include);
+                                //_logger.LogMessage($"Adding Include file {include}");
+                                lstFilesToCompile.Add(include);
+                            }
                         }
                         //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
                         compParams.GenerateInMemory = true; // in memory cannot be unloaded
-                        var resCompile = cdProvider.CompileAssemblyFromSource(compParams, strCodeToExecute);
+                        var resCompile = cdProvider.CompileAssemblyFromFile(compParams, lstFilesToCompile.ToArray());
                         if (resCompile.Errors.HasErrors)
                         {
                             var strb = new StringBuilder();
@@ -124,6 +147,7 @@ namespace PerfGraphVSIX
                     }
                 }
                 var asmCompiled = _resCompile.CompiledAssembly;
+                var didGetMain = false;
                 foreach (var clas in asmCompiled.GetExportedTypes())
                 {
                     var mainMethod = clas.GetMethod(DoMain);
@@ -134,6 +158,7 @@ namespace PerfGraphVSIX
                             throw new InvalidOperationException("DoMain must be static");
                         }
 
+                        didGetMain = true;
                         if (!_fDidAddAssemblyResolver)
                         {
                             _fDidAddAssemblyResolver = true;
@@ -186,11 +211,14 @@ namespace PerfGraphVSIX
                         }
                         //                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
-                        object[] parms = new object[4];
-                        parms[0] = _logger;
-                        parms[1] = token;
-                        parms[2] = PerfGraphToolWindowCommand.Instance?.g_dte;
-                        parms[3] = actTakeSample;
+                        object[] parms = new object[]
+                        {
+                            pathFileToExecute,
+                            _logger,
+                            token,
+                            PerfGraphToolWindowCommand.Instance?.g_dte,
+                            actTakeSample
+                        };
                         var res = mainMethod.Invoke(null, new object[] { parms });
                         if (res is string strres)
                         {
@@ -202,6 +230,10 @@ namespace PerfGraphVSIX
                         }
                         break;
                     }
+                }
+                if (!didGetMain)
+                {
+                    throw new InvalidOperationException($"Couldn't find static Main in {pathFileToExecute}");
                 }
             }
             catch (Exception ex)
