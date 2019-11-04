@@ -129,7 +129,7 @@ namespace PerfGraphVSIX
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
                         compParams.GenerateInMemory = true; // in memory cannot be unloaded
                         var resCompile = cdProvider.CompileAssemblyFromFile(compParams, lstFilesToCompile.ToArray());
-                        if (resCompile.Errors.HasErrors)
+                        if (resCompile.Errors.HasErrors || resCompile.Errors.HasWarnings)
                         {
                             var strb = new StringBuilder();
                             int nErrors = 0;

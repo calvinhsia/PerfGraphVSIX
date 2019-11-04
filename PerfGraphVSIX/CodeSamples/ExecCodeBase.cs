@@ -51,6 +51,7 @@ namespace MyCodeToExecute
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
         public Action<string> actTakeSample;
+        public PerfGraphToolWindowControl PerfGraphToolWindowControl;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
@@ -75,7 +76,6 @@ namespace MyCodeToExecute
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
         }
-
 
         public void TakeSample(string desc)
         {

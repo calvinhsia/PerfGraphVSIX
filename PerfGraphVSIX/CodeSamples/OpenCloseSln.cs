@@ -82,7 +82,7 @@ namespace MyCodeToExecute
                 {
                     msg = string.Format("Done all {0} iterations", NumberOfIterations);
                 }
-                DoSample(msg);
+                TakeSample(msg);
             }
             catch (OperationCanceledException ex)
             {
