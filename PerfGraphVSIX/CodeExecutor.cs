@@ -38,35 +38,37 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileAndExecute(string pathFileToExecute, CancellationToken token, Action<string> actTakeSample = null)
+        public object CompileAndExecute(IMemoryUtil memoryUtil, string pathFileToExecute, CancellationToken token)
         {
             object result = string.Empty;
-            var strCodeToExecute = File.ReadAllText(pathFileToExecute);
-            var lstFilesToCompile = new List<string>() { pathFileToExecute };
-            var hashofCodeToExecute = strCodeToExecute.GetHashCode();
+            var lstFilesToCompile = new HashSet<string>();
+            var hashofCodeToExecute = 0;
             //            _logger.LogMessage($"Compiling code");
             try
             {
-                if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
+                _lstRefDirs.Clear();
+                //logger.LogMessage($"Main file= { Process.GetCurrentProcess().MainModule.FileName}"); //  C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\Extensions\TestPlatform\testhost.x86.exe
+                var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
+                var ndxCommon7 = curProcMainModule.IndexOf("common7", StringComparison.OrdinalIgnoreCase);
+                if (ndxCommon7 <= 0)
                 {
-                    _logger.LogMessage($"Using prior compiled assembly for {pathFileToExecute}");
+                    throw new InvalidOperationException("Can't find VSRoot");
                 }
-                else
+                var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
+                                                                             // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
+                using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
                 {
-                    _lstRefDirs.Clear();
-                    //logger.LogMessage($"Main file= { Process.GetCurrentProcess().MainModule.FileName}"); //  C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\Extensions\TestPlatform\testhost.x86.exe
-                    var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
-                    var ndxCommon7 = curProcMainModule.IndexOf("common7", StringComparison.OrdinalIgnoreCase);
-                    if (ndxCommon7 <= 0)
+                    var compParams = new CompilerParameters();
+                    _lstRefDirs = new HashSet<string>();
+                    void AddFileToCompileList(string fileToCompile)
                     {
-                        throw new InvalidOperationException("Can't find VSRoot");
-                    }
-                    var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
-                                                                                 // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
-                    using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
-                    {
-                        var compParams = new CompilerParameters();
-                        _lstRefDirs = new HashSet<string>();
+                        if (lstFilesToCompile.Contains(fileToCompile))
+                        {
+                            return;
+                        }
+                        lstFilesToCompile.Add(fileToCompile);
+                        var strCodeToExecute = File.ReadAllText(fileToCompile);
+                        hashofCodeToExecute += strCodeToExecute.GetHashCode();
                         var srcLines = strCodeToExecute.Split("\r\n".ToArray());
                         foreach (var srcline in srcLines.Where(s => s.StartsWith(refPathPrefix) || s.StartsWith(includePathPrefix)))
                         {
@@ -120,11 +122,19 @@ namespace PerfGraphVSIX
                                 {
                                     include = include.Replace("\"", string.Empty);
                                 }
-                                include = Path.Combine(Path.GetDirectoryName(pathFileToExecute), include);
+                                include = Path.Combine(Path.GetDirectoryName(fileToCompile), include);
                                 //_logger.LogMessage($"Adding Include file {include}");
-                                lstFilesToCompile.Add(include);
+                                AddFileToCompileList(include);
                             }
                         }
+                    }
+                    AddFileToCompileList(pathFileToExecute);
+                    if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
+                    {
+                        _logger.LogMessage($"Using prior compiled assembly for {pathFileToExecute}");
+                    }
+                    else
+                    {
                         //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
                         compParams.GenerateInMemory = true; // in memory cannot be unloaded
@@ -166,7 +176,7 @@ namespace PerfGraphVSIX
                             AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
                               {
                                   Assembly asm = null;
-//                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
+                                  //                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
                                   var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
                                   if (requestName == nameof(PerfGraphVSIX))
                                   {
@@ -213,11 +223,11 @@ namespace PerfGraphVSIX
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                         object[] parms = new object[]
                         {
+                            memoryUtil,
                             pathFileToExecute,
                             _logger,
                             token,
                             PerfGraphToolWindowCommand.Instance?.g_dte,
-                            actTakeSample
                         };
                         var res = mainMethod.Invoke(null, new object[] { parms });
                         if (res is string strres)

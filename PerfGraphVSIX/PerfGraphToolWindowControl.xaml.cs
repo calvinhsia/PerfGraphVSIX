@@ -29,7 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
 
-    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger
+    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, IMemoryUtil
     {
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
@@ -38,6 +38,7 @@
 
         JoinableTask _tskDoPerfMonitoring;
         CancellationTokenSource _ctsPcounter;
+        TaskCompletionSource<int> _tcsPcounter;
 
         CodeExecutor _codeExecutor;
         CancellationTokenSource _ctsExecuteCode;
@@ -173,7 +174,7 @@
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                 {
-                    ResetPerfCounterMonitor();
+                    _ = ResetPerfCounterMonitorAsync();
                 };
 
                 btnDoSample.Click += (o, e) =>
@@ -205,7 +206,7 @@
                         {
                             await _tskDoPerfMonitoring;
                         }
-                        await Task.Run(() =>
+                        await Task.Run(async () =>
                         {
                             // run on threadpool thread
                             lock (_lstPerfCounterDefinitionsForVSIX)
@@ -214,8 +215,8 @@
                                 {
                                     itm.IsEnabled = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
-                                ResetPerfCounterMonitor();
                             }
+                            await ResetPerfCounterMonitorAsync();
                         });
                         AddStatusMsgAsync($"SelectionChanged done").Forget();
                         lbPCounters.IsEnabled = true;
@@ -229,9 +230,9 @@
                 _chart = new Chart();
                 wfhost.Child = _chart;
 
-                _ = Task.Run(() =>
+                _ = Task.Run(async () =>
                 {
-                    ResetPerfCounterMonitor();
+                    await ResetPerfCounterMonitorAsync();
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
                 chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
@@ -275,9 +276,13 @@
         public Dictionary<int, List<uint>> _dataPoints = new Dictionary<int, List<uint>>();
         int _bufferIndex = 0;
         List<uint> _lstPCData; // list of samples from each selected counter
-        void ResetPerfCounterMonitor()
+        async Task ResetPerfCounterMonitorAsync()
         {
             _ctsPcounter?.Cancel();
+            if (_tcsPcounter != null)
+            {
+                await _tcsPcounter.Task;
+            }
             lock (_lstPerfCounterDefinitionsForVSIX)
             {
                 _lstPCData = new List<uint>();
@@ -286,7 +291,7 @@
             }
             if (UpdateInterval > 0)
             {
-                AddStatusMsgAsync($"{nameof(ResetPerfCounterMonitor)}").Forget();
+                AddStatusMsgAsync($"{nameof(ResetPerfCounterMonitorAsync)}").Forget();
                 DoPerfCounterMonitoring();
             }
             else
@@ -298,6 +303,7 @@
         void DoPerfCounterMonitoring()
         {
             _ctsPcounter = new CancellationTokenSource();
+            _tcsPcounter = new TaskCompletionSource<int>();
             _tskDoPerfMonitoring = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
@@ -312,10 +318,11 @@
                 {
                 }
                 AddStatusMsgAsync($"cancelling {nameof(DoPerfCounterMonitoring)}").Forget();
+                _tcsPcounter.SetResult(0);
             });
         }
 
-        async Task DoSampleAsync(string desc = "")
+        public async Task DoSampleAsync(string desc = "")
         {
             try
             {
@@ -600,7 +607,7 @@
                 if (this.UpdateInterval != 0)
                 {
                     this.UpdateInterval = 0;
-                    ResetPerfCounterMonitor();
+                    await ResetPerfCounterMonitorAsync();
                 }
                 if (_ctsExecuteCode == null)
                 {
@@ -621,10 +628,7 @@
                         _codeExecutor = new CodeExecutor(this);
                     }
                     var sw = Stopwatch.StartNew();
-                    var res = _codeExecutor.CompileAndExecute(CodeFileToRun, _ctsExecuteCode.Token, actTakeSample: async (desc) =>
-                    {
-                        await DoSampleAsync(desc);
-                    });
+                    var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
                     if (res is Task task)
                     {
                         //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");

@@ -37,6 +37,7 @@ using System.Threading.Tasks;
 using PerfGraphVSIX;
 
 using Microsoft.VisualStudio.Shell;
+using EnvDTE;
 
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
@@ -44,48 +45,164 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-    public class BaseExecCodeClass
+    public class BaseExecCodeClass : IDisposable
     {
+        public IMemoryUtil MemoryUtil;
         public string FileToExecute;
         public ILogger logger;
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
-        public Action<string> actTakeSample;
-        public PerfGraphToolWindowControl PerfGraphToolWindowControl;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
-        public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+        public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
 
-        public TaskCompletionSource<int> _tcsSolution;
+        public BuildEvents BuildEvents;
+        public DebuggerEvents DebuggerEvents;
+
+        public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
+        public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
+        public TaskCompletionSource<int> _tcsDebug = new TaskCompletionSource<int>();
         JoinableTask _tskDoPerfMonitoring;
 
         public BaseExecCodeClass(object[] args)
         {
-            FileToExecute = args[0] as string;
-            logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
-            g_dte = args[3] as EnvDTE.DTE;
-            actTakeSample = args[4] as Action<string>;
+            MemoryUtil = args[0] as IMemoryUtil;
+            FileToExecute = args[1] as string;
+            logger = args[2] as ILogger;
+            _CancellationTokenExecuteCode = (CancellationToken)args[3]; // value type
+            g_dte = args[4] as EnvDTE.DTE;
             logger.LogMessage("Registering events ");
+
+            BuildEvents = g_dte.Events.BuildEvents;
+            DebuggerEvents = g_dte.Events.DebuggerEvents;
+
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
+            BuildEvents.OnBuildBegin += BuildEvents_OnBuildBegin;
+            BuildEvents.OnBuildDone += BuildEvents_OnBuildDone;
+
+            DebuggerEvents.OnEnterRunMode += DebuggerEvents_OnEnterRunMode;
+            DebuggerEvents.OnEnterDesignMode += DebuggerEvents_OnEnterDesignMode;
+
+
         }
         public void UnregisterEvents()
         {
             logger.LogMessage("UnRegistering events");
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
+            BuildEvents.OnBuildBegin -= BuildEvents_OnBuildBegin;
+            BuildEvents.OnBuildDone -= BuildEvents_OnBuildDone;
+
+            DebuggerEvents.OnEnterRunMode -= DebuggerEvents_OnEnterRunMode;
+            DebuggerEvents.OnEnterDesignMode -= DebuggerEvents_OnEnterDesignMode;
+
+            BuildEvents = null;
+            DebuggerEvents = null;
+
         }
 
-        public void TakeSample(string desc)
+        public async Task TakeSampleAsync(string desc)
         {
-            if (actTakeSample != null)
+            if (MemoryUtil != null)
             {
-                actTakeSample(Path.GetFileNameWithoutExtension(FileToExecute) + " " + desc);
+                await MemoryUtil.DoSampleAsync(Path.GetFileNameWithoutExtension(FileToExecute) + " " + desc);
+            }
+        }
+        public virtual async Task DoInitializeAsync()
+        {
+            await Task.Yield();
+        }
+        public virtual async Task DoIterationBodyAsync()
+        {
+            await Task.Yield();
+        }
+
+        public virtual async Task DoCleanupAsync()
+        {
+            await Task.Yield();
+        }
+
+        public virtual async Task DoTheTest(int numIterations)
+        {
+            await DoInitializeAsync();
+            await IterateCode(numIterations);
+            await DoCleanupAsync();
+        }
+
+        public async Task IterateCode(int numIterations)
+        {
+            try
+            {
+                for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
+                {
+                    var desc = string.Format("Start of Iter {0}/{1}", iteration + 1, numIterations);
+                    await TakeSampleAsync(desc);
+                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+                    if (_CancellationTokenExecuteCode.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    await DoIterationBodyAsync();
+                }
+                var msg = "Cancelled Code Execution";
+                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                {
+                    msg = string.Format("Done all {0} iterations", numIterations);
+                }
+                await TakeSampleAsync(msg);
+                // cleanup code here: compare measurements, take a dump, examine for types, etc.
+            }
+            catch (OperationCanceledException)
+            {
+                logger.LogMessage("Cancelled");
+            }
+            catch (Exception ex)
+            {
+                logger.LogMessage(ex.ToString());
             }
         }
 
-        public async Task OpenASolutionAsync()
+
+        public async Task IterateCodeOld(int numIterations, Func<Task> codeToIterateAsync)
+        {
+            try
+            {
+                for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
+                {
+                    var desc = string.Format("Start of Iter {0}/{1}", iteration + 1, numIterations);
+                    await TakeSampleAsync(desc);
+                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+                    if (_CancellationTokenExecuteCode.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    await codeToIterateAsync();
+                }
+                var msg = "Cancelled Code Execution";
+                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                {
+                    msg = string.Format("Done all {0} iterations", numIterations);
+                }
+                await TakeSampleAsync(msg);
+                // cleanup code here: compare measurements, take a dump, examine for types, etc.
+            }
+            catch (OperationCanceledException)
+            {
+                logger.LogMessage("Cancelled");
+            }
+            catch (Exception ex)
+            {
+                logger.LogMessage(ex.ToString());
+            }
+        }
+
+        public void Dispose()
+        {
+            UnregisterEvents();
+        }
+
+        public async Task OpenASolutionAsync(int delayAfterOpen = 5)
         {
             _tcsSolution = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -93,18 +210,18 @@ namespace MyCodeToExecute
             await _tcsSolution.Task;
             if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
+                await Task.Delay(TimeSpan.FromSeconds(delayAfterOpen * DelayMultiplier), _CancellationTokenExecuteCode);
             }
         }
 
-        public async Task CloseTheSolutionAsync()
+        public async Task CloseTheSolutionAsync(int delayAfterClose = 0)
         {
             _tcsSolution = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             g_dte.Solution.Close();
-            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
+            if (!_CancellationTokenExecuteCode.IsCancellationRequested && delayAfterClose > 0)
             {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
+                await Task.Delay(TimeSpan.FromSeconds(delayAfterClose* DelayMultiplier), _CancellationTokenExecuteCode);
             }
         }
 
@@ -119,6 +236,28 @@ namespace MyCodeToExecute
             //logger.LogMessage("SolutionEvents_OnAfterBackgroundSolutionLoadComplete");
             _tcsSolution.TrySetResult(0);
         }
+
+        void BuildEvents_OnBuildBegin(vsBuildScope Scope, vsBuildAction Action)
+        {
+            //            logger.LogMessage("BuildEvents_OnBuildBegin " + Scope.ToString() + Action.ToString());
+        }
+        void BuildEvents_OnBuildDone(vsBuildScope Scope, vsBuildAction Action)
+        {
+            //            logger.LogMessage("BuildEvents_OnBuildDone " + Scope.ToString() + Action.ToString());
+            _tcsProject.TrySetResult(0);
+        }
+
+        void DebuggerEvents_OnEnterRunMode(dbgEventReason Reason)
+        {
+            //logger.LogMessage("DebuggerEvents_OnEnterRunMode " + Reason.ToString()); // dbgEventReasonLaunchProgram
+            _tcsDebug.TrySetResult(0);
+        }
+        void DebuggerEvents_OnEnterDesignMode(dbgEventReason Reason)
+        {
+            //logger.LogMessage("DebuggerEvents_OnEnterDesignMode " + Reason.ToString()); //dbgEventReasonStopDebugging
+            _tcsDebug.TrySetResult(0);
+        }
+
     }
 }
 
