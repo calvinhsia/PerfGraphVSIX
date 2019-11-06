@@ -179,25 +179,20 @@ namespace PerfGraphVSIX
         public static double FindLinearLeastSquaresFit(
             List<PointF> points, out double m, out double b)
         {
-            // Perform the calculation.
-            // Find the values S1, Sx, Sy, Sxx, and Sxy.
-            double S1 = points.Count;
-            double Sx = 0;
-            double Sy = 0;
-            double Sxx = 0;
-            double Sxy = 0;
+            double N = points.Count;
+            double SumX = 0;
+            double SumY = 0;
+            double SumXX = 0;
+            double SumXY = 0;
             foreach (PointF pt in points)
             {
-                Sx += pt.X;
-                Sy += pt.Y;
-                Sxx += pt.X * pt.X;
-                Sxy += pt.X * pt.Y;
+                SumX += pt.X;
+                SumY += pt.Y;
+                SumXX += pt.X * pt.X;
+                SumXY += pt.X * pt.Y;
             }
-
-            // Solve for m and b.
-            m = (Sxy * S1 - Sx * Sy) / (Sxx * S1 - Sx * Sx);
-            b = (Sxy * Sx - Sy * Sxx) / (Sx * Sx - S1 * Sxx);
-
+            m = (SumXY * N - SumX * SumY) / (SumXX * N - SumX * SumX);
+            b = (SumXY * SumX - SumY * SumXX) / (SumX * SumX - N * SumXX);
             return Math.Sqrt(ErrorSquared(points, m, b));
         }
         // Return the error squared.
