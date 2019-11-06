@@ -192,7 +192,7 @@ namespace DoesntMatter
 
         public string DoIt(object[] args)
         {
-            logger = args[2] as ILogger;
+            logger = args[1] as ILogger;
             logger.LogMessage(""in doit"");
             logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
             logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
@@ -257,13 +257,13 @@ namespace MyCustomCode
         int NumberOfIterations = 7;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         int nTimes = 0;
-        IMemoryUtil MemoryUtil;
+        IStressUtil StressUtil;
         TaskCompletionSource<int> _tcs;
         CancellationToken _CancellationToken;
         ILogger logger;
         public MyClass(object[] args)
         {
-            logger = args[2] as ILogger;
+            logger = args[1] as ILogger;
             _CancellationToken = (CancellationToken)args[3]; // value type
         }
 
@@ -305,9 +305,9 @@ namespace MyCustomCode
 
         async Task DoSampleAsync()
         {
-            if (MemoryUtil != null)
+            if (StressUtil != null)
             {
-                await MemoryUtil.DoSampleAsync();
+                await StressUtil.DoSampleAsync("""");
             }
         }
 
@@ -392,9 +392,9 @@ namespace MyCustomCode
         public MyClass(object[] args)
         {
             _tcs = new TaskCompletionSource<int>();
-            logger = args[2] as ILogger;
+            logger = args[1] as ILogger;
             _CancellationToken = (CancellationToken)args[3]; // value type
-            g_dte= args[3] as EnvDTE.DTE;
+            g_dte= args[4] as EnvDTE.DTE;
         }
         private async Task DoSomeWorkAsync()
         {

@@ -19,7 +19,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 3);
+                await oMyClass.DoTheTest(numIterations: 17);
             }
         }
         public MyClass(object[] args) : base(args) { }
@@ -35,14 +35,14 @@ namespace MyCodeToExecute
         {
             _tcsDebug = new TaskCompletionSource<int>();
             g_dte.ExecuteCommand("Debug.Start", @"");
-            //await Task.Delay(10000);
+            //await Task.Delay(10000 * DelayMultiplier);
             await _tcsDebug.Task;
 
-            await Task.Delay(TimeSpan.FromSeconds(15));
+            await Task.Delay(TimeSpan.FromSeconds(15 * DelayMultiplier));
 
             _tcsDebug = new TaskCompletionSource<int>();
             g_dte.ExecuteCommand("Debug.StopDebugging", @"");
-            //                    await Task.Delay(10000);
+            //                    await Task.Delay(10000 * DelayMultiplier);
             await _tcsDebug.Task;
         }
         public override async Task DoCleanupAsync()

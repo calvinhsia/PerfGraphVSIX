@@ -38,7 +38,7 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileAndExecute(IMemoryUtil memoryUtil, string pathFileToExecute, CancellationToken token)
+        public object CompileAndExecute(IStressUtil memoryUtil, string pathFileToExecute, CancellationToken token)
         {
             object result = string.Empty;
             var lstFilesToCompile = new HashSet<string>();
@@ -223,9 +223,9 @@ namespace PerfGraphVSIX
                         // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
                         object[] parms = new object[]
                         {
-                            memoryUtil,
                             pathFileToExecute,
                             _logger,
+                            memoryUtil,
                             token,
                             PerfGraphToolWindowCommand.Instance?.g_dte,
                         };

@@ -119,5 +119,98 @@ namespace PerfGraphVSIX
         {
             return GetGuiResources(ProcToMonitor.Handle, uiFlags: 1);
         }
+
+        /// <summary>
+        /// Fits a line to a collection of (x,y) points.
+        /// </summary>
+        /// <param name="xVals">The x-axis values.</param>
+        /// <param name="yVals">The y-axis values.</param>
+        /// <param name="inclusiveStart">The inclusive inclusiveStart index.</param>
+        /// <param name="exclusiveEnd">The exclusive exclusiveEnd index.</param>
+        /// <param name="rsquared">The r^2 value of the line.</param>
+        /// <param name="yintercept">The y-intercept value of the line (i.e. y = ax + b, yintercept is b).</param>
+        /// <param name="slope">The slop of the line (i.e. y = ax + b, slope is a).</param>
+        public static void LinearRegression(double[] xVals, double[] yVals,
+                                            int inclusiveStart, int exclusiveEnd,
+                                            out double rsquared, out double yintercept,
+                                            out double slope)
+        {
+            Debug.Assert(xVals.Length == yVals.Length);
+            double sumOfX = 0;
+            double sumOfY = 0;
+            double sumOfXSq = 0;
+            double sumOfYSq = 0;
+            double sumCodeviates = 0;
+            double count = exclusiveEnd - inclusiveStart;
+
+            for (int ctr = inclusiveStart; ctr < exclusiveEnd; ctr++)
+            {
+                double x = xVals[ctr];
+                double y = yVals[ctr];
+                sumCodeviates += x * y;
+                sumOfX += x;
+                sumOfY += y;
+                sumOfXSq += x * x;
+                sumOfYSq += y * y;
+            }
+            double ssX = sumOfXSq - sumOfX * sumOfX / count;
+//            double ssY = sumOfYSq - sumOfY * sumOfY / count;
+            double RNumerator = (count * sumCodeviates) - (sumOfX * sumOfY);
+            double RDenom = (count * sumOfXSq - (sumOfX * sumOfX))
+             * (count * sumOfYSq - (sumOfY * sumOfY));
+            double sCo = sumCodeviates - sumOfX * sumOfY / count;
+
+            double meanX = sumOfX / count;
+            double meanY = sumOfY / count;
+            double dblR = RNumerator / Math.Sqrt(RDenom);
+            rsquared = dblR * dblR;
+            yintercept = meanY - ((sCo / ssX) * meanX);
+            slope = sCo / ssX;
+        }
+
+        // http://csharphelper.com/blog/2014/10/find-a-linear-least-squares-fit-for-a-set-of-points-in-c/
+        public struct PointF
+        {
+            public double X;
+            public double Y;
+        }
+        // Find the least squares linear fit.
+        // Return the total error.
+        public static double FindLinearLeastSquaresFit(
+            List<PointF> points, out double m, out double b)
+        {
+            // Perform the calculation.
+            // Find the values S1, Sx, Sy, Sxx, and Sxy.
+            double S1 = points.Count;
+            double Sx = 0;
+            double Sy = 0;
+            double Sxx = 0;
+            double Sxy = 0;
+            foreach (PointF pt in points)
+            {
+                Sx += pt.X;
+                Sy += pt.Y;
+                Sxx += pt.X * pt.X;
+                Sxy += pt.X * pt.Y;
+            }
+
+            // Solve for m and b.
+            m = (Sxy * S1 - Sx * Sy) / (Sxx * S1 - Sx * Sx);
+            b = (Sxy * Sx - Sy * Sxx) / (Sx * Sx - S1 * Sxx);
+
+            return Math.Sqrt(ErrorSquared(points, m, b));
+        }
+        // Return the error squared.
+        public static double ErrorSquared(List<PointF> points,
+            double m, double b)
+        {
+            double total = 0;
+            foreach (PointF pt in points)
+            {
+                double dy = pt.Y - (m * pt.X + b);
+                total += dy * dy;
+            }
+            return total;
+        }
     }
 }

@@ -15,6 +15,20 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 
+namespace PerfGraphVSIX
+{
+    /// <summary>
+    /// When a stress test needs to create a dump, these flags indicate what do do
+    /// </summary>
+    [Flags]
+    public enum MemoryAnalysisType
+    {
+        StartClrObjectExplorer = 0x2,
+        OutputTypeCounts = 0x4,
+        CompareTypeCounts = 0x8
+    }
+}
+
 namespace DumperViewer
 {
     public class DumperViewerMain : ILogger
@@ -51,7 +65,7 @@ namespace DumperViewer
         public async Task DoitAsync()
         {
             await SendTelemetryAsync($"{nameof(DumperViewerMain)}");
-            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = {string.Join(" ", args)}");
+            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = '{string.Join(" ", args)}'");
 
             if (args.Length == 0)
             {
@@ -72,7 +86,7 @@ namespace DumperViewer
                 {
                     while (iArg < args.Length)
                     {
-                        var curArg = args[iArg++];
+                        var curArg = args[iArg++].Trim();
                         if (curArg.Length > 1 && "-/".IndexOf(curArg[0]) == 0)
                         {
                             switch (curArg[1].ToString().ToLower())
@@ -124,6 +138,7 @@ namespace DumperViewer
                         }
                         else
                         {
+                            _logger.LogMessage($"Invalid arguments");
                             argsGood = false;
                         }
                     }

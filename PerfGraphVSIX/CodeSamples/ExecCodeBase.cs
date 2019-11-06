@@ -47,9 +47,9 @@ namespace MyCodeToExecute
 {
     public class BaseExecCodeClass : IDisposable
     {
-        public IMemoryUtil MemoryUtil;
         public string FileToExecute;
         public ILogger logger;
+        public IStressUtil StressUtil;
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
 
@@ -66,11 +66,12 @@ namespace MyCodeToExecute
 
         public BaseExecCodeClass(object[] args)
         {
-            MemoryUtil = args[0] as IMemoryUtil;
-            FileToExecute = args[1] as string;
-            logger = args[2] as ILogger;
+            FileToExecute = args[0] as string;
+            logger = args[1] as ILogger;
+            StressUtil = args[2] as IStressUtil;
             _CancellationTokenExecuteCode = (CancellationToken)args[3]; // value type
             g_dte = args[4] as EnvDTE.DTE;
+
             logger.LogMessage("Registering events ");
 
             BuildEvents = g_dte.Events.BuildEvents;
@@ -83,9 +84,8 @@ namespace MyCodeToExecute
 
             DebuggerEvents.OnEnterRunMode += DebuggerEvents_OnEnterRunMode;
             DebuggerEvents.OnEnterDesignMode += DebuggerEvents_OnEnterDesignMode;
-
-
         }
+
         public void UnregisterEvents()
         {
             logger.LogMessage("UnRegistering events");
@@ -104,9 +104,9 @@ namespace MyCodeToExecute
 
         public async Task TakeSampleAsync(string desc)
         {
-            if (MemoryUtil != null)
+            if (StressUtil != null)
             {
-                await MemoryUtil.DoSampleAsync(Path.GetFileNameWithoutExtension(FileToExecute) + " " + desc);
+                await StressUtil.DoSampleAsync(Path.GetFileNameWithoutExtension(FileToExecute) + " " + desc);
             }
         }
         public virtual async Task DoInitializeAsync()
@@ -134,50 +134,17 @@ namespace MyCodeToExecute
         {
             try
             {
+                await TakeSampleAsync("Initial Measurement");
                 for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                 {
-                    var desc = string.Format("Start of Iter {0}/{1}", iteration + 1, numIterations);
-                    await TakeSampleAsync(desc);
-                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
-                    if (_CancellationTokenExecuteCode.IsCancellationRequested)
-                    {
-                        break;
-                    }
                     await DoIterationBodyAsync();
-                }
-                var msg = "Cancelled Code Execution";
-                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
-                {
-                    msg = string.Format("Done all {0} iterations", numIterations);
-                }
-                await TakeSampleAsync(msg);
-                // cleanup code here: compare measurements, take a dump, examine for types, etc.
-            }
-            catch (OperationCanceledException)
-            {
-                logger.LogMessage("Cancelled");
-            }
-            catch (Exception ex)
-            {
-                logger.LogMessage(ex.ToString());
-            }
-        }
-
-
-        public async Task IterateCodeOld(int numIterations, Func<Task> codeToIterateAsync)
-        {
-            try
-            {
-                for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
-                {
-                    var desc = string.Format("Start of Iter {0}/{1}", iteration + 1, numIterations);
-                    await TakeSampleAsync(desc);
                     await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+                    var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
+                    await TakeSampleAsync(desc);
                     if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         break;
                     }
-                    await codeToIterateAsync();
                 }
                 var msg = "Cancelled Code Execution";
                 if (!_CancellationTokenExecuteCode.IsCancellationRequested)
@@ -186,6 +153,11 @@ namespace MyCodeToExecute
                 }
                 await TakeSampleAsync(msg);
                 // cleanup code here: compare measurements, take a dump, examine for types, etc.
+
+                await StressUtil.CreateDumpAsync(
+                    System.Diagnostics.Process.GetCurrentProcess().Id,
+                    desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + numIterations.ToString(),
+                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
             }
             catch (OperationCanceledException)
             {

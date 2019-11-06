@@ -101,7 +101,7 @@ namespace TestStress
 
         public async Task OpenCloseSolutionOnce(string SolutionToLoad)
         {
-            var timeoutVSSlnEventsSecs = 15;
+            var timeoutVSSlnEventsSecs = 15 * DelayMultiplier;
             //LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Open(SolutionToLoad);
@@ -145,6 +145,7 @@ namespace TestStress
 
 
         public Dictionary<string, List<uint>> _measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
+
         /// <summary>
         /// after each iteration, take measurements
         /// </summary>
@@ -156,7 +157,7 @@ namespace TestStress
             try
             {
                 test._vsDTE?.ExecuteCommand("Tools.ForceGC");
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
                 var sBuilder = new StringBuilder(desc + " ");
                 foreach (var ctr in _lstPerfCounterDefinitionsForStressTest)
                 {
@@ -229,11 +230,12 @@ namespace TestStress
         {
             test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
             var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
+            await BaseStressTestClass.TakeMeasurementAsync(test, $"Initial Measurement");
 
             for (int iteration = 0; iteration < NumIterations; iteration++)
             {
                 var ret = _theTestMethod.Invoke(test, parameters: null);
-                await BaseStressTestClass.TakeMeasurementAsync(test, $"Start of Iter {iteration + 1}/{NumIterations}");
+                await BaseStressTestClass.TakeMeasurementAsync(test, $"Iter {iteration + 1}/{NumIterations}");
             }
             await BaseStressTestClass.AllIterationsFinishedAsync(test);
 
@@ -268,7 +270,7 @@ namespace TestStress
                 {
                     break;
                 }
-                await Task.Delay(1000);
+                await Task.Delay(1000); // one second (no multiplier needed)
             }
             return dte;
         }

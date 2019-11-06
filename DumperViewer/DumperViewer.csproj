@@ -64,7 +64,7 @@
     <Compile Include="Dumper.cs" />
     <Compile Include="DumperViewerMain.cs" />
     <Compile Include="ILogger.cs" />
-    <Compile Include="IMemoryUtil.cs" />
+    <Compile Include="IStressUtil.cs" />
     <Compile Include="MemSpectAttribute.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">

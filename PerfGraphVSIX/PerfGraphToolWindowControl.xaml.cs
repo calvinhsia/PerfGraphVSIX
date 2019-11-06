@@ -29,7 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
 
-    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, IMemoryUtil
+    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, IStressUtil
     {
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
@@ -185,7 +185,7 @@
 
                 lbPCounters.ItemsSource = _lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
-                _lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.ProcessorPrivateBytes).Single().IsEnabled = true;
+                _lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabled = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -567,35 +567,42 @@
         async void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
 #pragma warning restore VSTHRD100 // Avoid async void methods
         {
+            btnClrObjExplorer.IsEnabled = false;
+            await CreateDumpAsync(System.Diagnostics.Process.GetCurrentProcess().Id, MemoryAnalysisType.StartClrObjectExplorer, string.Empty);
+
+            btnClrObjExplorer.IsEnabled = true;
+
+            //var x = new DumpAnalyzer(this);
+            //x.StartClrObjectExplorer(pathDumpFile);
+        }
+
+        public async Task CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
+        {
             try
             {
-                btnClrObjExplorer.IsEnabled = false;
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: "devenv");
-                DoGC();
+                DoGC(); //must be on main thread
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: string.IsNullOrEmpty(desc) ? "devenv" : desc);
                 LogMessage($"start clrobjexplorer {pathDumpFile}");
-                var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
-                var args = new[] {
-                "-p", pid.ToString(),
-                "-f",  "\"" + pathDumpFile + "\"",
-                "-c"
-            };
-                var odumper = new DumperViewerMain(args)
+                var arglist = new List<string>()
+                    {
+                        "-p", pid.ToString(),
+                        "-f",  "\"" + pathDumpFile + "\""
+                    };
+                if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjectExplorer))
+                {
+                    arglist.Add("-c");
+                }
+                var odumper = new DumperViewerMain(arglist.ToArray())
                 {
                     _logger = this
                 };
                 await odumper.DoitAsync();
-                btnClrObjExplorer.IsEnabled = true;
             }
             catch (Exception ex)
             {
                 LogMessage(ex.ToString());
-                btnClrObjExplorer.IsEnabled = true;
             }
-
-            //var x = new DumpAnalyzer(this);
-            //x.StartClrObjectExplorer(pathDumpFile);
-
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods
@@ -611,7 +618,7 @@
                 }
                 if (_ctsExecuteCode == null)
                 {
-
+                    this.tabControl.SelectedIndex = 0; // select graph tab
                     var CodeFileToRun = string.Empty;
                     if (lvCodeSamples.SelectedItem == null || lvCodeSamples.SelectedItems.Count != 1)
                     {

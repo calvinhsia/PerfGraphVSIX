@@ -18,13 +18,14 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 3);
+                await oMyClass.DoTheTest(numIterations: 37);
             }
         }
         public MyClass(object[] args) : base(args) { }
 
         public override async Task DoInitializeAsync()
         {
+            await Task.Yield();
             SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
         }
 
