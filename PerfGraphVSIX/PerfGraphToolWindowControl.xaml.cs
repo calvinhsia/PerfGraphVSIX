@@ -64,7 +64,6 @@
         public int UpdateInterval { get { return _UpdateInterval; } set { _UpdateInterval = value; RaisePropChanged(); } }
         public int NumDataPoints { get; set; } = 100;
 
-        public bool ScaleByteCounters { get; set; } = false;
         public bool SetMaxGraphTo100 { get; set; } = false;
 
 
@@ -100,31 +99,13 @@
         public bool TrackProjectObjects { get; set; } = true;
         public bool TrackContainedObjects { get; set; } = true;
 
+        public List<PerfCounterData> LstPerfCounterData => throw new NotImplementedException();
+
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         }
-
-
-        /// <summary>
-        /// these are used to provider interactive user counters from which to choose in VSIX
-        /// </summary>
-        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForVSIX = new List<PerfCounterData>()
-        {
-            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
-            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
-            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
-            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
-            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
-            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
-            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
-            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
-            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
-            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
-        };
 
         public class LeakedObject
         {
@@ -179,13 +160,13 @@
 
                 btnDoSample.Click += (o, e) =>
                   {
-                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync("Manual"));
+                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync(measurementHolderInteractiveUser, SampleType.SampleTypeNormal, "Manual"));
                   };
 
 
-                lbPCounters.ItemsSource = _lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 1;
-                _lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabled = true;
+                PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -209,11 +190,11 @@
                         await Task.Run(async () =>
                         {
                             // run on threadpool thread
-                            lock (_lstPerfCounterDefinitionsForVSIX)
+                            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                             {
-                                foreach (var itm in _lstPerfCounterDefinitionsForVSIX)
+                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
                                 {
-                                    itm.IsEnabled = pctrEnum.HasFlag(itm.perfCounterType);
+                                    itm.IsEnabledForGraph = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
                             }
                             await ResetPerfCounterMonitorAsync();
@@ -275,7 +256,6 @@
         // dictionary of sample # (int from 0 to NumDataPoints) =>( List (PerfCtrValues in order)
         public Dictionary<int, List<uint>> _dataPoints = new Dictionary<int, List<uint>>();
         int _bufferIndex = 0;
-        List<uint> _lstPCData; // list of samples from each selected counter
         async Task ResetPerfCounterMonitorAsync()
         {
             _ctsPcounter?.Cancel();
@@ -283,9 +263,9 @@
             {
                 await _tcsPcounter.Task;
             }
-            lock (_lstPerfCounterDefinitionsForVSIX)
+            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
             {
-                _lstPCData = new List<uint>();
+                measurementHolderInteractiveUser = new MeasurementHolder(string.Empty, PerfCounterData._lstPerfCounterDefinitionsForVSIX, logger: this);
                 _dataPoints.Clear();
                 _bufferIndex = 0;
             }
@@ -310,7 +290,7 @@
                 {
                     while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
-                        await DoSampleAsync();
+                        await DoSampleAsync(measurementHolderInteractiveUser, SampleType.SampleTypeNormal);
                         await Task.Delay(TimeSpan.FromMilliseconds(UpdateInterval), _ctsPcounter.Token);
                     }
                 }
@@ -322,69 +302,45 @@
             });
         }
 
-        public async Task DoSampleAsync(string desc = "")
+        //used for interactive user, not for iteration tests
+        MeasurementHolder measurementHolderInteractiveUser;
+        public async Task DoSampleAsync(MeasurementHolder measurementHolder, SampleType sampleType, string descriptionOverride = "")
         {
+            if (measurementHolder == null)
+            {
+                measurementHolder = measurementHolderInteractiveUser;
+            }
+            List<uint> lstPerfCtrCurrentMeasurements;
             try
             {
-                var sBuilder = new StringBuilder();
-                if (!string.IsNullOrEmpty(desc))
+                var res = string.Empty;
+
+                lock (measurementHolder.lstPerfCounterData)
                 {
-                    sBuilder.Append(desc + " ");
-                }
-                lock (_lstPerfCounterDefinitionsForVSIX)
-                {
-                    int idx = 0;
-                    foreach (var ctr in _lstPerfCounterDefinitionsForVSIX.Where(pctr => pctr.IsEnabled))
-                    {
-                        var pcValueAsFloat = ctr.ReadNextValue();
-                        uint pcValue = 0;
-                        uint priorValue = 0;
-                        if (idx < _lstPCData.Count)
-                        {
-                            priorValue = _lstPCData[idx];
-                        }
-                        else
-                        {
-                            _lstPCData.Add(0);
-                        }
-                        if (ctr.perfCounterType.ToString().Contains("Bytes") && !ctr.perfCounterType.ToString().Contains("PerSec") && this.ScaleByteCounters)
-                        {
-                            pcValue = (uint)(pcValueAsFloat * 100 / uint.MaxValue); // '% of 4G
-                            int delta = (int)pcValue - (int)priorValue;
-                            sBuilder.Append($"{ctr.PerfCounterName}= {pcValueAsFloat:n0}  {pcValue:n0}%  Δ = {delta:n0} ");
-                        }
-                        else
-                        {
-                            pcValue = (uint)pcValueAsFloat;
-                            int delta = (int)pcValue - (int)priorValue;
-                            sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
-                        }
-                        _lstPCData[idx] = pcValue;
-                        idx++;
-                    }
+                    res = measurementHolder.TakeMeasurement(descriptionOverride, sampleType);
+                    lstPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
                 }
                 try
                 {
-                    await AddDataPointsAsync();
+                    await AddDataPointsAsync(lstPerfCtrCurrentMeasurements);
                 }
                 catch (Exception ex)
                 {
-                    sBuilder = new StringBuilder(ex.ToString());
+                    res = ex.ToString();
                 }
-                AddStatusMsgAsync($"{sBuilder.ToString()}").Forget();
+                AddStatusMsgAsync($"{res}").Forget();
             }
             catch (InvalidOperationException ex)
             {
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (_lstPerfCounterDefinitionsForVSIX)
+                    lock (measurementHolder.lstPerfCounterData)
                     {
-                        foreach (var ctr in _lstPerfCounterDefinitionsForVSIX)
+                        foreach (var ctr in measurementHolder.lstPerfCounterData)
                         {
                             ctr.ResetCounter();
                         }
-                        _lstPCData = new List<uint>();
                         _dataPoints.Clear();
                         _bufferIndex = 0;
                     }
@@ -393,24 +349,23 @@
             catch (Exception ex)
             {
                 await AddStatusMsgAsync($"Exception in {nameof(DoSampleAsync)}" + ex.ToString());
-                _lstPCData = new List<uint>();
                 _dataPoints.Clear();
                 _bufferIndex = 0;
             }
         }
 
-        async Task AddDataPointsAsync()
+        async Task AddDataPointsAsync(List<uint> lstPerfCtrCurrentMeasurements)
         {
             if (_dataPoints.Count == 0) // nothing yet
             {
                 for (int i = 0; i < NumDataPoints; i++)
                 {
-                    _dataPoints[i] = new List<uint>(_lstPCData); // let all init points be equal, so y axis scales IsStartedFromZero
+                    _dataPoints[i] = new List<uint>(lstPerfCtrCurrentMeasurements); // let all init points be equal, so y axis scales IsStartedFromZero
                 }
             }
             else
             {
-                _dataPoints[_bufferIndex++] = new List<uint>(_lstPCData);
+                _dataPoints[_bufferIndex++] = new List<uint>(lstPerfCtrCurrentMeasurements);
                 if (_bufferIndex == _dataPoints.Count) // wraparound?
                 {
                     _bufferIndex = 0;
@@ -431,7 +386,7 @@
             {
                 _chart.ChartAreas[0].AxisY.Maximum = 100;
             }
-            foreach (var entry in _lstPCData)
+            foreach (var entry in lstPerfCtrCurrentMeasurements)
             {
                 var series = new Series
                 {

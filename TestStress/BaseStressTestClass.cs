@@ -123,34 +123,13 @@ namespace TestStress
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
         }
 
-        /// <summary>
-        /// These are the counters used for stress test measurements
-        /// </summary>
-        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForStressTest = new List<PerfCounterData>()
-        {
-//            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" )} ,
-            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") },
-            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") },
-//            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") },
-//            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID") },
-//            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" )},
-//            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID") },
-//            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process") },
-//            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") },
-            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) },
-            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) },
-        };
-
-
-
         public Dictionary<string, List<uint>> _measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
 
         /// <summary>
         /// after each iteration, take measurements
         /// </summary>
         /// <returns></returns>
-        public static async Task TakeMeasurementAsync(BaseStressTestClass test, string desc)
+        public static async Task TakeMeasurementAsync(BaseStressTestClass test, MeasurementHolder measurementHolder, string desc)
         {
             //test.LogMessage($"{nameof(TakeMeasurementAsync)} {nIteration}");
             //                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
@@ -158,27 +137,29 @@ namespace TestStress
             {
                 test._vsDTE?.ExecuteCommand("Tools.ForceGC");
                 await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
-                var sBuilder = new StringBuilder(desc + " ");
-                foreach (var ctr in _lstPerfCounterDefinitionsForStressTest)
-                {
-                    if (!test._measurements.TryGetValue(ctr.PerfCounterName, out var lst))
-                    {
-                        lst = new List<uint>();
-                        test._measurements[ctr.PerfCounterName] = lst;
-                    }
-                    var pcValueAsFloat = ctr.ReadNextValue();
-                    uint pcValue = 0;
-                    uint priorValue = 0;
-                    if (lst.Count > 0)
-                    {
-                        priorValue = lst[0];
-                    }
-                    pcValue = (uint)pcValueAsFloat;
-                    int delta = (int)pcValue - (int)priorValue;
-                    sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
-                    lst.Add(pcValue);
-                }
-                test.LogMessage($"{sBuilder.ToString()}");
+
+                measurementHolder.TakeMeasurement(desc, SampleType.SampleTypeIteration);
+                //var sBuilder = new StringBuilder(desc + " ");
+                //foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForStressTest)
+                //{
+                //    if (!test._measurements.TryGetValue(ctr.PerfCounterName, out var lst))
+                //    {
+                //        lst = new List<uint>();
+                //        test._measurements[ctr.PerfCounterName] = lst;
+                //    }
+                //    var pcValueAsFloat = ctr.ReadNextValue();
+                //    uint pcValue = 0;
+                //    uint priorValue = 0;
+                //    if (lst.Count > 0)
+                //    {
+                //        priorValue = lst[0];
+                //    }
+                //    pcValue = (uint)pcValueAsFloat;
+                //    int delta = (int)pcValue - (int)priorValue;
+                //    sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
+                //    lst.Add(pcValue);
+                //}
+                //test.LogMessage($"{sBuilder.ToString()}");
             }
             catch (Exception ex)
             {
@@ -230,12 +211,24 @@ namespace TestStress
         {
             test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
             var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
-            await BaseStressTestClass.TakeMeasurementAsync(test, $"Initial Measurement");
+
+            var measurementHolder = new MeasurementHolder(
+                test.TestContext.TestName,
+                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                logger: test);
+            test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
+
 
             for (int iteration = 0; iteration < NumIterations; iteration++)
             {
                 var ret = _theTestMethod.Invoke(test, parameters: null);
-                await BaseStressTestClass.TakeMeasurementAsync(test, $"Iter {iteration + 1}/{NumIterations}");
+                await BaseStressTestClass.TakeMeasurementAsync(test, measurementHolder, $"Iter {iteration + 1}/{NumIterations}");
+            }
+            var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+            test.LogMessage($"Measurement Results {filenameResults}");
+            if (measurementHolder.CalculateRegression())
+            {
+                test.LogMessage("Regression!!!!!");
             }
             await BaseStressTestClass.AllIterationsFinishedAsync(test);
 

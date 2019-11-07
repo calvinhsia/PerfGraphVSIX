@@ -22,17 +22,29 @@ namespace TestStress
             test.LogMessage($"Got attr {attr}");
             testContext.Properties.Add("TestIterationCount", 0);
 
+            var measurementHolder = new MeasurementHolder(
+                test.TestContext.TestName,
+                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                logger: test);
+            test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
+
             for (int iteration = 0; iteration < attr.NumIterations; iteration++)
             {
-                var result =_theTestMethod.Invoke(test, parameters: null);
+                var result = _theTestMethod.Invoke(test, parameters: null);
                 if (_theTestMethod.ReturnType.Name == "Task")
                 {
                     var resultTask = (Task)result;
                     await resultTask;
                 }
-                //                await OpenCloseSolutionOnce(SolutionToLoad);
                 testContext.Properties["TestIterationCount"] = ((int)testContext.Properties["TestIterationCount"]) + 1;
-                await TakeMeasurementAsync(test, $"Start of Iter {iteration + 1}/{attr.NumIterations}");
+                await TakeMeasurementAsync(test, measurementHolder, $"Start of Iter {iteration + 1}/{attr.NumIterations}");
+            }
+            var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+            test.LogMessage($"Measurement Results {filenameResults}");
+
+            if (measurementHolder.CalculateRegression())
+            {
+                test.LogMessage("Regression!!!!!");
             }
             await AllIterationsFinishedAsync(test);
         }

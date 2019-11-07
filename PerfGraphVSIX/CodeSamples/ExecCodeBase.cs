@@ -32,6 +32,8 @@
 
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
@@ -102,13 +104,6 @@ namespace MyCodeToExecute
 
         }
 
-        public async Task TakeSampleAsync(string desc)
-        {
-            if (StressUtil != null)
-            {
-                await StressUtil.DoSampleAsync(Path.GetFileNameWithoutExtension(FileToExecute) + " " + desc);
-            }
-        }
         public virtual async Task DoInitializeAsync()
         {
             await Task.Yield();
@@ -134,25 +129,37 @@ namespace MyCodeToExecute
         {
             try
             {
-                await TakeSampleAsync("Initial Measurement");
+                var measurementHolder = new MeasurementHolder(
+                    Path.GetFileNameWithoutExtension(FileToExecute),
+                    PerfCounterData._lstPerfCounterDefinitionsForStressTest, 
+                    logger);
+
                 for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                 {
                     await DoIterationBodyAsync();
                     await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
                     var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
-                    await TakeSampleAsync(desc);
+                    await StressUtil.DoSampleAsync(measurementHolder, SampleType.SampleTypeIteration, descriptionOverride: desc);
                     if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         break;
                     }
                 }
-                var msg = "Cancelled Code Execution";
                 if (!_CancellationTokenExecuteCode.IsCancellationRequested)
                 {
-                    msg = string.Format("Done all {0} iterations", numIterations);
+                    logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
                 }
-                await TakeSampleAsync(msg);
+                else
+                {
+                    logger.LogMessage("Cancelled Code Execution");
+                }
                 // cleanup code here: compare measurements, take a dump, examine for types, etc.
+                var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel:false);
+                logger.LogMessage("Measurement Results " + filenameResults);
+                if (measurementHolder.CalculateRegression())
+                {
+                    logger.LogMessage("Regression!!!!!!!");
+                }
 
                 await StressUtil.CreateDumpAsync(
                     System.Diagnostics.Process.GetCurrentProcess().Id,
@@ -193,7 +200,7 @@ namespace MyCodeToExecute
             g_dte.Solution.Close();
             if (!_CancellationTokenExecuteCode.IsCancellationRequested && delayAfterClose > 0)
             {
-                await Task.Delay(TimeSpan.FromSeconds(delayAfterClose* DelayMultiplier), _CancellationTokenExecuteCode);
+                await Task.Delay(TimeSpan.FromSeconds(delayAfterClose * DelayMultiplier), _CancellationTokenExecuteCode);
             }
         }
 

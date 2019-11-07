@@ -107,9 +107,6 @@
                             <local:MyTextBox Text="{Binding NumDataPoints}" Width="90" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
-                            <CheckBox Content="Scale 'Byte' counters (but not BytePerSec)" IsChecked="{Binding ScaleByteCounters}" ToolTip="for Byte counters, eg VirtualBytes, scale to be a percent of 4Gigs"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
                             <CheckBox Name="chkShowStatusHistory" Content="Show Status History" IsChecked="True" ToolTip="Show a textbox which accumulates history of samples"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">

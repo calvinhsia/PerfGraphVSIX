@@ -6,36 +6,71 @@ using System.Runtime.InteropServices;
 
 namespace PerfGraphVSIX
 {
-    [Flags] // user can select multiple items. (beware scaling: pct => 0-100, Bytes => 0-4G)
-    public enum PerfCounterType
-    {
-        None,
-        ProcessorPctTime = 0x1,
-        ProcessorPrivateBytes = 0x2,
-        ProcessorVirtualBytes = 0x4,
-        ProcessorWorkingSet = 0x8,
-        GCPctTime = 0x10,
-        GCBytesInAllHeaps = 0x20,
-        GCAllocatedBytesPerSec = 0x40,
-        PageFaultsPerSec = 0x80,
-        KernelHandleCount = 0x100, // same as Win32api GetProcessHandleCount
-        GDIHandleCount = 0x200, //GetGuiResources
-        UserHandleCount = 0x400, //GetGuiResources
-        ThreadCount = 0x800,
-    }
 
     public class PerfCounterData
     {
+        /// <summary>
+        /// These are the counters used for stress test measurements
+        /// </summary>
+        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForStressTest = new List<PerfCounterData>()
+        {
+            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") { thresholdRegression=1e6f} },
+            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") { thresholdRegression=1e6f}},
+            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") { thresholdRegression=1e6f}},
+            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForGraph=true,thresholdRegression=1e6f} },
+            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") { thresholdRegression=1}},
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") { thresholdRegression=1}},
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) { thresholdRegression=1 } },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) { thresholdRegression=1}},
+        };
+        /// <summary>
+        /// these are used to provider interactive user counters from which to choose in VSIX to drive graph
+        /// typically, user will select only 1 or 2 else the graph is too busy (and different scales)
+        /// </summary>
+        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForVSIX = new List<PerfCounterData>()
+        {
+            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" ) { IsEnabledForMeasurement=false} } ,
+            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty)  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty)  { IsEnabledForMeasurement=false} },
+        };
 
         public PerfCounterType perfCounterType;
         public string PerfCounterCategory;
         public string PerfCounterName;
         public string PerfCounterInstanceName;
-        public bool IsEnabled = false;
+        /// <summary>
+        /// counter can be enabled for graphing but not for measurements (graph can look too busy and scaling can hide trends)
+        /// </summary>
+        public bool IsEnabledForGraph = false;
+        /// <summary>
+        /// true means collect (for iterations) but not necessarily for graph
+        /// </summary>
+        public bool IsEnabledForMeasurement = true;
         public Lazy<PerformanceCounter> lazyPerformanceCounter;
         public static Process ProcToMonitor;
 
         public float LastValue;
+        /// <summary>
+        /// We calculate the linear regression slope, which is the growth of the counter per iteration. If this growth changes > this threshold, then fail the test
+        /// </summary>
+        public float thresholdRegression;
+
+        /// <summary>
+        /// This is a scale factor (sensitivity) multiplied by the thrsholdRegression. Should be > 0, centered at 1
+        /// If the iteration is small and fast, and doesn't do much allocation, then our static thresholds might be too big, so set this to be e.g. .5 for half the threshold
+        /// Likewise, if the iteration is huge and leaky, set this >1 to increase the default theshold
+        /// Default to 1 means no effect: use the threshold defaults.
+        /// </summary>
+        public float RatioThresholdSensitivity = 1;
         public float ReadNextValue()
         {
             float retVal = 0;
@@ -98,7 +133,7 @@ namespace PerfGraphVSIX
 
         public override string ToString()
         {
-            return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} Enabled = {IsEnabled}";
+            return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} EnabledForMeasure = {IsEnabledForMeasurement} IsEnabledForGraph={IsEnabledForGraph}";
         }
         /// uiFlags: 0 - Count of GDI objects
         /// uiFlags: 1 - Count of USER objects
@@ -118,94 +153,6 @@ namespace PerfGraphVSIX
         public static int GetGuiResourcesUserCount()
         {
             return GetGuiResources(ProcToMonitor.Handle, uiFlags: 1);
-        }
-
-        /// <summary>
-        /// Fits a line to a collection of (x,y) points.
-        /// </summary>
-        /// <param name="xVals">The x-axis values.</param>
-        /// <param name="yVals">The y-axis values.</param>
-        /// <param name="inclusiveStart">The inclusive inclusiveStart index.</param>
-        /// <param name="exclusiveEnd">The exclusive exclusiveEnd index.</param>
-        /// <param name="rsquared">The r^2 value of the line.</param>
-        /// <param name="yintercept">The y-intercept value of the line (i.e. y = ax + b, yintercept is b).</param>
-        /// <param name="slope">The slop of the line (i.e. y = ax + b, slope is a).</param>
-        public static void LinearRegression(double[] xVals, double[] yVals,
-                                            int inclusiveStart, int exclusiveEnd,
-                                            out double rsquared, out double yintercept,
-                                            out double slope)
-        {
-            Debug.Assert(xVals.Length == yVals.Length);
-            double sumOfX = 0;
-            double sumOfY = 0;
-            double sumOfXSq = 0;
-            double sumOfYSq = 0;
-            double sumCodeviates = 0;
-            double count = exclusiveEnd - inclusiveStart;
-
-            for (int ctr = inclusiveStart; ctr < exclusiveEnd; ctr++)
-            {
-                double x = xVals[ctr];
-                double y = yVals[ctr];
-                sumCodeviates += x * y;
-                sumOfX += x;
-                sumOfY += y;
-                sumOfXSq += x * x;
-                sumOfYSq += y * y;
-            }
-            double ssX = sumOfXSq - sumOfX * sumOfX / count;
-//            double ssY = sumOfYSq - sumOfY * sumOfY / count;
-            double RNumerator = (count * sumCodeviates) - (sumOfX * sumOfY);
-            double RDenom = (count * sumOfXSq - (sumOfX * sumOfX))
-             * (count * sumOfYSq - (sumOfY * sumOfY));
-            double sCo = sumCodeviates - sumOfX * sumOfY / count;
-
-            double meanX = sumOfX / count;
-            double meanY = sumOfY / count;
-            double dblR = RNumerator / Math.Sqrt(RDenom);
-            rsquared = dblR * dblR;
-            yintercept = meanY - ((sCo / ssX) * meanX);
-            slope = sCo / ssX;
-        }
-
-        // http://csharphelper.com/blog/2014/10/find-a-linear-least-squares-fit-for-a-set-of-points-in-c/
-        public struct PointF
-        {
-            public double X;
-            public double Y;
-        }
-        // Find the least squares linear fit.
-        // Return the total error.
-        public static double FindLinearLeastSquaresFit(
-            List<PointF> points, out double m, out double b)
-        {
-            double N = points.Count;
-            double SumX = 0;
-            double SumY = 0;
-            double SumXX = 0;
-            double SumXY = 0;
-            foreach (PointF pt in points)
-            {
-                SumX += pt.X;
-                SumY += pt.Y;
-                SumXX += pt.X * pt.X;
-                SumXY += pt.X * pt.Y;
-            }
-            m = (SumXY * N - SumX * SumY) / (SumXX * N - SumX * SumX);
-            b = (SumXY * SumX - SumY * SumXX) / (SumX * SumX - N * SumXX);
-            return Math.Sqrt(ErrorSquared(points, m, b));
-        }
-        // Return the error squared.
-        public static double ErrorSquared(List<PointF> points,
-            double m, double b)
-        {
-            double total = 0;
-            foreach (PointF pt in points)
-            {
-                double dy = pt.Y - (m * pt.X + b);
-                total += dy * dy;
-            }
-            return total;
         }
     }
 }

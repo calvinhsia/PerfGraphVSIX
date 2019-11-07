@@ -15,19 +15,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 
-namespace PerfGraphVSIX
-{
-    /// <summary>
-    /// When a stress test needs to create a dump, these flags indicate what do do
-    /// </summary>
-    [Flags]
-    public enum MemoryAnalysisType
-    {
-        StartClrObjectExplorer = 0x2,
-        OutputTypeCounts = 0x4,
-        CompareTypeCounts = 0x8
-    }
-}
 
 namespace DumperViewer
 {

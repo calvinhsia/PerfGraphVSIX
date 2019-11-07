@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using DumperViewer;
+using PerfGraphVSIX;
 
 namespace TestStress
 {
@@ -41,16 +42,26 @@ namespace TestStress
                     LogMessage($"{nameof(StressIterateManually)} # iterations = {NumIterations}");
                     //                await TakeMeasurementAsync(this, -1);
                     await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+
+                    var measurementHolder = new MeasurementHolder(nameof(StressIterateManually), PerfCounterData._lstPerfCounterDefinitionsForStressTest, logger: this);
+
+
                     for (int iteration = 0; iteration < NumIterations; iteration++)
                     {
                         await OpenCloseSolutionOnce(SolutionToLoad);
-                        await TakeMeasurementAsync(this, $"Start of Iter {iteration + 1}/{NumIterations}");
+                        await TakeMeasurementAsync(this, measurementHolder, $"Start of Iter {iteration + 1}/{NumIterations}");
+                    }
+                    measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+                    if (measurementHolder.CalculateRegression())
+                    {
+                        LogMessage("Regression!!!!!");
                     }
                 }
                 finally
                 {
 
                 }
+
                 await AllIterationsFinishedAsync(this);
             });
 
