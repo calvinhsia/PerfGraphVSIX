@@ -12,7 +12,7 @@ namespace DumperViewer
     /// <summary>
     /// Provides the ability to collect a memory dump of a process.
     /// </summary>
-    internal class MemoryDumpHelper
+    public class MemoryDumpHelper
     {
         /// <summary>
         /// Collects a mini dump (optionally with full memory) for the given process and writes it to the given file path

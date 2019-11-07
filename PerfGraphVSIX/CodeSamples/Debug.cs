@@ -19,7 +19,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 3);
+                await oMyClass.DoTheTest(numIterations: 17);
             }
         }
         public MyClass(object[] args) : base(args) { }
@@ -28,20 +28,26 @@ namespace MyCodeToExecute
         {
             SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             await OpenASolutionAsync();
+            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode);
         }
 
         public override async Task DoIterationBodyAsync()
         {
-            g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
+            _tcsDebug = new TaskCompletionSource<int>();
+            g_dte.ExecuteCommand("Debug.Start", @"");
+            //await Task.Delay(10000 * DelayMultiplier);
+            await _tcsDebug.Task;
 
-            await Task.Delay(3000, _CancellationTokenExecuteCode);
+            await Task.Delay(TimeSpan.FromSeconds(15 * DelayMultiplier));
 
-            g_dte.ExecuteCommand("File.Close", @"");
+            _tcsDebug = new TaskCompletionSource<int>();
+            g_dte.ExecuteCommand("Debug.StopDebugging", @"");
+            //                    await Task.Delay(10000 * DelayMultiplier);
+            await _tcsDebug.Task;
         }
-        public virtual async Task DoCleanupAsync()
+        public override async Task DoCleanupAsync()
         {
             await CloseTheSolutionAsync();
         }
     }
 }
-

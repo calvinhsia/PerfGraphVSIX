@@ -76,7 +76,7 @@ namespace DumperViewer
 
         }
 
-        internal void StartClrObjectExplorer(string _DumpFileName)
+        public void StartClrObjectExplorer(string _DumpFileName)
         {
             var exeNameClrObj = Path.Combine(
                Path.GetDirectoryName( this.GetType().Assembly.Location),

@@ -32,16 +32,18 @@ namespace MyCodeToExecute
 
         public override async Task DoIterationBodyAsync()
         {
-            g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
+            _tcsProject = new TaskCompletionSource<int>();
+            g_dte.ExecuteCommand("Build.CleanSolution", @"");
+            await _tcsProject.Task;
 
-            await Task.Delay(3000, _CancellationTokenExecuteCode);
-
-            g_dte.ExecuteCommand("File.Close", @"");
+            //                    logger.LogMessage("Build.BuildSolution");
+            _tcsProject = new TaskCompletionSource<int>();
+            g_dte.ExecuteCommand("Build.BuildSolution", @"");
+            await _tcsProject.Task;
         }
-        public virtual async Task DoCleanupAsync()
+        public override async Task DoCleanupAsync()
         {
             await CloseTheSolutionAsync();
         }
     }
 }
-

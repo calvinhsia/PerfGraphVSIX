@@ -435,7 +435,7 @@ namespace PerfGraphVSIX
             return sb.ToString();
         }
 
-        private string WriteOutputToTempFile(string strToOutput, string fExt = "txt", bool fStartIt = true)
+        public static string WriteOutputToTempFile(string strToOutput, string fExt = "txt", bool fStartIt = true)
         {
             var tmpFileName = System.IO.Path.GetTempFileName(); //"C:\Users\calvinh\AppData\Local\Temp\tmp8509.tmp"
             System.IO.File.WriteAllText(tmpFileName, strToOutput, new UnicodeEncoding(bigEndian: false, byteOrderMark: true));
@@ -446,7 +446,7 @@ namespace PerfGraphVSIX
             {
                 Process.Start(filename);
             }
-            return tmpFileName;
+            return filename;
         }
 
         public GridViewColumn AddAColumn(GridView gridvw, string bindingName, string toolTipHdr = null, string bindingObjectName = null, int colWidth = 0, int insertIndex = -1)

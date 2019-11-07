@@ -17,7 +17,6 @@ namespace Tests
         public void TestDumperInProc()
         {
             var pid = Process.GetProcessesByName("devenv")[0].Id;
-            //pid = Process.GetCurrentProcess().Id;
             var pathDumpFile = Path.Combine(Environment.CurrentDirectory, "test dump.dmp");
             if (File.Exists(pathDumpFile))
             {

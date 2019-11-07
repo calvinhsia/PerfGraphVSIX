@@ -2,6 +2,8 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using DumperViewer;
+using PerfGraphVSIX;
 
 namespace TestStress
 {
@@ -30,24 +32,42 @@ namespace TestStress
         [TestMethod]
         public async Task StressIterateManually()
         {
-            int NumIterations = 3;
-            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-            try
+            await Task.Yield();
+            AsyncPump.Run(async () =>
             {
-                LogMessage($"{nameof(StressIterateManually)} # iterations = {NumIterations}");
-                for (int iteration = 0; iteration < NumIterations; iteration++)
+                int NumIterations = 3;
+                string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+                try
                 {
-                    await OpenCloseSolutionOnce(SolutionToLoad);
-                    await TakeMeasurementAsync(this, iteration);
-                    LogMessage($"  Iter # {iteration}/{NumIterations}");
+                    LogMessage($"{nameof(StressIterateManually)} # iterations = {NumIterations}");
+                    //                await TakeMeasurementAsync(this, -1);
+                    await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+
+                    var measurementHolder = new MeasurementHolder(
+                        nameof(StressIterateManually), 
+                        PerfCounterData._lstPerfCounterDefinitionsForStressTest, 
+                        SampleType.SampleTypeIteration,
+                        logger: this);
+
+
+                    for (int iteration = 0; iteration < NumIterations; iteration++)
+                    {
+                        await OpenCloseSolutionOnce(SolutionToLoad);
+                        await TakeMeasurementAsync(this, measurementHolder, $"Start of Iter {iteration + 1}/{NumIterations}");
+                    }
+                    measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+                    if (measurementHolder.CalculateRegression())
+                    {
+                        LogMessage("Regression!!!!!");
+                    }
                 }
-            }
-            finally
-            {
+                finally
+                {
 
-            }
+                }
 
-            await AllIterationsFinishedAsync(this);
+            });
+
         }
     }
 }

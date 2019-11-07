@@ -21,22 +21,36 @@ namespace TestStress
             MemSpectAttribute attr = (MemSpectAttribute)_theTestMethod.GetCustomAttribute(typeof(MemSpectAttribute));
             test.LogMessage($"Got attr {attr}");
             testContext.Properties.Add("TestIterationCount", 0);
-            await TakeMeasurementAsync(test, nIteration: -1);
+
+            var measurementHolder = new MeasurementHolder(
+                test.TestContext.TestName,
+                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                SampleType.SampleTypeIteration,
+                logger: test);
+            test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
 
             for (int iteration = 0; iteration < attr.NumIterations; iteration++)
             {
-                var result =_theTestMethod.Invoke(test, parameters: null);
+                var result = _theTestMethod.Invoke(test, parameters: null);
                 if (_theTestMethod.ReturnType.Name == "Task")
                 {
                     var resultTask = (Task)result;
                     await resultTask;
                 }
-                //                await OpenCloseSolutionOnce(SolutionToLoad);
-                test.LogMessage($"  Iter # {iteration}/{attr.NumIterations}");
                 testContext.Properties["TestIterationCount"] = ((int)testContext.Properties["TestIterationCount"]) + 1;
-                await TakeMeasurementAsync(test, iteration);
+                await TakeMeasurementAsync(test, measurementHolder, $"Start of Iter {iteration + 1}/{attr.NumIterations}");
             }
-            await AllIterationsFinishedAsync(test);
+            var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+            test.LogMessage($"Measurement Results {filenameResults}");
+
+            if (measurementHolder.CalculateRegression())
+            {
+                test.LogMessage("Regression!!!!!");
+                await measurementHolder.CreateDumpAsync(
+                    test._targetProc.Id,
+                    desc: test.TestContext.TestName + "_" + attr.NumIterations.ToString(),
+                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+            }
         }
     }
 

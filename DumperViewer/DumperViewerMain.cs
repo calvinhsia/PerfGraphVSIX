@@ -15,6 +15,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 
+
 namespace DumperViewer
 {
     public class DumperViewerMain : ILogger
@@ -51,7 +52,7 @@ namespace DumperViewer
         public async Task DoitAsync()
         {
             await SendTelemetryAsync($"{nameof(DumperViewerMain)}");
-            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = {string.Join(" ", args)}");
+            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = '{string.Join(" ", args)}'");
 
             if (args.Length == 0)
             {
@@ -72,7 +73,7 @@ namespace DumperViewer
                 {
                     while (iArg < args.Length)
                     {
-                        var curArg = args[iArg++];
+                        var curArg = args[iArg++].Trim();
                         if (curArg.Length > 1 && "-/".IndexOf(curArg[0]) == 0)
                         {
                             switch (curArg[1].ToString().ToLower())
@@ -124,6 +125,7 @@ namespace DumperViewer
                         }
                         else
                         {
+                            _logger.LogMessage($"Invalid arguments");
                             argsGood = false;
                         }
                     }
@@ -209,7 +211,7 @@ namespace DumperViewer
             Process procChosen = null;
             var q = from proc in Process.GetProcesses()
                     orderby proc.ProcessName
-                    where fShow32BitOnly ? ProcessType(proc)=="32" : true
+                    where fShow32BitOnly ? ProcessType(proc) == "32" : true
                     select new
                     {
                         proc.Id,
@@ -287,10 +289,13 @@ namespace DumperViewer
 
         private void DoShowHelp(string extrainfo = "")
         {
-            var owin = new Window();
-            var tb = new TextBlock()
+            try
             {
-                Text = $@"DumperViewer: 
+
+                var owin = new Window();
+                var tb = new TextBlock()
+                {
+                    Text = $@"DumperViewer: 
 {extrainfo}
 
 This Program can
@@ -315,10 +320,14 @@ DumpViewer -p 1234 -t .*TextBuffer.*
 
 
 "
-            };
+                };
 
-            owin.Content = tb;
-            owin.ShowDialog();
+                owin.Content = tb;
+                owin.ShowDialog();
+            }
+            catch (InvalidOperationException) //System.InvalidOperationException: The calling thread must be STA, because many UI components require this.
+            {
+            }
         }
 
         readonly List<string> _lstLoggedStrings = new List<string>();
@@ -335,7 +344,7 @@ DumpViewer -p 1234 -t .*TextBuffer.*
                     DateTime.Now.ToString("hh:mm:ss:fff")
                     );
                 str = string.Format(dt + str, args);
-                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId} {str}";
+                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
 
                 if (Debugger.IsAttached)
                 {

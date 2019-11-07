@@ -1,35 +1,4 @@
-﻿
-// This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
-// This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
-
-//  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
-//                      %VSRoot% will be changed to the fullpath to VS: e.g. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
-
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.12.1.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.0.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.8.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll"
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
-
-//Ref:"%VSRoot%\Common7\IDE\PublicAssemblies\envdte.dll"
-
-//Ref: %PerfGraphVSIX%
-
-
-////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
-
-
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
-
+﻿//Include: ExecCodeBase.cs
 
 using System;
 using System.Threading;
@@ -40,145 +9,40 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 
-namespace MyCustomCode
+namespace MyCodeToExecute
 {
-    public class MyClass
+    public class MyClass : BaseExecCodeClass
     {
-        string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost";
-        int NumberOfIterations = 7;
-        int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
-        int nTimes = 0;
-        TaskCompletionSource<int> _tcs;
-        CancellationToken _CancellationToken;
-        JoinableTask _tskDoPerfMonitoring;
-        ILogger logger;
-        Action<string> actTakeSample;
-        public EnvDTE.DTE g_dte;
+        public TaskCompletionSource<int> _tcs = new TaskCompletionSource<int>();
 
         public static async Task DoMain(object[] args)
         {
-            var oMyClass = new MyClass(args);
-            await oMyClass.DoSomeWorkAsync();
-        }
-        public MyClass(object[] args)
-        {
-            _tcs = new TaskCompletionSource<int>();
-            logger = args[0] as ILogger;
-            _CancellationToken = (CancellationToken)args[1]; // value type
-            g_dte = args[2] as EnvDTE.DTE;
-            actTakeSample = args[3] as Action<string>;
-        }
-        private async Task DoSomeWorkAsync()
-        {
-            //            logger.LogMessage("in DoSomeWorkAsync");
-            try
+            using (var oMyClass = new MyClass(args))
             {
-                if (nTimes++ == 0)
-                {
-                    logger.LogMessage("Registering Folder events");
-                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder += SolutionEvents_OnAfterOpenFolder;
-                    Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
-
-                    //await OpenASolutionAsync();
-                    //foreach (EnvDTE.Window win in g_dte.Windows)
-                    //{
-                    //    logger.LogMessage("Win " + win.Kind + " " + win.ToString());
-                    //    if (win.Kind == "Document") // "Tool"
-                    //    {
-                    //        logger.LogMessage("   " + win.Document.Name);
-                    //    }
-                    //}
-                    //g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
-                    //g_dte.ExecuteCommand("File.NewFile", "temp.cs");
-                    //System.Windows.Forms.SendKeys.Send("using System;{ENTER}");
-                    //await Task.Delay(1000);
-                    //System.Windows.Forms.SendKeys.Send("class testing {{}");
-                    //await Task.Delay(1000);
-                    //Func<Task> undoAll = async () =>
-                    //  {
-                    //      var done = false;
-                    //      logger.LogMessage("Start undo loop");
-                    //      while (!done)
-                    //      {
-                    //          try
-                    //          {
-                    //              logger.LogMessage(" in undo loop");
-                    //              g_dte.ExecuteCommand("Edit.Undo");
-                    //              await Task.Delay(100);
-                    //          }
-                    //          catch (Exception)
-                    //          {
-                    //              done = true;
-                    //              logger.LogMessage("Done undo loop");
-                    //          }
-                    //      }
-                    //  };
-                    //await undoAll();
-                    //g_dte.ExecuteCommand("File.Close", @"");
-                    //await Task.Delay(1000);
-
-
-                    //var ox = new System.Windows.Window();
-                    //var tb = new System.Windows.Controls.TextBox()
-                    //{
-                    //    AcceptsReturn = true
-                    //};
-                    //ox.Content = tb;
-                    //ox.ShowDialog();
-                }
-                // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
-
-                for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
-                {
-                    var desc = string.Format("Start of Iter {0}/{1}", i + 1, NumberOfIterations);
-                    DoSample(desc);
-                    await Task.Delay(1000, _CancellationToken); // wait one second to allow UI thread to catch  up
-                                            //                    logger.LogMessage(desc);
-                    await OpenAFolderAsync();
-
-                    //                    g_dte.ExecuteCommand("File.OpenFolder", @"C:\Users\calvinh\Source\repos\hWndHost");
-
-                    //                    g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
-                    //                    await Task.Delay(2000);
-                    //                    await OpenASolutionAsync();
-                    if (_CancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
-                    await CloseTheFolderAsync();
-                    await Task.Delay(5000, _CancellationToken);
-
-                    //                    logger.LogMessage("End of Iter {0}", i);
-                }
-                var msg = "Cancelled Code Execution";
-                if (!_CancellationToken.IsCancellationRequested)
-                {
-                    msg = string.Format("Done all {0} iterations", NumberOfIterations);
-                }
-                DoSample(msg);
-            }
-            catch (OperationCanceledException ex)
-            {
-                logger.LogMessage("Cancelled");
-            }
-            catch (Exception ex)
-            {
-                logger.LogMessage(ex.ToString());
-            }
-            finally
-            {
-                logger.LogMessage("UnRegistering Folder events");
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder -= SolutionEvents_OnAfterOpenFolder;
-                Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
+                await oMyClass.DoTheTest(numIterations: 3);
             }
         }
+        public MyClass(object[] args) : base(args) { }
 
-        void DoSample(string desc)
+        public override async Task DoInitializeAsync()
         {
-            if (actTakeSample != null)
-            {
-                actTakeSample(desc);
-            }
+            SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost";
+            Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder += SolutionEvents_OnAfterOpenFolder;
+            Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
+        }
+
+        public override async Task DoIterationBodyAsync()
+        {
+            await OpenAFolderAsync();
+
+            await CloseTheFolderAsync();
+            await Task.Delay(5000, _CancellationTokenExecuteCode);
+        }
+        public override async Task DoCleanupAsync()
+        {
+            await CloseTheSolutionAsync();
+            Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder -= SolutionEvents_OnAfterOpenFolder;
+            Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
         }
 
         async Task OpenAFolderAsync()
@@ -187,9 +51,9 @@ namespace MyCustomCode
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             g_dte.ExecuteCommand("File.OpenFolder", SolutionToLoad);
             await _tcs.Task;
-            if (!_CancellationToken.IsCancellationRequested)
+            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
+                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
             }
         }
 
@@ -199,29 +63,28 @@ namespace MyCustomCode
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             g_dte.Solution.Close();
 
-            if (!_CancellationToken.IsCancellationRequested)
+            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                await Task.Delay(5000 * DelayMultiplier, _CancellationToken);
+                await Task.Delay(5000 * DelayMultiplier, _CancellationTokenExecuteCode);
             }
         }
 
         private void SolutionEvents_OnAfterOpenFolder(object sender, EventArgs e)
         {
-            logger.LogMessage("SolutionEvents_OnAfterOpenFolder");
+//            logger.LogMessage("SolutionEvents_OnAfterOpenFolder");
             _tcs.TrySetResult(0);
         }
 
-        private void SolutionEvents_OnAfterCloseFolder(object sender, EventArgs e)
-        {
-            logger.LogMessage("SolutionEvents_OnAfterCloseFolder");
-            _tcs.TrySetResult(0);
-        }
+        //private void SolutionEvents_OnAfterCloseFolder(object sender, EventArgs e)
+        //{
+        //    logger.LogMessage("SolutionEvents_OnAfterCloseFolder");
+        //    _tcs.TrySetResult(0);
+        //}
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
-            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
+//            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
             _tcs.TrySetResult(0);
         }
-
     }
 }
