@@ -54,9 +54,6 @@ namespace PerfGraphVSIX
                     {
                         lst.RemoveAt(0); // we're not iterating, don't accumulate more than 1 (1 for previous)
                     }
-                    else
-                    {
-                    }
                 }
                 uint pcValue = (uint)pcValueAsFloat;
                 int delta = (int)pcValue - (int)priorValue;
@@ -99,7 +96,8 @@ namespace PerfGraphVSIX
                     isRegression = true;
                     AnyCounterRegresssed = true;
                 }
-                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={rmsError,16:n3} m={m,18:n3} b={b,18:n3} Thrs={ctr.thresholdRegression,8:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
+                var pctRms = (int)(100 * rmsError/m);
+                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={pctRms,4} m={m,18:n3} b={b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
             }
             return AnyCounterRegresssed;
         }

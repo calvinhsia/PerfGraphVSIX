@@ -138,28 +138,8 @@ namespace TestStress
                 test._vsDTE?.ExecuteCommand("Tools.ForceGC");
                 await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
 
-                measurementHolder.TakeMeasurement(desc, SampleType.SampleTypeIteration);
-                //var sBuilder = new StringBuilder(desc + " ");
-                //foreach (var ctr in PerfCounterData._lstPerfCounterDefinitionsForStressTest)
-                //{
-                //    if (!test._measurements.TryGetValue(ctr.PerfCounterName, out var lst))
-                //    {
-                //        lst = new List<uint>();
-                //        test._measurements[ctr.PerfCounterName] = lst;
-                //    }
-                //    var pcValueAsFloat = ctr.ReadNextValue();
-                //    uint pcValue = 0;
-                //    uint priorValue = 0;
-                //    if (lst.Count > 0)
-                //    {
-                //        priorValue = lst[0];
-                //    }
-                //    pcValue = (uint)pcValueAsFloat;
-                //    int delta = (int)pcValue - (int)priorValue;
-                //    sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
-                //    lst.Add(pcValue);
-                //}
-                //test.LogMessage($"{sBuilder.ToString()}");
+                var res= measurementHolder.TakeMeasurement(desc, SampleType.SampleTypeIteration);
+                test.LogMessage(res);
             }
             catch (Exception ex)
             {

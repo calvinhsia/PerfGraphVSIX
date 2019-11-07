@@ -69,7 +69,7 @@ namespace TestStress
         }
 
         [TestMethod]
-        [MemSpectAttribute(NumIterations = 3)]
+        [MemSpectAttribute(NumIterations = 13)]
         public async Task StressTestWithAttribute()
         {
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";

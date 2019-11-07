@@ -446,7 +446,7 @@ namespace PerfGraphVSIX
             {
                 Process.Start(filename);
             }
-            return tmpFileName;
+            return filename;
         }
 
         public GridViewColumn AddAColumn(GridView gridvw, string bindingName, string toolTipHdr = null, string bindingObjectName = null, int colWidth = 0, int insertIndex = -1)
