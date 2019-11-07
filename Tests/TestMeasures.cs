@@ -89,7 +89,7 @@ namespace Tests
         public void TestPCMeasurementHolder2Meg()
         {
             // Big triggers regression
-            var res = DoStressSimulation(nIter: 100, nArraySize: 1024 * 1024 * 2, RatioThresholdSensitivity: 1f);
+            var res = DoStressSimulation(nIter: 10, nArraySize: 1024 * 1024 * 2, RatioThresholdSensitivity: 1f);
             Assert.IsTrue(res, $"Expected Regression");
         }
 

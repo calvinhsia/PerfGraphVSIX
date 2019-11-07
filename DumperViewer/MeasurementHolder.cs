@@ -47,6 +47,14 @@ namespace PerfGraphVSIX
         /// </summary>
         OutputMeasurements = 0x10,
     }
+    public class RegressionAnalysis
+    {
+        public List<PointF> lstData = new List<PointF>();
+        public double rmsError;
+        public double m;
+        public double b;
+        public bool IsRegression;
+    }
 
     public class MeasurementHolder
     {
@@ -60,7 +68,6 @@ namespace PerfGraphVSIX
         readonly SampleType sampleType;
         internal Dictionary<string, List<uint>> measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
         int nSamplesTaken;
-
 
         public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger)
         {
@@ -124,32 +131,34 @@ namespace PerfGraphVSIX
 
         public bool CalculateRegression(bool showGraph)
         {
-            //GraphWindow graphWindow = null;
-            //if (showGraph)
-            //{
-            //    graphWindow = new GraphWindow();
-            //}
+            GraphWin graphWin = null;
+            if (showGraph)
+            {
+                graphWin = new GraphWin();
+            }
             var AnyCounterRegresssed = false;
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
-                var lstData = new List<PointF>();
+                var r = new RegressionAnalysis();
                 int ndx = 0;
                 foreach (var itm in measurements[ctr.PerfCounterName])
                 {
-                    lstData.Add(new PointF() { X = ndx++, Y = itm });
+                    r.lstData.Add(new PointF() { X = ndx++, Y = itm });
                 }
-                var rmsError = MeasurementHolder.FindLinearLeastSquaresFit(lstData, out var m, out var b);
+                r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.m, out r.b);
                 var isRegression = false;
-                if (m > ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
+                if (r.m > ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
                 {
                     isRegression = true;
                     AnyCounterRegresssed = true;
                 }
-                var pctRms = m == 0 ? 0 : (int)(100 * rmsError / m);
-                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={pctRms,10} m={m,18:n3} b={b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
-//                graphWindow.AddGraph(ctr, lstData, isRegression, rmsError, m, b);
+                var pctRms = r.m == 0 ? 0 : (int)(100 * r.rmsError / r.m);
+                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={r.rmsError,16:n3} RmsPctErr={pctRms,10} m={r.m,18:n3} b={r.b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
+
+                graphWin.AddGraph(ctr, r);
 
             }
+            graphWin?.ShowDialog();
             return AnyCounterRegresssed;
         }
 

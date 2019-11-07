@@ -67,6 +67,9 @@
     <Compile Include="DumpAnalyzer.cs" />
     <Compile Include="Dumper.cs" />
     <Compile Include="DumperViewerMain.cs" />
+    <Compile Include="GraphWin.xaml.cs">
+      <DependentUpon>GraphWin.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ILogger.cs" />
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />
@@ -138,6 +141,12 @@
     <Resource Include="Microsoft.Diagnostics.Runtime.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="GraphWin.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
