@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Forms.DataVisualization.Charting;
+using System.Windows.Forms.Integration;
 
 namespace PerfGraphVSIX
 {
@@ -89,7 +92,7 @@ namespace PerfGraphVSIX
                 uint priorValue = 0;
                 if (lst.Count > 0)
                 {
-                    priorValue = lst[0];
+                    priorValue = lst[lst.Count - 1];
                     if (this.sampleType != SampleType.SampleTypeIteration)
                     {
                         lst.RemoveAt(0); // we're not iterating, don't accumulate more than 1 (1 for previous)
@@ -118,8 +121,14 @@ namespace PerfGraphVSIX
             }
             return res;
         }
-        public bool CalculateRegression()
+
+        public bool CalculateRegression(bool showGraph)
         {
+            //GraphWindow graphWindow = null;
+            //if (showGraph)
+            //{
+            //    graphWindow = new GraphWindow();
+            //}
             var AnyCounterRegresssed = false;
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
@@ -136,8 +145,10 @@ namespace PerfGraphVSIX
                     isRegression = true;
                     AnyCounterRegresssed = true;
                 }
-                var pctRms = m== 0 ? 0 : (int)(100 * rmsError/m);
-                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={pctRms,4} m={m,18:n3} b={b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
+                var pctRms = m == 0 ? 0 : (int)(100 * rmsError / m);
+                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={pctRms,10} m={m,18:n3} b={b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
+//                graphWindow.AddGraph(ctr, lstData, isRegression, rmsError, m, b);
+
             }
             return AnyCounterRegresssed;
         }
@@ -168,8 +179,41 @@ namespace PerfGraphVSIX
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
             }
+            var filename = BrowseList.WriteOutputToTempFile(sb.ToString(), fExt: "csv", fStartIt: StartExcel);
+            return filename;
+        }
 
-            return BrowseList.WriteOutputToTempFile(sb.ToString(), fExt: "csv", fStartIt: StartExcel);
+        public void GraphIt()
+        {
+            var oWindow = new Window()
+            {
+                Title = "Graph"
+            };
+            var wfhost = new WindowsFormsHost();
+            oWindow.Content = wfhost;
+            var chart = new Chart();
+            wfhost.Child = chart;
+            chart.Series.Clear();
+            chart.ChartAreas.Clear();
+            ChartArea chartArea = new ChartArea("ChartArea");
+            chartArea.AxisY.LabelStyle.Format = "{0:n0}";
+            chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
+            chart.ChartAreas.Add(chartArea);
+            var ctr = lstPerfCounterData.Where(pctr => pctr.perfCounterType == PerfCounterType.GCBytesInAllHeaps).First();
+            var series = new Series
+            {
+                ChartType = SeriesChartType.Line
+            };
+            chart.Series.Add(series);
+            for (int i = 0; i < nSamplesTaken; i++)
+            {
+                var val = measurements[ctr.PerfCounterName][i];
+                var dp = new DataPoint(i, val);
+                series.Points.Add(dp);
+            }
+            chart.DataBind();
+
+            oWindow.ShowDialog();
         }
         public async Task CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {

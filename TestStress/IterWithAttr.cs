@@ -43,7 +43,7 @@ namespace TestStress
             var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
             test.LogMessage($"Measurement Results {filenameResults}");
 
-            if (measurementHolder.CalculateRegression())
+            if (measurementHolder.CalculateRegression(showGraph:true))
             {
                 test.LogMessage("Regression!!!!!");
                 await measurementHolder.CreateDumpAsync(

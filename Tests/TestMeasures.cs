@@ -5,12 +5,40 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using System.Windows.Forms;
+using System.IO;
 
 namespace Tests
 {
     [TestClass]
     public class TestMeasures : BaseTestClass
     {
+        [TestMethod]
+        [Ignore]
+        public void TestMeasureStartExcel()
+        {
+
+            var filenamecsv = @"C:\t.csv";
+            var text = File.ReadAllText(filenamecsv);
+            try
+            {
+                DataObject dataObject = new DataObject();
+                dataObject.SetText(text);
+                Clipboard.SetDataObject(dataObject, false);
+            }
+            catch (Exception) { }
+
+
+            var typeExcel = Type.GetTypeFromProgID("Excel.Application");
+            dynamic oExcel = Activator.CreateInstance(typeExcel); // need to add ref to Microsoft.CSharp
+            oExcel.Visible = true;
+            dynamic workbook = oExcel.Workbooks.Add();
+            workbook.ActiveSheet.Paste();
+            // xlSrcRange=1
+//            workbook.ActiveSheet.ListObjects.Add(1,Range)
+
+        }
+
         [TestMethod]
         public void TestPCMeasures()
         {
@@ -74,6 +102,7 @@ namespace Tests
                 ctr.RatioThresholdSensitivity = RatioThresholdSensitivity;
             }
             var measurementHolder = new MeasurementHolder(nameof(DoStressSimulation), lstPCs, SampleType.SampleTypeIteration, this);
+
             var lstBigStuff = new List<byte[]>();
             LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");
             for (int i = 0; i < nIter; i++)
@@ -82,12 +111,12 @@ namespace Tests
                 lstBigStuff.Add(new byte[nArraySize]);
                 //                lstBigStuff.Add(new int[10000000]);
                 var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
-                //LogMessage(res);
+                LogMessage(res);
             }
             var filename = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
             LogMessage($"Results file name = {filename}");
 
-            return measurementHolder.CalculateRegression();
+            return measurementHolder.CalculateRegression(showGraph:true);
         }
     }
 }

@@ -531,7 +531,10 @@
             DoGC(); //must be on main thread
             await Task.Delay(TimeSpan.FromSeconds(1));
 
-            await measurementHolderInteractiveUser.CreateDumpAsync(System.Diagnostics.Process.GetCurrentProcess().Id, MemoryAnalysisType.StartClrObjectExplorer, string.Empty);
+            await measurementHolderInteractiveUser.CreateDumpAsync(
+                System.Diagnostics.Process.GetCurrentProcess().Id, 
+                MemoryAnalysisType.StartClrObjectExplorer, 
+                desc: string.Empty);
 
             btnClrObjExplorer.IsEnabled = true;
 
