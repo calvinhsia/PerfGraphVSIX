@@ -42,7 +42,7 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             Assert.AreEqual("did main 100 ", res);
         }
 
@@ -100,7 +100,7 @@ namespace DoesntMatter
                 "TBase.cs");
             File.WriteAllText(tempFile2, strCodeToExecuteBaseClass);
 
-            var res = codeExecutor.CompileAndExecute(null, tempFile1, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile1, CancellationToken.None);
             LogMessage($"Got output {res}");
             Assert.AreEqual("did main In Base Method NumIter= 97", res);
         }
@@ -144,7 +144,7 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             if (res is Task<string> task)
             {
                 task.Wait();
@@ -213,7 +213,7 @@ namespace DoesntMatter
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             LogMessage(res as string);
             Assert.AreEqual("did main 100 did delay", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
@@ -257,14 +257,13 @@ namespace MyCustomCode
         int NumberOfIterations = 7;
         int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         int nTimes = 0;
-        IStressUtil StressUtil;
         TaskCompletionSource<int> _tcs;
         CancellationToken _CancellationToken;
         ILogger logger;
         public MyClass(object[] args)
         {
             logger = args[1] as ILogger;
-            _CancellationToken = (CancellationToken)args[3]; // value type
+            _CancellationToken = (CancellationToken)args[2]; // value type
         }
 
         void foo()
@@ -282,9 +281,15 @@ namespace MyCustomCode
             logger.LogMessage(""Logger Asm =  "" + logger.GetType().Assembly.Location);
             logger.LogMessage(""This   Asm =  "" + this.GetType().Assembly.Location); // null for in memory
             logger.LogMessage(""Starting iterations "" + NumberOfIterations.ToString());
+            var measurementHolder = new MeasurementHolder(
+                ""testTODOTODO"",
+                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                SampleType.SampleTypeIteration,
+                logger: logger);
+
+
             for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
             {
-                DoSampleAsync().Wait();
                 logger.LogMessage(""Iter {0}   Start {1} left to do"", i, NumberOfIterations - i);
                 if (_CancellationToken.IsCancellationRequested)
                 {
@@ -300,16 +305,8 @@ namespace MyCustomCode
             {
                 logger.LogMessage(""Done all {0} iterations"", NumberOfIterations);
             }
-            DoSampleAsync().Wait();
         }
 
-        async Task DoSampleAsync()
-        {
-            if (StressUtil != null)
-            {
-                await StressUtil.DoSampleAsync("""");
-            }
-        }
 
         public static string DoMain(object[] args)
         {
@@ -325,7 +322,7 @@ namespace MyCustomCode
 
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             LogMessage(res as string);
             Assert.AreEqual("did main", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Iter 6   Start 1 left to do")).FirstOrDefault());
@@ -393,8 +390,8 @@ namespace MyCustomCode
         {
             _tcs = new TaskCompletionSource<int>();
             logger = args[1] as ILogger;
-            _CancellationToken = (CancellationToken)args[3]; // value type
-            g_dte= args[4] as EnvDTE.DTE;
+            _CancellationToken = (CancellationToken)args[2]; // value type
+            g_dte= args[3] as EnvDTE.DTE;
         }
         private async Task DoSomeWorkAsync()
         {
@@ -465,6 +462,12 @@ namespace MyCustomCode
 
                 }
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
+                var measurementHolder = new MeasurementHolder(
+                    ""testTODOTODO"",
+                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                    SampleType.SampleTypeIteration,
+                    logger: logger);
+
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
                 {
@@ -551,7 +554,7 @@ namespace MyCustomCode
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, sampleVSCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             if (res is string resString)
             {
                 Assert.Fail(resString);
@@ -600,10 +603,10 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
-            res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());

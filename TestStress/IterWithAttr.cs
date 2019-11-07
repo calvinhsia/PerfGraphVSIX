@@ -25,6 +25,7 @@ namespace TestStress
             var measurementHolder = new MeasurementHolder(
                 test.TestContext.TestName,
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                SampleType.SampleTypeIteration,
                 logger: test);
             test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
 
@@ -45,8 +46,11 @@ namespace TestStress
             if (measurementHolder.CalculateRegression())
             {
                 test.LogMessage("Regression!!!!!");
+                await measurementHolder.CreateDumpAsync(
+                    test._targetProc.Id,
+                    desc: test.TestContext.TestName + "_" + attr.NumIterations.ToString(),
+                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
             }
-            await AllIterationsFinishedAsync(test);
         }
     }
 
@@ -69,7 +73,7 @@ namespace TestStress
         }
 
         [TestMethod]
-        [MemSpectAttribute(NumIterations = 13)]
+        [MemSpectAttribute(NumIterations = 3)]
         public async Task StressTestWithAttribute()
         {
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";

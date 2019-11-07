@@ -29,7 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
 
-    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, IStressUtil
+    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger
     {
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
@@ -160,7 +160,7 @@
 
                 btnDoSample.Click += (o, e) =>
                   {
-                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync(measurementHolderInteractiveUser, SampleType.SampleTypeNormal, "Manual"));
+                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync(measurementHolderInteractiveUser, "Manual"));
                   };
 
 
@@ -265,7 +265,11 @@
             }
             lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
             {
-                measurementHolderInteractiveUser = new MeasurementHolder(string.Empty, PerfCounterData._lstPerfCounterDefinitionsForVSIX, logger: this);
+                measurementHolderInteractiveUser = new MeasurementHolder(
+                    TestName: string.Empty,
+                    lstPCData: PerfCounterData._lstPerfCounterDefinitionsForVSIX, 
+                    sampleType: SampleType.SampleTypeNormal,
+                    logger: this);
                 _dataPoints.Clear();
                 _bufferIndex = 0;
             }
@@ -290,7 +294,7 @@
                 {
                     while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
-                        await DoSampleAsync(measurementHolderInteractiveUser, SampleType.SampleTypeNormal);
+                        await DoSampleAsync(measurementHolderInteractiveUser);
                         await Task.Delay(TimeSpan.FromMilliseconds(UpdateInterval), _ctsPcounter.Token);
                     }
                 }
@@ -304,7 +308,7 @@
 
         //used for interactive user, not for iteration tests
         MeasurementHolder measurementHolderInteractiveUser;
-        public async Task DoSampleAsync(MeasurementHolder measurementHolder, SampleType sampleType, string descriptionOverride = "")
+        public async Task DoSampleAsync(MeasurementHolder measurementHolder, string descriptionOverride = "")
         {
             if (measurementHolder == null)
             {
@@ -317,7 +321,7 @@
 
                 lock (measurementHolder.lstPerfCounterData)
                 {
-                    res = measurementHolder.TakeMeasurement(descriptionOverride, sampleType);
+                    res = measurementHolder.TakeMeasurement(descriptionOverride);
                     lstPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
                 }
                 try
@@ -523,41 +527,16 @@
 #pragma warning restore VSTHRD100 // Avoid async void methods
         {
             btnClrObjExplorer.IsEnabled = false;
-            await CreateDumpAsync(System.Diagnostics.Process.GetCurrentProcess().Id, MemoryAnalysisType.StartClrObjectExplorer, string.Empty);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            DoGC(); //must be on main thread
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            await measurementHolderInteractiveUser.CreateDumpAsync(System.Diagnostics.Process.GetCurrentProcess().Id, MemoryAnalysisType.StartClrObjectExplorer, string.Empty);
 
             btnClrObjExplorer.IsEnabled = true;
 
             //var x = new DumpAnalyzer(this);
             //x.StartClrObjectExplorer(pathDumpFile);
-        }
-
-        public async Task CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
-        {
-            try
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                DoGC(); //must be on main thread
-                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: string.IsNullOrEmpty(desc) ? "devenv" : desc);
-                LogMessage($"start clrobjexplorer {pathDumpFile}");
-                var arglist = new List<string>()
-                    {
-                        "-p", pid.ToString(),
-                        "-f",  "\"" + pathDumpFile + "\""
-                    };
-                if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjectExplorer))
-                {
-                    arglist.Add("-c");
-                }
-                var odumper = new DumperViewerMain(arglist.ToArray())
-                {
-                    _logger = this
-                };
-                await odumper.DoitAsync();
-            }
-            catch (Exception ex)
-            {
-                LogMessage(ex.ToString());
-            }
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods
@@ -590,7 +569,7 @@
                         _codeExecutor = new CodeExecutor(this);
                     }
                     var sw = Stopwatch.StartNew();
-                    var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
+                    var res = _codeExecutor.CompileAndExecute(CodeFileToRun, _ctsExecuteCode.Token);
                     if (res is Task task)
                     {
                         //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");

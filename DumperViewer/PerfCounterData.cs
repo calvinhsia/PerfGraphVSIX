@@ -6,6 +6,23 @@ using System.Runtime.InteropServices;
 
 namespace PerfGraphVSIX
 {
+    [Flags] // user can select multiple items. (beware scaling: pct => 0-100, Bytes => 0-4G)
+    public enum PerfCounterType
+    {
+        None,
+        ProcessorPctTime = 0x1,
+        ProcessorPrivateBytes = 0x2,
+        ProcessorVirtualBytes = 0x4,
+        ProcessorWorkingSet = 0x8,
+        GCPctTime = 0x10,
+        GCBytesInAllHeaps = 0x20,
+        GCAllocatedBytesPerSec = 0x40,
+        PageFaultsPerSec = 0x80,
+        KernelHandleCount = 0x100, // same as Win32api GetProcessHandleCount
+        GDIHandleCount = 0x200, //GetGuiResources
+        UserHandleCount = 0x400, //GetGuiResources
+        ThreadCount = 0x800,
+    }
 
     public class PerfCounterData
     {

@@ -138,7 +138,7 @@ namespace TestStress
                 test._vsDTE?.ExecuteCommand("Tools.ForceGC");
                 await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
 
-                var res= measurementHolder.TakeMeasurement(desc, SampleType.SampleTypeIteration);
+                var res= measurementHolder.TakeMeasurement(desc);
                 test.LogMessage(res);
             }
             catch (Exception ex)
@@ -147,39 +147,39 @@ namespace TestStress
             }
         }
 
-        public static async Task AllIterationsFinishedAsync(BaseStressTestClass test, bool createDump = false, bool startClrObjExplorer = false)
-        {
-            try
-            {
-                test.LogMessage($"{nameof(AllIterationsFinishedAsync)}");
-                if (createDump)
-                {
-                    var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{test.TestContext.TestName}");
-                    await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
+        //public static async Task AllIterationsFinishedAsync(BaseStressTestClass test, bool createDump = false, bool startClrObjExplorer = false)
+        //{
+        //    try
+        //    {
+        //        test.LogMessage($"{nameof(AllIterationsFinishedAsync)}");
+        //        if (createDump)
+        //        {
+        //            var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: $"devenv_{test.TestContext.TestName}");
+        //            await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
 
-                    test.LogMessage($"start clrobjexplorer {pathDumpFile}");
-                    var pid = test._targetProc.Id;
-                    var args = new List<string>
-                {
-                    $" -p {pid}"
-                };
-                    args.Add($" -f \"{pathDumpFile}\"");
-                    if (startClrObjExplorer)
-                    {
-                        args.Add($"-c");
-                    }
-                    var odumper = new DumperViewerMain(args.ToArray())
-                    {
-                        _logger = test
-                    };
-                    await odumper.DoitAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                test.LogMessage(ex.ToString());
-            }
-        }
+        //            test.LogMessage($"start clrobjexplorer {pathDumpFile}");
+        //            var pid = test._targetProc.Id;
+        //            var args = new List<string>
+        //        {
+        //            $" -p {pid}"
+        //        };
+        //            args.Add($" -f \"{pathDumpFile}\"");
+        //            if (startClrObjExplorer)
+        //            {
+        //                args.Add($"-c");
+        //            }
+        //            var odumper = new DumperViewerMain(args.ToArray())
+        //            {
+        //                _logger = test
+        //            };
+        //            await odumper.DoitAsync();
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        test.LogMessage(ex.ToString());
+        //    }
+        //}
 
         /// <summary>
         /// Do it all: tests need only add a single line to TestInitialize to turn a normal test into a stress test
@@ -195,6 +195,7 @@ namespace TestStress
             var measurementHolder = new MeasurementHolder(
                 test.TestContext.TestName,
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                SampleType.SampleTypeIteration,
                 logger: test);
             test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
 
@@ -209,8 +210,12 @@ namespace TestStress
             if (measurementHolder.CalculateRegression())
             {
                 test.LogMessage("Regression!!!!!");
+                await measurementHolder.CreateDumpAsync(
+                    test._targetProc.Id,
+                    desc: test.TestContext.TestName + "_" + NumIterations.ToString(),
+                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+
             }
-            await BaseStressTestClass.AllIterationsFinishedAsync(test);
 
         }
 

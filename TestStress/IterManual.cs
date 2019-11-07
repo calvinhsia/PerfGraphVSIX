@@ -43,7 +43,11 @@ namespace TestStress
                     //                await TakeMeasurementAsync(this, -1);
                     await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
-                    var measurementHolder = new MeasurementHolder(nameof(StressIterateManually), PerfCounterData._lstPerfCounterDefinitionsForStressTest, logger: this);
+                    var measurementHolder = new MeasurementHolder(
+                        nameof(StressIterateManually), 
+                        PerfCounterData._lstPerfCounterDefinitionsForStressTest, 
+                        SampleType.SampleTypeIteration,
+                        logger: this);
 
 
                     for (int iteration = 0; iteration < NumIterations; iteration++)
@@ -62,7 +66,6 @@ namespace TestStress
 
                 }
 
-                await AllIterationsFinishedAsync(this);
             });
 
         }

@@ -29,7 +29,9 @@ namespace Tests
                 }
             }
             var rmsError = MeasurementHolder.FindLinearLeastSquaresFit(lstData, out var m, out var b);
-            Assert.Fail($"RmsErr={rmsError} m={m} b={b}");
+            var pctRms = (int)(100 * rmsError / m);
+            LogMessage($"RmsErr={rmsError,16:n3} RmsPctErr={pctRms,4} m={m,18:n3} b={b,18:n3}");
+            //Assert.Fail($"RmsErr={rmsError} m={m} b={b}");
         }
 
         [TestMethod]
@@ -71,7 +73,7 @@ namespace Tests
                 ctr.IsEnabledForMeasurement = true;
                 ctr.RatioThresholdSensitivity = RatioThresholdSensitivity;
             }
-            var measurementHolder = new MeasurementHolder(nameof(DoStressSimulation), lstPCs, this);
+            var measurementHolder = new MeasurementHolder(nameof(DoStressSimulation), lstPCs, SampleType.SampleTypeIteration, this);
             var lstBigStuff = new List<byte[]>();
             LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");
             for (int i = 0; i < nIter; i++)
@@ -79,7 +81,7 @@ namespace Tests
 
                 lstBigStuff.Add(new byte[nArraySize]);
                 //                lstBigStuff.Add(new int[10000000]);
-                var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}", SampleType.SampleTypeIteration);
+                var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
                 //LogMessage(res);
             }
             var filename = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);

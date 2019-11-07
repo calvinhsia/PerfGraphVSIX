@@ -51,7 +51,6 @@ namespace MyCodeToExecute
     {
         public string FileToExecute;
         public ILogger logger;
-        public IStressUtil StressUtil;
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
 
@@ -70,9 +69,8 @@ namespace MyCodeToExecute
         {
             FileToExecute = args[0] as string;
             logger = args[1] as ILogger;
-            StressUtil = args[2] as IStressUtil;
-            _CancellationTokenExecuteCode = (CancellationToken)args[3]; // value type
-            g_dte = args[4] as EnvDTE.DTE;
+            _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
+            g_dte = args[3] as EnvDTE.DTE;
 
             logger.LogMessage("Registering events ");
 
@@ -131,7 +129,8 @@ namespace MyCodeToExecute
             {
                 var measurementHolder = new MeasurementHolder(
                     Path.GetFileNameWithoutExtension(FileToExecute),
-                    PerfCounterData._lstPerfCounterDefinitionsForStressTest, 
+                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                    SampleType.SampleTypeIteration,
                     logger);
 
                 for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
@@ -139,7 +138,8 @@ namespace MyCodeToExecute
                     await DoIterationBodyAsync();
                     await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
                     var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
-                    await StressUtil.DoSampleAsync(measurementHolder, SampleType.SampleTypeIteration, descriptionOverride: desc);
+                    var res = measurementHolder.TakeMeasurement(desc);
+                    logger.LogMessage(res);
                     if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         break;
@@ -158,13 +158,13 @@ namespace MyCodeToExecute
                 logger.LogMessage("Measurement Results " + filenameResults);
                 if (measurementHolder.CalculateRegression())
                 {
-                    logger.LogMessage("Regression!!!!!!!");
+                    logger.LogMessage("Regression Detected!!!!!!!");
+                    await measurementHolder.CreateDumpAsync(
+                        System.Diagnostics.Process.GetCurrentProcess().Id,
+                        desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + numIterations.ToString(),
+                        memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
                 }
 
-                await StressUtil.CreateDumpAsync(
-                    System.Diagnostics.Process.GetCurrentProcess().Id,
-                    desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + numIterations.ToString(),
-                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
             }
             catch (OperationCanceledException)
             {

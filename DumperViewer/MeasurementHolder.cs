@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DumperViewer;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +7,44 @@ using System.Threading.Tasks;
 
 namespace PerfGraphVSIX
 {
+    public enum SampleType
+    {
+        /// <summary>
+        /// sample is taken, no accumulation. If accumulation was in progress, terminate the accumulation (so doesn't show as leak)
+        /// </summary>
+        SampleTypeNormal,
+        /// <summary>
+        /// Sample of an iterated test. The iterated samples are accumulated so we can calculate statistics/regression analysis
+        /// this will show as small leak (sizeof measurement * numiterations)
+        /// The number of these samples is the iteration count so far.
+        /// </summary>
+        SampleTypeIteration,
+    }
+
+    /// <summary>
+    /// When a stress test needs to create a dump, these flags indicate what do do
+    /// </summary>
+    [Flags]
+    public enum MemoryAnalysisType
+    {
+        /// <summary>
+        /// after creating a dump, the ClrObjectExplorer WPF app is started with the dump loaded for manual analysis
+        /// </summary>
+        StartClrObjectExplorer = 0x2,
+        /// <summary>
+        /// the dump is analyzed and type counts are stored in a file
+        /// </summary>
+        OutputTypeCounts = 0x4,
+        /// <summary>
+        /// the dump is analyzed and type counts are compared to prior stored results
+        /// </summary>
+        CompareTypeCounts = 0x8,
+        /// <summary>
+        /// the PerfCounter measurements are output to a CSV file easily digested by Excel for graphing
+        /// </summary>
+        OutputMeasurements = 0x10,
+    }
+
     public class MeasurementHolder
     {
         public string TestName;
@@ -15,15 +54,16 @@ namespace PerfGraphVSIX
         /// </summary>
         public readonly List<PerfCounterData> lstPerfCounterData;
         readonly ILogger logger;
-
+        readonly SampleType sampleType;
         internal Dictionary<string, List<uint>> measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
         int nSamplesTaken;
 
 
-        public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, ILogger logger)
+        public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger)
         {
             this.TestName = TestName;
             this.lstPerfCounterData = lstPCData;
+            this.sampleType = sampleType;
             this.logger = logger;
             foreach (var entry in lstPCData)
             {
@@ -31,7 +71,7 @@ namespace PerfGraphVSIX
             }
         }
 
-        public string TakeMeasurement(string desc, SampleType sampleType)
+        public string TakeMeasurement(string desc)
         {
             if (string.IsNullOrEmpty(desc))
             {
@@ -50,14 +90,14 @@ namespace PerfGraphVSIX
                 if (lst.Count > 0)
                 {
                     priorValue = lst[0];
-                    if (sampleType != SampleType.SampleTypeIteration)
+                    if (this.sampleType != SampleType.SampleTypeIteration)
                     {
                         lst.RemoveAt(0); // we're not iterating, don't accumulate more than 1 (1 for previous)
                     }
                 }
                 uint pcValue = (uint)pcValueAsFloat;
                 int delta = (int)pcValue - (int)priorValue;
-                sBuilder.Append($"{ctr.PerfCounterName}={pcValue:n0}  Δ = {delta:n0} ");
+                sBuilder.Append($"{ctr.PerfCounterName}={pcValue,13:n0}  Δ = {delta,13:n0} ");
                 lst.Add(pcValue);
             }
             nSamplesTaken++;
@@ -96,7 +136,7 @@ namespace PerfGraphVSIX
                     isRegression = true;
                     AnyCounterRegresssed = true;
                 }
-                var pctRms = (int)(100 * rmsError/m);
+                var pctRms = m== 0 ? 0 : (int)(100 * rmsError/m);
                 logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={pctRms,4} m={m,18:n3} b={b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
             }
             return AnyCounterRegresssed;
@@ -130,6 +170,32 @@ namespace PerfGraphVSIX
             }
 
             return BrowseList.WriteOutputToTempFile(sb.ToString(), fExt: "csv", fStartIt: StartExcel);
+        }
+        public async Task CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
+        {
+            try
+            {
+                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: string.IsNullOrEmpty(desc) ? "devenv" : desc);
+                logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
+                var arglist = new List<string>()
+                    {
+                        "-p", pid.ToString(),
+                        "-f",  "\"" + pathDumpFile + "\""
+                    };
+                if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjectExplorer))
+                {
+                    arglist.Add("-c");
+                }
+                var odumper = new DumperViewerMain(arglist.ToArray())
+                {
+                    _logger = logger
+                };
+                await odumper.DoitAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogMessage(ex.ToString());
+            }
         }
 
         public override string ToString()
