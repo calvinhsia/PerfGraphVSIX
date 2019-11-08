@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using DumperViewer;
 using PerfGraphVSIX;
+using System.Linq;
 
 namespace TestStress
 {
@@ -44,8 +45,8 @@ namespace TestStress
                     await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
                     var measurementHolder = new MeasurementHolder(
-                        nameof(StressIterateManually), 
-                        PerfCounterData._lstPerfCounterDefinitionsForStressTest, 
+                        nameof(StressIterateManually),
+                        PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                         SampleType.SampleTypeIteration,
                         logger: this);
 
@@ -56,9 +57,13 @@ namespace TestStress
                         await TakeMeasurementAsync(this, measurementHolder, $"Start of Iter {iteration + 1}/{NumIterations}");
                     }
                     measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
-                    if (await measurementHolder.CalculateRegressionAsync(showGraph:true))
+                    var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+                    if (lstRegResults.Count > 0)
                     {
-                        LogMessage("Regression!!!!!");
+                        foreach (var regres in lstRegResults)
+                        {
+                            LogMessage($"Regression!!!!! {regres}");
+                        }
                     }
                 }
                 finally

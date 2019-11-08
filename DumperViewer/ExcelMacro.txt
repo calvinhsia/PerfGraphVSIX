@@ -18,9 +18,9 @@
     Selection.NumberFormat = "#,##0"
     Columns("D:D").Select
     ActiveSheet.Shapes.AddChart2(240, xlXYScatter).Select
-    ActiveChart.SetSourceData Source:=Range("tmpF018!$D:$D")
-    ActiveSheet.Shapes("Chart 1").IncrementLeft 219.75
-    ActiveSheet.Shapes("Chart 1").IncrementTop -33.3749606299
-    Windows("tmpD185.csv").Activate
-    Windows("tmpF018.csv").Activate
+    'ActiveChart.SetSourceData Source:=Range("tmpF018!$D:$D")
+    'ActiveSheet.Shapes("Chart 1").IncrementLeft 219.75
+    'ActiveSheet.Shapes("Chart 1").IncrementTop -33.3749606299
+    'Windows("tmpD185.csv").Activate
+    'Windows("tmpF018.csv").Activate
 End Sub

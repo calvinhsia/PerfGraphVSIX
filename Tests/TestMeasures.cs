@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using PerfGraphVSIX;
 using System.Windows.Forms;
 using System.IO;
+using System.Threading;
+using System.Runtime.InteropServices;
+using HANDLE = System.IntPtr;
 
 namespace Tests
 {
@@ -35,8 +38,26 @@ namespace Tests
             dynamic workbook = oExcel.Workbooks.Add();
             workbook.ActiveSheet.Paste();
             // xlSrcRange=1
-//            workbook.ActiveSheet.ListObjects.Add(1,Range)
+            //            workbook.ActiveSheet.ListObjects.Add(1,Range)
 
+        }
+
+
+        [TestMethod]
+//        [Ignore]
+        public async Task TestMeasureRegressionVerifyGraph()
+        {
+            await Task.Yield();
+            var x = new MeasurementHolder(nameof(TestMeasureRegressionVerifyGraph), PerfCounterData._lstPerfCounterDefinitionsForStressTest, SampleType.SampleTypeIteration, this);
+            for (int iter = 0; iter < 10; iter++)
+            {
+                foreach (var ctr in x.lstPerfCounterData)
+                {
+//                    if (iter == 5 && ctr.PerfCounterName == PerfCounterType.)
+                    x.measurements[ctr.PerfCounterName].Add(100 + (uint)iter);
+                }
+            }
+            var res = await x.CalculateRegressionAsync(showGraph: true);
         }
 
         [TestMethod]
@@ -93,7 +114,47 @@ namespace Tests
             Assert.IsTrue(res, $"Expected Regression");
         }
 
-        private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity)
+
+        [TestMethod]
+        public async Task TestPCMeasurementHolderLeakHandle()
+        {
+            //            var cts = new CancellationTokenSource();
+            var lstHandles = new List<HANDLE>();
+            var res = await DoStressSimulation(nIter: 10, nArraySize: 0, RatioThresholdSensitivity: 1, () =>
+            {
+                // see https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3803/CancellationToken-and-CancellationTokenSource-Leaks
+                for (int i = 0; i < 1; i++)
+                {
+                    //var mre = new ManualResetEvent(initialState: false);// leaks mem and handles. Not a CTS leak (used internally by CTS)
+                    var myevent = CreateEvent(IntPtr.Zero, false, false, $"aa{i}"); // leaks kernel handles, this is used internally in CTS
+                    lstHandles.Add(myevent);
+                    //CloseHandle(myevent); // must close else leaks kernel handles
+
+
+                    //var newcts = new CancellationTokenSource();
+                    //var handle = newcts.Token.WaitHandle; // this internally lazily instantiates a ManualResetEvent
+                    //newcts.Dispose(); // must dispose, else leaks mem and handles. CTS Leak Type No. 4
+
+                    //var tk = cts.Token;
+                    //var cancellationTokenRegistration = tk.Register(() =>
+                    //{
+
+                    //});
+                    //cancellationTokenRegistration.Dispose(); // must dispose else leaks. CTS Leak Type No. 2
+                }
+            });
+            foreach (HANDLE h in lstHandles)
+            {
+                CloseHandle(h);
+            }
+            Assert.IsTrue(res, $"Expected Regression");
+        }
+
+
+        /// <summary>
+        /// return true if regression found
+        /// </summary>
+        private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity, Action action = null)
         {
             var lstPCs = new List<PerfCounterData>(PerfCounterData._lstPerfCounterDefinitionsForStressTest);
             foreach (var ctr in lstPCs)
@@ -107,16 +168,29 @@ namespace Tests
             LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");
             for (int i = 0; i < nIter; i++)
             {
-
-                lstBigStuff.Add(new byte[nArraySize]);
+                if (action != null)
+                {
+                    action();
+                }
+                else
+                {
+                    lstBigStuff.Add(new byte[nArraySize]);
+                }
                 //                lstBigStuff.Add(new int[10000000]);
                 var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
                 LogMessage(res);
             }
             var filename = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
             LogMessage($"Results file name = {filename}");
-
-            return await measurementHolder.CalculateRegressionAsync(showGraph:true);
+            var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+            return lstRegResults.Count > 0;
         }
+
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto)]
+        public static extern HANDLE CreateEvent(HANDLE lpEventAttributes, [In, MarshalAs(UnmanagedType.Bool)] bool bManualReset, [In, MarshalAs(UnmanagedType.Bool)] bool bIntialState, [In, MarshalAs(UnmanagedType.BStr)] string lpName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool CloseHandle(IntPtr hHandle);
+
     }
 }

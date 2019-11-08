@@ -32,6 +32,7 @@
 
 
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -158,15 +159,19 @@ namespace MyCodeToExecute
                 // cleanup code here: compare measurements, take a dump, examine for types, etc.
                 var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel:false);
                 logger.LogMessage("Measurement Results " + filenameResults);
-                if (await measurementHolder.CalculateRegressionAsync(showGraph: false))
+                var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+
+                if (lstRegResults.Count > 0)
                 {
-                    logger.LogMessage("Regression Detected!!!!!!!");
+                    foreach (var regres in lstRegResults)
+                    {
+                        test.LogMessage($"Regression!!!!! {regres}");
+                    }
                     await measurementHolder.CreateDumpAsync(
                         System.Diagnostics.Process.GetCurrentProcess().Id,
                         desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + numIterations.ToString(),
                         memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
                 }
-
             }
             catch (OperationCanceledException)
             {

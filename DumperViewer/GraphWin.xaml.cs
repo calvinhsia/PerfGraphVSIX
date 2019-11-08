@@ -33,7 +33,7 @@ namespace DumperViewer
         public ObservableCollection<string> LstCounters { get; set; } = new ObservableCollection<string>();
         public bool ShowTrendLines { get; set; } = true;
         string _txtInfo;
-        public string TxtInfo { get { return _txtInfo; } set { _txtInfo = value;RaisePropChanged(); } }
+        public string TxtInfo { get { return _txtInfo; } set { _txtInfo = value; RaisePropChanged(); } }
 
         readonly Chart _chart = new Chart();
         List<RegressionAnalysis> lstRegressionAnalysis;
@@ -43,7 +43,8 @@ namespace DumperViewer
             InitializeComponent();
             this.DataContext = this;
             this.measurementHolder = measurementHolder;
-            this.Title= this.measurementHolder.TestName;
+            this.Title = this.measurementHolder.TestName;
+            this.WindowState = WindowState.Maximized;
             this.Loaded += GraphWin_Loaded;
         }
 
@@ -61,6 +62,7 @@ namespace DumperViewer
             chartArea.AxisY.LabelStyle.Format = "{0:n0}";
             chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
             _chart.ChartAreas.Add(chartArea);
+            chartArea.AxisY.IsStartedFromZero = false;
 
             var lstCtrsToInclude = new List<string>();
             if (this.lbCounters.SelectedItems.Count == 0)
@@ -112,7 +114,7 @@ namespace DumperViewer
                     _chart.Series.Add(seriesTrendLine);
                     var dp0 = new DataPoint(0, item.b);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.m + item.b);
+                    var dp1 = new DataPoint(item.lstData.Count - 1, (item.lstData.Count - 1) * item.m + item.b);
                     seriesTrendLine.Points.Add(dp1);
                 }
             }

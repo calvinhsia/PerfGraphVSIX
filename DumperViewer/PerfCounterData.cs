@@ -36,9 +36,9 @@ namespace PerfGraphVSIX
             {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") { thresholdRegression=1e6f}},
             {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForGraph=true,thresholdRegression=1e6f} },
             {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") { thresholdRegression=1}},
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") { thresholdRegression=1}},
-            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) { thresholdRegression=1 } },
-            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) { thresholdRegression=1}},
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") { thresholdRegression=.5f}},
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) { thresholdRegression=.5f } },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) { thresholdRegression=.5f}},
         };
         /// <summary>
         /// these are used to provider interactive user counters from which to choose in VSIX to drive graph

@@ -1,6 +1,7 @@
 ﻿using DumperViewer;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -140,9 +141,8 @@ namespace PerfGraphVSIX
             return res;
         }
 
-        public async Task<bool> CalculateRegressionAsync(bool showGraph)
+        public async Task<List<RegressionAnalysis>> CalculateRegressionAsync(bool showGraph)
         {
-            var AnyCounterRegresssed = false;
             var lstResults = new List<RegressionAnalysis>();
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
@@ -156,32 +156,44 @@ namespace PerfGraphVSIX
                     r.lstData.Add(new PointF() { X = ndx++, Y = itm });
                 }
                 r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.m, out r.b);
-                var isRegression = false;
-                if (r.m > ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
+                if (r.m >= ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
                 {
-                    isRegression = true;
-                    AnyCounterRegresssed = true;
+                    r.IsRegression = true;
                 }
-                r.IsRegression = isRegression;
-                var pctRms = r.m == 0 ? 0 : (int)(100 * r.rmsError / r.m);
                 logger.LogMessage($"{r}");
                 lstResults.Add(r);
             }
             if (showGraph)
             {
                 var tcs = new TaskCompletionSource<int>();
+                var timeoutEnabled = Process.GetCurrentProcess().ProcessName.IndexOf("testhost", StringComparison.InvariantCultureIgnoreCase) > 0;
+                logger.LogMessage($"Showing graph  timeoutenabled ={timeoutEnabled}");
                 var thr = new Thread((o) =>
                 {
-                    var graphWin = new GraphWin(this);
-                    graphWin.AddGraph(lstResults);
-                    graphWin?.ShowDialog();
+                    try
+                    {
+                        var graphWin = new GraphWin(this);
+                        graphWin.AddGraph(lstResults);
+                        if (!timeoutEnabled)
+                        {
+//                            graphWin.WindowState = WindowState.Maximized;
+                        }
+                        graphWin.ShowDialog();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogMessage($"graph {ex.ToString()}");
+                    }
                     tcs.SetResult(0);
                 });
                 thr.SetApartmentState(ApartmentState.STA);
                 thr.Start();
-                await tcs.Task;
+                if (await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30))) != tcs.Task)
+                {
+                    logger.LogMessage($"Timeout showing graph");
+                }
             }
-            return AnyCounterRegresssed;
+            return lstResults;
         }
 
         public string DumpOutMeasurementsToTempFile(bool StartExcel)

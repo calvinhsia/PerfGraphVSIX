@@ -207,16 +207,18 @@ namespace TestStress
             }
             var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
             test.LogMessage($"Measurement Results {filenameResults}");
-            if (await measurementHolder.CalculateRegressionAsync(showGraph: true))
+            var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+            if (lstRegResults.Count > 0)
             {
-                test.LogMessage("Regression!!!!!");
+                foreach (var regres in lstRegResults)
+                {
+                    test.LogMessage($"Regression!!!!! {regres}");
+                }
                 await measurementHolder.CreateDumpAsync(
                     test._targetProc.Id,
                     desc: test.TestContext.TestName + "_" + NumIterations.ToString(),
                     memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-
             }
-
         }
 
         public List<string> _lstLoggedStrings = new List<string>();
