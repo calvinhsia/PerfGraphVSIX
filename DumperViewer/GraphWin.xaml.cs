@@ -32,7 +32,7 @@ namespace DumperViewer
 
         public ObservableCollection<string> LstCounters { get; set; } = new ObservableCollection<string>();
 
-        Chart _chart = new Chart();
+        readonly Chart _chart = new Chart();
         public GraphWin()
         {
             InitializeComponent();
@@ -51,18 +51,21 @@ namespace DumperViewer
             this.wfhost.Child = _chart;
         }
 
-        internal void AddGraph(PerfCounterData ctr, RegressionAnalysis r)
+        internal void AddGraph(List<RegressionAnalysis> lst)
         {
-            LstCounters.Add(ctr.PerfCounterName);
-            var series = new Series
+            foreach (var item in lst)
             {
-                ChartType = SeriesChartType.Line
-            };
-            _chart.Series.Add(series);
-            for (int i = 0; i < r.lstData.Count; i++)
-            {
-                var dp = new DataPoint(i, r.lstData[i].Y);
-                series.Points.Add(dp);
+                LstCounters.Add(item.perfCounterData.PerfCounterName);
+                var series = new Series
+                {
+                    ChartType = SeriesChartType.Line
+                };
+                _chart.Series.Add(series);
+                for (int i = 0; i < item.lstData.Count; i++)
+                {
+                    var dp = new DataPoint(i, item.lstData[i].Y);
+                    series.Points.Add(dp);
+                }
             }
             _chart.DataBind();
         }

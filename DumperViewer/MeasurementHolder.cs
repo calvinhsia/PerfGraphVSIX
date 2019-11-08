@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
@@ -49,6 +50,7 @@ namespace PerfGraphVSIX
     }
     public class RegressionAnalysis
     {
+        public PerfCounterData perfCounterData;
         public List<PointF> lstData = new List<PointF>();
         public double rmsError;
         public double m;
@@ -131,15 +133,14 @@ namespace PerfGraphVSIX
 
         public bool CalculateRegression(bool showGraph)
         {
-            GraphWin graphWin = null;
-            if (showGraph)
-            {
-                graphWin = new GraphWin();
-            }
             var AnyCounterRegresssed = false;
+            var lstResults = new List<RegressionAnalysis>();
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
-                var r = new RegressionAnalysis();
+                var r = new RegressionAnalysis()
+                {
+                    perfCounterData = ctr
+                };
                 int ndx = 0;
                 foreach (var itm in measurements[ctr.PerfCounterName])
                 {
@@ -154,11 +155,22 @@ namespace PerfGraphVSIX
                 }
                 var pctRms = r.m == 0 ? 0 : (int)(100 * r.rmsError / r.m);
                 logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={r.rmsError,16:n3} RmsPctErr={pctRms,10} m={r.m,18:n3} b={r.b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
-
-                graphWin.AddGraph(ctr, r);
-
+                lstResults.Add(r);
             }
-            graphWin?.ShowDialog();
+            if (showGraph)
+            {
+                var tcs = new TaskCompletionSource<int>();
+                var thr = new Thread((o) =>
+                {
+                    var graphWin = new GraphWin();
+                    graphWin.AddGraph(lstResults);
+                    graphWin?.ShowDialog();
+                    tcs.SetResult(0);
+                });
+                thr.SetApartmentState(ApartmentState.STA);
+                thr.Start();
+                tcs.Task.Wait();
+            }
             return AnyCounterRegresssed;
         }
 
