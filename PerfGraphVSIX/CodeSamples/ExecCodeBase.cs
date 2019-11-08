@@ -59,6 +59,7 @@ namespace MyCodeToExecute
 
         public BuildEvents BuildEvents;
         public DebuggerEvents DebuggerEvents;
+        public IStressUtil StressUtil;
 
         public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
@@ -70,7 +71,8 @@ namespace MyCodeToExecute
             FileToExecute = args[0] as string;
             logger = args[1] as ILogger;
             _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
-            g_dte = args[3] as EnvDTE.DTE;
+            StressUtil = args[3] as IStressUtil;
+            g_dte = args[4] as EnvDTE.DTE;
 
             logger.LogMessage("Registering events ");
 
@@ -138,8 +140,8 @@ namespace MyCodeToExecute
                     await DoIterationBodyAsync();
                     await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
                     var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
-                    var res = measurementHolder.TakeMeasurement(desc);
-                    logger.LogMessage(res);
+                    // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
+                    await StressUtil.DoSampleAsync(measurementHolder, desc);
                     if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         break;
@@ -156,7 +158,7 @@ namespace MyCodeToExecute
                 // cleanup code here: compare measurements, take a dump, examine for types, etc.
                 var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel:false);
                 logger.LogMessage("Measurement Results " + filenameResults);
-                if (measurementHolder.CalculateRegression())
+                if (await measurementHolder.CalculateRegressionAsync(showGraph: false))
                 {
                     logger.LogMessage("Regression Detected!!!!!!!");
                     await measurementHolder.CreateDumpAsync(

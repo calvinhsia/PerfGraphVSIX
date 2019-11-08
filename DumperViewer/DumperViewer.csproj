@@ -71,6 +71,7 @@
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
     <Compile Include="ILogger.cs" />
+    <Compile Include="IStressUtil.cs" />
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />
     <Compile Include="PerfCounterData.cs" />
@@ -113,7 +114,6 @@
     <Content Include="ClrObjExplorer.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Resource Include="ExcelMacro.txt" />
     <Content Include="FastSerialization.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

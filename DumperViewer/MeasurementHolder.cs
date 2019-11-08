@@ -131,7 +131,7 @@ namespace PerfGraphVSIX
             return res;
         }
 
-        public bool CalculateRegression(bool showGraph)
+        public async Task<bool> CalculateRegressionAsync(bool showGraph)
         {
             var AnyCounterRegresssed = false;
             var lstResults = new List<RegressionAnalysis>();
@@ -169,7 +169,7 @@ namespace PerfGraphVSIX
                 });
                 thr.SetApartmentState(ApartmentState.STA);
                 thr.Start();
-                tcs.Task.Wait();
+                await tcs.Task;
             }
             return AnyCounterRegresssed;
         }
@@ -204,38 +204,6 @@ namespace PerfGraphVSIX
             return filename;
         }
 
-        public void GraphIt()
-        {
-            var oWindow = new Window()
-            {
-                Title = "Graph"
-            };
-            var wfhost = new WindowsFormsHost();
-            oWindow.Content = wfhost;
-            var chart = new Chart();
-            wfhost.Child = chart;
-            chart.Series.Clear();
-            chart.ChartAreas.Clear();
-            ChartArea chartArea = new ChartArea("ChartArea");
-            chartArea.AxisY.LabelStyle.Format = "{0:n0}";
-            chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
-            chart.ChartAreas.Add(chartArea);
-            var ctr = lstPerfCounterData.Where(pctr => pctr.perfCounterType == PerfCounterType.GCBytesInAllHeaps).First();
-            var series = new Series
-            {
-                ChartType = SeriesChartType.Line
-            };
-            chart.Series.Add(series);
-            for (int i = 0; i < nSamplesTaken; i++)
-            {
-                var val = measurements[ctr.PerfCounterName][i];
-                var dp = new DataPoint(i, val);
-                series.Points.Add(dp);
-            }
-            chart.DataBind();
-
-            oWindow.ShowDialog();
-        }
         public async Task CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
             try

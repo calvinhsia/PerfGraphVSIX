@@ -38,7 +38,7 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileAndExecute(string pathFileToExecute, CancellationToken token)
+        public object CompileAndExecute(IStressUtil stressUtil, string pathFileToExecute, CancellationToken token)
         {
             object result = string.Empty;
             var lstFilesToCompile = new HashSet<string>();
@@ -226,6 +226,7 @@ namespace PerfGraphVSIX
                             pathFileToExecute,
                             _logger,
                             token,
+                            stressUtil,
                             PerfGraphToolWindowCommand.Instance?.g_dte,
                         };
                         var res = mainMethod.Invoke(null, new object[] { parms });

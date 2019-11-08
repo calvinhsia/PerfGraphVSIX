@@ -56,7 +56,7 @@ namespace TestStress
                         await TakeMeasurementAsync(this, measurementHolder, $"Start of Iter {iteration + 1}/{NumIterations}");
                     }
                     measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
-                    if (measurementHolder.CalculateRegression(showGraph:true))
+                    if (await measurementHolder.CalculateRegressionAsync(showGraph:true))
                     {
                         LogMessage("Regression!!!!!");
                     }

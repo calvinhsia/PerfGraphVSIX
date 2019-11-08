@@ -29,7 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
 
-    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger
+    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, IStressUtil
     {
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
@@ -572,7 +572,7 @@
                         _codeExecutor = new CodeExecutor(this);
                     }
                     var sw = Stopwatch.StartNew();
-                    var res = _codeExecutor.CompileAndExecute(CodeFileToRun, _ctsExecuteCode.Token);
+                    var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
                     if (res is Task task)
                     {
                         //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");

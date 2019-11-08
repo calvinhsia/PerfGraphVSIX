@@ -8,10 +8,15 @@
         Title="GraphWin" Height="450" Width="800">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
+            <ColumnDefinition Width="150"/>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <ListBox Grid.Column="0" Name="lbCounters" ItemsSource="{Binding LstCounters}" SelectionChanged="LbCounters_SelectionChanged"/>
+        <StackPanel Orientation="Vertical">
+            <CheckBox Content="Show Trend Lines" IsChecked="{Binding ShowTrendLines}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" />
+            <ListBox Grid.Column="0" Name="lbCounters" Height="200" ItemsSource="{Binding LstCounters}" SelectionChanged="LbCounters_SelectionChanged" SelectionMode="Extended"/>
+            
+
+        </StackPanel>
         <WindowsFormsHost Grid.Column="1" Name="wfhost"/>
     </Grid>
 </Window>

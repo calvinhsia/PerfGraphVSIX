@@ -31,19 +31,15 @@ namespace DumperViewer
         }
 
         public ObservableCollection<string> LstCounters { get; set; } = new ObservableCollection<string>();
+        public bool ShowTrendLines { get; set; } = true;
 
         readonly Chart _chart = new Chart();
+        List<RegressionAnalysis> lstRegressionAnalysis;
         public GraphWin()
         {
             InitializeComponent();
             this.DataContext = this;
             this.Loaded += GraphWin_Loaded;
-            _chart.Series.Clear();
-            _chart.ChartAreas.Clear();
-            ChartArea chartArea = new ChartArea("ChartArea");
-            chartArea.AxisY.LabelStyle.Format = "{0:n0}";
-            chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
-            _chart.ChartAreas.Add(chartArea);
         }
 
         private void GraphWin_Loaded(object sender, RoutedEventArgs e)
@@ -51,14 +47,46 @@ namespace DumperViewer
             this.wfhost.Child = _chart;
         }
 
-        internal void AddGraph(List<RegressionAnalysis> lst)
+        internal void AddGraph(List<RegressionAnalysis> lstRegressionAnalysis)
         {
-            foreach (var item in lst)
+            this.lstRegressionAnalysis = lstRegressionAnalysis;
+            _chart.Series.Clear();
+            _chart.ChartAreas.Clear();
+            ChartArea chartArea = new ChartArea("ChartArea");
+            chartArea.AxisY.LabelStyle.Format = "{0:n0}";
+            chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
+            _chart.ChartAreas.Add(chartArea);
+
+            var lstCtrsToInclude = new List<string>();
+            if (this.lbCounters.SelectedItems.Count == 0)
             {
-                LstCounters.Add(item.perfCounterData.PerfCounterName);
+                lstCtrsToInclude = null;// include all
+            }
+            else
+            {
+                foreach (var item in this.lbCounters.SelectedItems)
+                {
+                    lstCtrsToInclude.Add(item.ToString());
+                }
+            }
+            foreach (var item in lstRegressionAnalysis)
+            {
+                if (lstCtrsToInclude != null)
+                {
+                    if (!lstCtrsToInclude.Contains(item.perfCounterData.PerfCounterName))
+                    {
+                        continue;
+                    }
+                }
+                if (!LstCounters.Contains(item.perfCounterData.PerfCounterName))
+                {
+                    LstCounters.Add(item.perfCounterData.PerfCounterName);
+                }
                 var series = new Series
                 {
-                    ChartType = SeriesChartType.Line
+                    ChartType = SeriesChartType.Line,
+                    Name = item.perfCounterData.PerfCounterName,
+                    ToolTip = item.perfCounterData.PerfCounterName
                 };
                 _chart.Series.Add(series);
                 for (int i = 0; i < item.lstData.Count; i++)
@@ -66,13 +94,45 @@ namespace DumperViewer
                     var dp = new DataPoint(i, item.lstData[i].Y);
                     series.Points.Add(dp);
                 }
+                if (ShowTrendLines)
+                {
+                    var seriesTrendLine = new Series()
+                    {
+                        ChartType = SeriesChartType.Line,
+                        Name = item.perfCounterData.PerfCounterName + "Trend",
+                        ToolTip = item.perfCounterData.PerfCounterName + "Trend"
+                    };
+                    _chart.Series.Add(seriesTrendLine);
+                    var dp0 = new DataPoint(0, item.b);
+                    seriesTrendLine.Points.Add(dp0);
+                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.m);
+                    seriesTrendLine.Points.Add(dp1);
+                }
             }
             _chart.DataBind();
         }
 
         private void LbCounters_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (this.lbCounters.SelectedItems.Count > 0)
+            {
+                var lstCtrsToInclude = new List<string>();
+                foreach (var item in this.lbCounters.SelectedItems)
+                {
+                    lstCtrsToInclude.Add(item.ToString());
+                }
+                AddGraph(this.lstRegressionAnalysis);
+            }
+        }
 
+        private void CheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            AddGraph(this.lstRegressionAnalysis);
+        }
+
+        private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            AddGraph(this.lstRegressionAnalysis);
         }
     }
 }

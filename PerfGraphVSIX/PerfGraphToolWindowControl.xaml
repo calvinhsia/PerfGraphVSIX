@@ -137,7 +137,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1">
                         <Label Content="Counters to track:"/>
-                        <ListBox Name="lbPCounters" SelectionMode="Multiple" Width="160" MaxHeight = "300" VerticalAlignment="Top" ToolTip="Multiselect various counters" />
+                        <ListBox Name="lbPCounters" SelectionMode="Extended" Width="160" MaxHeight = "300" VerticalAlignment="Top" ToolTip="Multiselect various counters" />
                     </StackPanel>
                     <StackPanel Grid.Column="2">
                         <Label Content="Code Samples:"/>

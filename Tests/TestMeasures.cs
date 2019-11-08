@@ -63,37 +63,37 @@ namespace Tests
         }
 
         [TestMethod]
-        public void TestPCMeasurementHolder1k()
+        public async Task TestPCMeasurementHolder1k()
         {
             // too small to trigger threshold
-            var res = DoStressSimulation(nIter: 100, nArraySize: 1024, RatioThresholdSensitivity: 1f);
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024, RatioThresholdSensitivity: 1f);
             Assert.IsFalse(res, $"Expected no Regression");
         }
 
         [TestMethod]
-        public void TestPCMeasurementHolder500k()
+        public async Task TestPCMeasurementHolder500k()
         {
             // too small to trigger threshold, but close to boundary
-            var res = DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 1f);
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 1f);
             Assert.IsFalse(res, $"Expected no Regression");
         }
         [TestMethod]
-        public void TestPCMeasurementHolder500kSensitive()
+        public async Task TestPCMeasurementHolder500kSensitive()
         {
             // too small to trigger threshold, but close to boundary, so making more sensitive triggers regression
-            var res = DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: .6f);
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: .6f);
             Assert.IsTrue(res, $"Expected Regression");
         }
 
         [TestMethod]
-        public void TestPCMeasurementHolder2Meg()
+        public async Task TestPCMeasurementHolder2Meg()
         {
             // Big triggers regression
-            var res = DoStressSimulation(nIter: 10, nArraySize: 1024 * 1024 * 2, RatioThresholdSensitivity: 1f);
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 1024 * 2, RatioThresholdSensitivity: 1f);
             Assert.IsTrue(res, $"Expected Regression");
         }
 
-        private bool DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity)
+        private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity)
         {
             var lstPCs = new List<PerfCounterData>(PerfCounterData._lstPerfCounterDefinitionsForStressTest);
             foreach (var ctr in lstPCs)
@@ -116,7 +116,7 @@ namespace Tests
             var filename = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
             LogMessage($"Results file name = {filename}");
 
-            return measurementHolder.CalculateRegression(showGraph:true);
+            return await measurementHolder.CalculateRegressionAsync(showGraph:true);
         }
     }
 }

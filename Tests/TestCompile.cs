@@ -42,7 +42,7 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             Assert.AreEqual("did main 100 ", res);
         }
 
@@ -100,7 +100,7 @@ namespace DoesntMatter
                 "TBase.cs");
             File.WriteAllText(tempFile2, strCodeToExecuteBaseClass);
 
-            var res = codeExecutor.CompileAndExecute(tempFile1, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile1, CancellationToken.None);
             LogMessage($"Got output {res}");
             Assert.AreEqual("did main In Base Method NumIter= 97", res);
         }
@@ -144,7 +144,7 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             if (res is Task<string> task)
             {
                 task.Wait();
@@ -213,7 +213,7 @@ namespace DoesntMatter
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res as string);
             Assert.AreEqual("did main 100 did delay", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
@@ -322,7 +322,7 @@ namespace MyCustomCode
 
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res as string);
             Assert.AreEqual("did main", res);
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Iter 6   Start 1 left to do")).FirstOrDefault());
@@ -554,7 +554,7 @@ namespace MyCustomCode
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, sampleVSCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             if (res is string resString)
             {
                 Assert.Fail(resString);
@@ -603,10 +603,10 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
-            res = codeExecutor.CompileAndExecute(tempFile, CancellationToken.None);
+            res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
