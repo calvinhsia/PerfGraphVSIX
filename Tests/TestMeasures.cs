@@ -75,14 +75,14 @@ namespace Tests
         {
             // too small to trigger threshold, but close to boundary
             var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 1f);
-            Assert.IsFalse(res, $"Expected no Regression");
+            Assert.IsFalse(res, $"Expected no Regression because lower than threshold");
         }
         [TestMethod]
         public async Task TestPCMeasurementHolder500kSensitive()
         {
             // too small to trigger threshold, but close to boundary, so making more sensitive triggers regression
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: .6f);
-            Assert.IsTrue(res, $"Expected Regression");
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: .4f);
+            Assert.IsTrue(res, $"Expected Regression because more sensitive");
         }
 
         [TestMethod]

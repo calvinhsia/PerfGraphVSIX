@@ -59,7 +59,7 @@ namespace PerfGraphVSIX
         public int PctRms => m == 0 ? 0 : (int)(100 * rmsError / m);
         public override string ToString()
         {
-            return $"{perfCounterData.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={PctRms,10} m={m,18:n3} b={b,18:n3} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
+            return $"{perfCounterData.PerfCounterName,-25} RmsErr={rmsError,16:n1} RmsPctErr={PctRms,10} m={m,15:n1} b={b,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
         }
     }
 
@@ -93,6 +93,10 @@ namespace PerfGraphVSIX
             if (string.IsNullOrEmpty(desc))
             {
                 desc = TestName;
+            }
+            if (PerfCounterData.ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
+            {
+                GC.Collect();
             }
             var sBuilder = new StringBuilder(desc + " ");
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
