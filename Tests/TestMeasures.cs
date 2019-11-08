@@ -101,7 +101,7 @@ namespace Tests
                 ctr.IsEnabledForMeasurement = true;
                 ctr.RatioThresholdSensitivity = RatioThresholdSensitivity;
             }
-            var measurementHolder = new MeasurementHolder(nameof(DoStressSimulation), lstPCs, SampleType.SampleTypeIteration, this);
+            var measurementHolder = new MeasurementHolder(TestContext.TestName, lstPCs, SampleType.SampleTypeIteration, this);
 
             var lstBigStuff = new List<byte[]>();
             LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");

@@ -56,6 +56,11 @@ namespace PerfGraphVSIX
         public double m;
         public double b;
         public bool IsRegression;
+        public int PctRms => m == 0 ? 0 : (int)(100 * rmsError / m);
+        public override string ToString()
+        {
+            return $"{perfCounterData.PerfCounterName,-25} RmsErr={rmsError,16:n3} RmsPctErr={PctRms,10} m={m,18:n3} b={b,18:n3} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
+        }
     }
 
     public class MeasurementHolder
@@ -153,8 +158,9 @@ namespace PerfGraphVSIX
                     isRegression = true;
                     AnyCounterRegresssed = true;
                 }
+                r.IsRegression = isRegression;
                 var pctRms = r.m == 0 ? 0 : (int)(100 * r.rmsError / r.m);
-                logger.LogMessage($"{ctr.PerfCounterName,-25} RmsErr={r.rmsError,16:n3} RmsPctErr={pctRms,10} m={r.m,18:n3} b={r.b,18:n3} Thrs={ctr.thresholdRegression,10:n0} Sens={ctr.RatioThresholdSensitivity} isRegression={isRegression}");
+                logger.LogMessage($"{r}");
                 lstResults.Add(r);
             }
             if (showGraph)

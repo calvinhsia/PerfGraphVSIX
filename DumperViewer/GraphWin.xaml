@@ -12,12 +12,21 @@
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <StackPanel Orientation="Vertical">
-            <Button Content="Show Raw Data" ToolTip="Show raw data as CSV in Excel" Click="Button_Click"/>
+            <Button Content="Data to Excel" ToolTip="Show raw data as CSV in Excel" Click="Button_Click"/>
             <CheckBox Content="Show Trend Lines" IsChecked="{Binding ShowTrendLines}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" />
             <ListBox Grid.Column="0" Name="lbCounters" Height="200" ItemsSource="{Binding LstCounters}" SelectionChanged="LbCounters_SelectionChanged" SelectionMode="Extended"/>
-            
-
         </StackPanel>
-        <WindowsFormsHost Grid.Column="1" Name="wfhost"/>
+        <Grid Grid.Column="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="100"/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                <TextBox Text="{Binding TxtInfo}" TextWrapping="WrapWithOverflow" IsReadOnly="True" 
+                         FontSize="10" FontFamily="Consolas"
+                         HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" MaxHeight="100" />
+                <WindowsFormsHost Grid.Row="1" Name="wfhost"/>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

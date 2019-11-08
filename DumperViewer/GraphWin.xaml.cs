@@ -32,15 +32,18 @@ namespace DumperViewer
 
         public ObservableCollection<string> LstCounters { get; set; } = new ObservableCollection<string>();
         public bool ShowTrendLines { get; set; } = true;
+        string _txtInfo;
+        public string TxtInfo { get { return _txtInfo; } set { _txtInfo = value;RaisePropChanged(); } }
 
         readonly Chart _chart = new Chart();
         List<RegressionAnalysis> lstRegressionAnalysis;
-        MeasurementHolder measurementHolder;
+        readonly MeasurementHolder measurementHolder;
         public GraphWin(MeasurementHolder measurementHolder)
         {
             InitializeComponent();
             this.DataContext = this;
             this.measurementHolder = measurementHolder;
+            this.Title= this.measurementHolder.TestName;
             this.Loaded += GraphWin_Loaded;
         }
 
@@ -71,6 +74,7 @@ namespace DumperViewer
                     lstCtrsToInclude.Add(item.ToString());
                 }
             }
+            var sbInfo = new StringBuilder();
             foreach (var item in lstRegressionAnalysis)
             {
                 if (lstCtrsToInclude != null)
@@ -84,6 +88,7 @@ namespace DumperViewer
                 {
                     LstCounters.Add(item.perfCounterData.PerfCounterName);
                 }
+                sbInfo.AppendLine($"{item}");
                 var series = new Series
                 {
                     ChartType = SeriesChartType.Line,
@@ -107,11 +112,12 @@ namespace DumperViewer
                     _chart.Series.Add(seriesTrendLine);
                     var dp0 = new DataPoint(0, item.b);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.m + item.b);
+                    var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.m + item.b);
                     seriesTrendLine.Points.Add(dp1);
                 }
             }
             _chart.DataBind();
+            TxtInfo = sbInfo.ToString();
         }
 
         private void LbCounters_SelectionChanged(object sender, SelectionChangedEventArgs e)
