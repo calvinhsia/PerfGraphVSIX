@@ -1,0 +1,26 @@
+﻿Sub Macro1()
+'
+' Macro1 Macro
+'
+
+'
+    Columns("A:A").Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=True, Space:=False, Other:=False, FieldInfo _
+        :=Array(Array(1, 1), Array(2, 1), Array(3, 1), Array(4, 1), Array(5, 1), Array(6, 1), _
+        Array(7, 1), Array(8, 1)), TrailingMinusNumbers:=True
+    Range("B7").Select
+    Application.CutCopyMode = False
+    ActiveSheet.ListObjects.Add(xlSrcRange, Range("$A$1:$H$101"), , xlYes).Name = _
+        "Table1"
+    Range("Table1[#All]").Select
+    Selection.NumberFormat = "#,##0"
+    Columns("D:D").Select
+    ActiveSheet.Shapes.AddChart2(240, xlXYScatter).Select
+    ActiveChart.SetSourceData Source:=Range("tmpF018!$D:$D")
+    ActiveSheet.Shapes("Chart 1").IncrementLeft 219.75
+    ActiveSheet.Shapes("Chart 1").IncrementTop -33.3749606299
+    Windows("tmpD185.csv").Activate
+    Windows("tmpF018.csv").Activate
+End Sub

@@ -35,10 +35,12 @@ namespace DumperViewer
 
         readonly Chart _chart = new Chart();
         List<RegressionAnalysis> lstRegressionAnalysis;
-        public GraphWin()
+        MeasurementHolder measurementHolder;
+        public GraphWin(MeasurementHolder measurementHolder)
         {
             InitializeComponent();
             this.DataContext = this;
+            this.measurementHolder = measurementHolder;
             this.Loaded += GraphWin_Loaded;
         }
 
@@ -100,12 +102,12 @@ namespace DumperViewer
                     {
                         ChartType = SeriesChartType.Line,
                         Name = item.perfCounterData.PerfCounterName + "Trend",
-                        ToolTip = item.perfCounterData.PerfCounterName + "Trend"
+                        ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.lstData.Count} RmsErr={item.rmsError}  m={item.m:n1} b= {item.b:n1} IsRegression={item.IsRegression}"
                     };
                     _chart.Series.Add(seriesTrendLine);
                     var dp0 = new DataPoint(0, item.b);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.m);
+                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.m + item.b);
                     seriesTrendLine.Points.Add(dp1);
                 }
             }
@@ -133,6 +135,11 @@ namespace DumperViewer
         private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
         {
             AddGraph(this.lstRegressionAnalysis);
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            this.measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: true);
         }
     }
 }

@@ -12,6 +12,7 @@
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <StackPanel Orientation="Vertical">
+            <Button Content="Show Raw Data" ToolTip="Show raw data as CSV in Excel" Click="Button_Click"/>
             <CheckBox Content="Show Trend Lines" IsChecked="{Binding ShowTrendLines}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" />
             <ListBox Grid.Column="0" Name="lbCounters" Height="200" ItemsSource="{Binding LstCounters}" SelectionChanged="LbCounters_SelectionChanged" SelectionMode="Extended"/>
             

@@ -114,6 +114,7 @@
     <Content Include="ClrObjExplorer.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Resource Include="ExcelMacro.txt" />
     <Content Include="FastSerialization.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

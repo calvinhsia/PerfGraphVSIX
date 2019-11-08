@@ -162,7 +162,7 @@ namespace PerfGraphVSIX
                 var tcs = new TaskCompletionSource<int>();
                 var thr = new Thread((o) =>
                 {
-                    var graphWin = new GraphWin();
+                    var graphWin = new GraphWin(this);
                     graphWin.AddGraph(lstResults);
                     graphWin?.ShowDialog();
                     tcs.SetResult(0);
