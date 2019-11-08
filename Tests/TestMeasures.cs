@@ -48,13 +48,20 @@ namespace Tests
         public async Task TestMeasureRegressionVerifyGraph()
         {
             await Task.Yield();
-            var x = new MeasurementHolder(nameof(TestMeasureRegressionVerifyGraph), PerfCounterData._lstPerfCounterDefinitionsForStressTest, SampleType.SampleTypeIteration, this);
+            var x = new MeasurementHolder(
+                nameof(TestMeasureRegressionVerifyGraph), 
+                PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p=>p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(), 
+                SampleType.SampleTypeIteration, this);
             for (int iter = 0; iter < 10; iter++)
             {
                 foreach (var ctr in x.lstPerfCounterData)
                 {
-//                    if (iter == 5 && ctr.PerfCounterName == PerfCounterType.)
-                    x.measurements[ctr.PerfCounterName].Add(100 + (uint)iter);
+                    var val = 100 + (uint)iter;
+                    if (iter == 5 && ctr.perfCounterType == PerfCounterType.KernelHandleCount)
+                    {
+                        val += 1;
+                    }
+                    x.measurements[ctr.perfCounterType].Add(val);
                 }
             }
             var res = await x.CalculateRegressionAsync(showGraph: true);

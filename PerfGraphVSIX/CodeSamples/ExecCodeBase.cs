@@ -28,6 +28,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
 
 
@@ -165,7 +166,7 @@ namespace MyCodeToExecute
                 {
                     foreach (var regres in lstRegResults)
                     {
-                        test.LogMessage($"Regression!!!!! {regres}");
+                        logger.LogMessage("Regression!!!!!" +regres.ToString());
                     }
                     await measurementHolder.CreateDumpAsync(
                         System.Diagnostics.Process.GetCurrentProcess().Id,

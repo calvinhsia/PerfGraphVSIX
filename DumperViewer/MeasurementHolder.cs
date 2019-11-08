@@ -74,7 +74,7 @@ namespace PerfGraphVSIX
         public readonly List<PerfCounterData> lstPerfCounterData;
         readonly ILogger logger;
         readonly SampleType sampleType;
-        internal Dictionary<string, List<uint>> measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
+        internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
 
         public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger)
@@ -85,7 +85,7 @@ namespace PerfGraphVSIX
             this.logger = logger;
             foreach (var entry in lstPCData)
             {
-                measurements[entry.PerfCounterName] = new List<uint>();
+                measurements[entry.perfCounterType] = new List<uint>();
             }
         }
 
@@ -102,10 +102,10 @@ namespace PerfGraphVSIX
             var sBuilder = new StringBuilder(desc + " ");
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
-                if (!measurements.TryGetValue(ctr.PerfCounterName, out var lst))
+                if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))
                 {
                     lst = new List<uint>();
-                    measurements[ctr.PerfCounterName] = lst;
+                    measurements[ctr.perfCounterType] = lst;
                 }
                 var pcValueAsFloat = ctr.ReadNextValue();
                 uint priorValue = 0;
@@ -135,7 +135,7 @@ namespace PerfGraphVSIX
             var res = new List<uint>();
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForGraph))
             {
-                var entry = measurements[ctr.PerfCounterName];
+                var entry = measurements[ctr.perfCounterType];
                 res.Add(entry[entry.Count - 1]);
             }
             return res;
@@ -151,7 +151,7 @@ namespace PerfGraphVSIX
                     perfCounterData = ctr
                 };
                 int ndx = 0;
-                foreach (var itm in measurements[ctr.PerfCounterName])
+                foreach (var itm in measurements[ctr.perfCounterType])
                 {
                     r.lstData.Add(new PointF() { X = ndx++, Y = itm });
                 }
@@ -211,13 +211,13 @@ namespace PerfGraphVSIX
                 lst.Clear();
                 foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
                 {
-                    if (i < measurements[ctr.PerfCounterName].Count)
+                    if (i < measurements[ctr.perfCounterType].Count)
                     {
-                        lst.Add($"{measurements[ctr.PerfCounterName][i]}");
+                        lst.Add($"{measurements[ctr.perfCounterType][i]}");
                     }
                     else
                     {
-                        logger.LogMessage($"Index out of range {ctr.PerfCounterName}  {i}  {measurements[ctr.PerfCounterName].Count}");
+                        logger.LogMessage($"Index out of range {ctr.PerfCounterName}  {i}  {measurements[ctr.perfCounterType].Count}");
                     }
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
