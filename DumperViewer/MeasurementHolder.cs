@@ -54,13 +54,38 @@ namespace PerfGraphVSIX
         public PerfCounterData perfCounterData;
         public List<PointF> lstData = new List<PointF>();
         public double rmsError;
-        public double m;
-        public double b;
+        /// <summary>
+        /// Slope represents the amount leaked per iteration. 0 means no leak.
+        /// </summary>
+        public double slope;
+        public double yintercept;
         public bool IsRegression;
-        public int PctRms => m == 0 ? 0 : (int)(100 * rmsError / m);
+        /// <summary>
+        /// When RSquared (range 0-1) is close to 1, indicates how well the trend is linear and matches the line.
+        /// The smaller the value, the less likely the trend is linear
+        /// </summary>
+        public double RSquared
+        {
+            get
+            {
+                var SStot = 0.0;
+                var SSerr = 0.0;
+                double YMean = 0;
+                lstData.ForEach(t => YMean += t.Y);
+                YMean /= lstData.Count;
+                double xMean = (lstData.Count - 1) / 2;
+                for (int i = 0; i < lstData.Count; i++)
+                {
+                    SStot += Math.Pow(lstData[i].Y - YMean, 2.0);
+                    SSerr += Math.Pow(lstData[i].Y - (slope * lstData[i].X + yintercept), 2.0);
+                }
+                var rS = 1.0 - SSerr / SStot;
+                return rS;
+            }
+        }
         public override string ToString()
         {
-            return $"{perfCounterData.PerfCounterName,-25} RmsErr={rmsError,16:n1} RmsPctErr={PctRms,10} m={m,15:n1} b={b,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
+            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n1} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
         }
     }
 
@@ -141,7 +166,7 @@ namespace PerfGraphVSIX
             return res;
         }
 
-        public async Task<List<RegressionAnalysis>> CalculateRegressionAsync(bool showGraph)
+        public async Task<List<RegressionAnalysis>> CalculateRegressionAsync(bool showGraph, bool fUseAlgP1 = false)
         {
             var lstResults = new List<RegressionAnalysis>();
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
@@ -151,14 +176,32 @@ namespace PerfGraphVSIX
                     perfCounterData = ctr
                 };
                 int ndx = 0;
-                foreach (var itm in measurements[ctr.perfCounterType])
+                if (fUseAlgP1)
                 {
-                    r.lstData.Add(new PointF() { X = ndx++, Y = itm });
+                    var lstx = new List<double>();
+                    var lsty = new List<double>();
+                    foreach (var itm in measurements[ctr.perfCounterType])
+                    {
+                        lstx.Add(ndx);
+                        lsty.Add(itm);
+                        r.lstData.Add(new PointF() { X = ndx++, Y = itm });
+                    }
+                    LinearRegression(lstx.ToArray(), lsty.ToArray(), 0, lsty.Count - 1, out var rsquared, out var yintercept, out var slope);
+                    r.slope = slope;
+                    r.yintercept = yintercept;
+                    r.rmsError = rsquared;
                 }
-                r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.m, out r.b);
-                if (r.m >= ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
+                else
                 {
-                    r.IsRegression = true;
+                    foreach (var itm in measurements[ctr.perfCounterType])
+                    {
+                        r.lstData.Add(new PointF() { X = ndx++, Y = itm });
+                    }
+                    r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.slope, out r.yintercept);
+                    if (r.RSquared > 0.5 && r.slope >= ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
+                    {
+                        r.IsRegression = true;
+                    }
                 }
                 logger.LogMessage($"{r}");
                 lstResults.Add(r);
@@ -176,7 +219,7 @@ namespace PerfGraphVSIX
                         graphWin.AddGraph(lstResults);
                         if (!timeoutEnabled)
                         {
-//                            graphWin.WindowState = WindowState.Maximized;
+                            //                            graphWin.WindowState = WindowState.Maximized;
                         }
                         graphWin.ShowDialog();
                     }
@@ -188,9 +231,9 @@ namespace PerfGraphVSIX
                 });
                 thr.SetApartmentState(ApartmentState.STA);
                 thr.Start();
-                if (await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(30))) != tcs.Task)
+                if (await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(120))) != tcs.Task)
                 {
-                    logger.LogMessage($"Timeout showing graph");
+                    logger.LogMessage($"Timedout showing graph");
                 }
             }
             return lstResults;
@@ -345,5 +388,9 @@ namespace PerfGraphVSIX
     {
         public double X;
         public double Y;
+        public override string ToString()
+        {
+            return $"({X:n1},{Y:n1})";
+        }
     }
 }

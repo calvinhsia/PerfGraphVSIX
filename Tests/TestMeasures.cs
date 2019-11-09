@@ -56,7 +56,7 @@ namespace Tests
             {
                 foreach (var ctr in x.lstPerfCounterData)
                 {
-                    var val = 100 + (uint)iter;
+                    var val = 10000 + (uint)iter;
                     if (iter == 5 && ctr.perfCounterType == PerfCounterType.KernelHandleCount)
                     {
                         val += 1;
