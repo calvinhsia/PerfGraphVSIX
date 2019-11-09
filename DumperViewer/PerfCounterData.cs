@@ -33,7 +33,7 @@ namespace PerfGraphVSIX
         {
             {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") { thresholdRegression=1e6f} },
             {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") { thresholdRegression=1e6f}},
-            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") { thresholdRegression=1e6f}},
+            //{new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") { thresholdRegression=1e6f}},
             {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForGraph=true,thresholdRegression=1e6f} },
             {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") { thresholdRegression=1}},
             {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") { thresholdRegression=.5f}},

@@ -108,6 +108,9 @@ namespace Tests
         [TestMethod]
         public async Task TestPCMeasurementHolder500kSensitive()
         {
+
+            var eatmem = new byte[1024 * 1024 * 8];
+
             // too small to trigger threshold, but close to boundary, so making more sensitive triggers regression
             var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: .4f);
             Assert.IsTrue(res, $"Expected Regression because more sensitive");
@@ -160,6 +163,7 @@ namespace Tests
 
         /// <summary>
         /// return true if regression found
+        /// These tests will be affected by other tests running in the same instance of testhost because they share the same memory
         /// </summary>
         private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity, Action action = null)
         {

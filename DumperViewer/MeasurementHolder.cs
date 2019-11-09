@@ -49,6 +49,9 @@ namespace PerfGraphVSIX
         /// </summary>
         OutputMeasurements = 0x10,
     }
+    /// <summary>
+    /// Todo: discard outliers
+    /// </summary>
     public class RegressionAnalysis
     {
         public PerfCounterData perfCounterData;
@@ -76,8 +79,10 @@ namespace PerfGraphVSIX
                 double xMean = (lstData.Count - 1) / 2;
                 for (int i = 0; i < lstData.Count; i++)
                 {
-                    SStot += Math.Pow(lstData[i].Y - YMean, 2.0);
-                    SSerr += Math.Pow(lstData[i].Y - (slope * lstData[i].X + yintercept), 2.0);
+                    var t = lstData[i].Y - YMean;
+                    SStot += t * t;
+                    t = lstData[i].Y - (slope * lstData[i].X + yintercept);
+                    SSerr += t * t;
                 }
                 var rS = 1.0 - SSerr / SStot;
                 return rS;
@@ -85,6 +90,7 @@ namespace PerfGraphVSIX
         }
         public override string ToString()
         {
+            // r²= alt 253
             return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n1} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
         }
     }
