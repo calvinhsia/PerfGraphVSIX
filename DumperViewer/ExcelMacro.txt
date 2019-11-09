@@ -16,7 +16,7 @@
         "Table1"
     Range("Table1[#All]").Select
     Selection.NumberFormat = "#,##0"
-    Columns("D:D").Select
+    Columns("C:C").Select
     ActiveSheet.Shapes.AddChart2(240, xlXYScatter).Select
     'ActiveChart.SetSourceData Source:=Range("tmpF018!$D:$D")
     'ActiveSheet.Shapes("Chart 1").IncrementLeft 219.75

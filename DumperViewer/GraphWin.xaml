@@ -13,7 +13,7 @@
         </Grid.ColumnDefinitions>
         <StackPanel Orientation="Vertical">
             <Button Content="Data to Excel" ToolTip="Show raw data as CSV in Excel" Click="Button_Click"/>
-            <CheckBox Content="Show Trend Lines" IsChecked="{Binding ShowTrendLines}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" />
+            <CheckBox Content="Show Trend Lines" IsChecked="{Binding ShowTrendLines}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" Margin="0,10,0,20" />
             <ListBox Grid.Column="0" Name="lbCounters" Height="200" ItemsSource="{Binding LstCounters}" SelectionChanged="LbCounters_SelectionChanged" SelectionMode="Extended"/>
         </StackPanel>
         <Grid Grid.Column="1">

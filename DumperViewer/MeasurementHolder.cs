@@ -91,7 +91,7 @@ namespace PerfGraphVSIX
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n1} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
+            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n3} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
         }
     }
 
@@ -204,7 +204,7 @@ namespace PerfGraphVSIX
                         r.lstData.Add(new PointF() { X = ndx++, Y = itm });
                     }
                     r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.slope, out r.yintercept);
-                    if (r.RSquared > 0.5 && r.slope >= ctr.thresholdRegression * ctr.RatioThresholdSensitivity)
+                    if (r.slope >= ctr.thresholdRegression * ctr.RatioThresholdSensitivity && r.RSquared > 0.5)
                     {
                         r.IsRegression = true;
                     }
