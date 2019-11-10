@@ -14,7 +14,6 @@ namespace DumperViewer
     public class DumpAnalyzer
     {
         private readonly ILogger logger;
-
         public DumpAnalyzer(ILogger logger)
         {
             this.logger = logger;
@@ -61,12 +60,11 @@ namespace DumperViewer
                         nObjCount++;
                     }
                     logger.LogMessage($"Total Object Count = {nObjCount:n0}  {dumpFile}");
-                    var maxLength = 100;
+                    var maxLength = 1024;
                     var strValue = string.Empty;
                     foreach (var str in lstStrings)
                     {
-                        var clrtype = str.Type;
-                        if (clrtype.IsString)
+                        if (str.Type.IsString)
                         {
                             var addrToUse = str.Address + (uint)IntPtr.Size; // skip clsid
                             byte[] buff = new byte[IntPtr.Size];
@@ -128,10 +126,11 @@ namespace DumperViewer
         {
             var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
             var resCurrent = AnalyzeDump(pathDumpCurrent);
-            var sb = new StringBuilder();
+            var sb = new StringBuilder($"TypesAndStrings {pathDumpBase} {pathDumpCurrent}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             AnalyzeDiff(sb, dictTypes, resCurrent.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             AnalyzeDiff(sb, dictStrings, resCurrent.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             logger.LogMessage($"analzyed types and strings {pathDumpBase} {pathDumpCurrent}");
+//            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
             var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
             logger.LogMessage($"Out put to {fname}");
         }
@@ -147,7 +146,7 @@ namespace DumperViewer
                     {
                         var msg = string.Format("{0,3} {1,3} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
                         sb.AppendLine(msg);
-//                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
+                        //                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
                     }
                 }
             }

@@ -212,7 +212,14 @@ namespace DumperViewer
             }
             return pathResultsFolder;
         }
-        public static string GetNewDumpFileName(string baseFolderName, string baseDumpFileName)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="baseFolderName"></param>
+        /// <param name="baseDumpFileName"></param>
+        /// <param name="ext">without the '.', defaults to 'dmp'</param>
+        /// <returns></returns>
+        public static string GetNewFileName(string baseFolderName, string baseDumpFileName, string ext = "dmp")
         {
             string pathDumpFile;
             int nIter = 0;
@@ -220,7 +227,7 @@ namespace DumperViewer
             {
                 pathDumpFile = Path.Combine(
                     baseFolderName,
-                    $"{baseDumpFileName}_{nIter++}.dmp");
+                    $"{baseDumpFileName}_{nIter++}.{ext}");
                 if (!File.Exists(pathDumpFile))
                 {
                     break;

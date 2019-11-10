@@ -19,7 +19,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 31);
+                await oMyClass.DoTheTest(numIterations: 13);
             }
         }
         public MyClass(object[] args) : base(args) { }
@@ -32,9 +32,9 @@ namespace MyCodeToExecute
             SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             await OpenASolutionAsync();
             g_dte.ExecuteCommand("File.OpenFile", file1);
-            await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
+            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
             g_dte.ExecuteCommand("File.OpenFile", file2);
-            await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
+            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
         }
 
         public override async Task DoIterationBodyAsync()

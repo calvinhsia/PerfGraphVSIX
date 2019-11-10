@@ -193,7 +193,7 @@ namespace TestStress
         /// <param name="stressWithNoInheritance"></param>
         /// <param name="NumIterations"></param>
         /// <returns></returns>
-        public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations)
+        public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations, double Sensitivity = 1.0f)
         {
             test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
             var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
@@ -202,7 +202,8 @@ namespace TestStress
                 test.TestContext.TestName,
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                 SampleType.SampleTypeIteration,
-                logger: test);
+                logger: test,
+                sensitivity: Sensitivity);
             test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
 
             var baseDumpFileName = string.Empty;

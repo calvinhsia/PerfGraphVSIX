@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace TestStress
 {
     [TestClass]
-    public class StressWithNoInheritance: BaseStressTestClass // inheritance is only used for logging and vs automation mechanics, not stress test mechanics
+    public class StressWithNoInheritance : BaseStressTestClass // inheritance is only used for logging and vs automation mechanics, not stress test mechanics
     {
         [TestInitialize]
         public async Task InitAsync()
@@ -16,7 +16,7 @@ namespace TestStress
             await StartVSAsync();
 
             // the only change to existing test required: call to static method
-            await BaseStressTestClass.DoIterationsAsync(this, NumIterations:7);
+            await BaseStressTestClass.DoIterationsAsync(this, NumIterations: 7, Sensitivity: 1);
         }
         [TestCleanup]
         public async Task Cleanup()

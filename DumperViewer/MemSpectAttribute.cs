@@ -29,6 +29,7 @@ namespace DumperViewer
             NumIterations = 3;
             UseMemSpect = false;
             TrackClrObjects = 1;
+            Sensitivity = 1;
             WriteSnapshot = LeakStatusCondition.Never;
             DesiredVerbosity = LogVerbosity.LogVerbosityDetailed;
             ShutDownTargetProcess = LeakStatusCondition.NoLeaks;
@@ -47,6 +48,7 @@ namespace DumperViewer
         /// Measurement is taken before and after all iterations. If any perfcounter exceeds this percent threshold, test fails
         /// </summary>
         public int PercentThreshold { get; set; }
+        public double Sensitivity { get; set; }
         /// <summary>
         /// Normally leave at 1, but when testing infrastructure 0 is faster
         /// </summary>

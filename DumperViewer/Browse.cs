@@ -435,9 +435,9 @@ namespace PerfGraphVSIX
             return sb.ToString();
         }
 
-        public static string WriteOutputToTempFile(string strToOutput, string fExt = "txt", bool fStartIt = true)
+        public static string WriteOutputToTempFile(string strToOutput, string fExt = "txt", bool fStartIt = true, string FileNameToUse = "")
         {
-            var tmpFileName = System.IO.Path.GetTempFileName(); //"C:\Users\calvinh\AppData\Local\Temp\tmp8509.tmp"
+            var tmpFileName = string.IsNullOrEmpty(FileNameToUse)?  System.IO.Path.GetTempFileName(): FileNameToUse; //"C:\Users\calvinh\AppData\Local\Temp\tmp8509.tmp"
             System.IO.File.WriteAllText(tmpFileName, strToOutput, new UnicodeEncoding(bigEndian: false, byteOrderMark: true));
             var filename = System.IO.Path.ChangeExtension(tmpFileName, fExt);
 

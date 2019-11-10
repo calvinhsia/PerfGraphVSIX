@@ -84,7 +84,7 @@ namespace TestStress
             await OpenCloseSolutionOnce(SolutionToLoad);
         }
         [TestMethod]
-        [MemSpectAttribute(NumIterations = 3)]
+        [MemSpectAttribute(NumIterations = 3, Sensitivity=1)]
         public void StressTestWithAttributeNotAsync()
         {
             LogMessage($"{nameof(StressTestWithAttributeNotAsync)}");

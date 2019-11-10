@@ -60,6 +60,7 @@ namespace PerfGraphVSIX
     {
         public PerfCounterData perfCounterData;
         public List<PointF> lstData = new List<PointF>();
+        public double sensitivity;
         public double rmsError;
         /// <summary>
         /// Slope represents the amount leaked per iteration. 0 means no leak.
@@ -95,7 +96,7 @@ namespace PerfGraphVSIX
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n3} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={perfCounterData.RatioThresholdSensitivity} isRegression={IsRegression}";
+            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n3} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n2} isRegression={IsRegression}";
         }
     }
 
@@ -109,16 +110,18 @@ namespace PerfGraphVSIX
         public readonly List<PerfCounterData> lstPerfCounterData;
         readonly ILogger logger;
         readonly SampleType sampleType;
+        readonly double sensitivity;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
         public string ResultsFolder;
 
-        public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger)
+        public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger, double sensitivity = 1.0f)
         {
             this.TestName = TestName;
             this.lstPerfCounterData = lstPCData;
             this.sampleType = sampleType;
             this.logger = logger;
+            this.sensitivity = sensitivity;
             if (string.IsNullOrEmpty(TestName))
             {
                 ResultsFolder = DumperViewerMain.EnsureMyDir();
@@ -192,7 +195,8 @@ namespace PerfGraphVSIX
             {
                 var r = new RegressionAnalysis()
                 {
-                    perfCounterData = ctr
+                    perfCounterData = ctr,
+                    sensitivity = this.sensitivity
                 };
                 int ndx = 0;
                 if (fUseAlgP1)
@@ -217,7 +221,7 @@ namespace PerfGraphVSIX
                         r.lstData.Add(new PointF() { X = ndx++, Y = itm });
                     }
                     r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.slope, out r.yintercept);
-                    if (r.slope >= ctr.thresholdRegression * ctr.RatioThresholdSensitivity && r.RSquared > 0.5)
+                    if (r.slope >= ctr.thresholdRegression * this.sensitivity && r.RSquared > 0.5)
                     {
                         r.IsRegression = true;
                     }
@@ -290,7 +294,7 @@ namespace PerfGraphVSIX
 
         public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
-            var pathDumpFile = DumperViewerMain.GetNewDumpFileName(ResultsFolder, desc);
+            var pathDumpFile = DumperViewerMain.GetNewFileName(ResultsFolder, desc);
             try
             {
                 var arglist = new List<string>()

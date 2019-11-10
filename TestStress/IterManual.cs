@@ -48,7 +48,8 @@ namespace TestStress
                         nameof(StressIterateManually),
                         PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                         SampleType.SampleTypeIteration,
-                        logger: this);
+                        logger: this, 
+                        sensitivity: 1);
 
 
                     for (int iteration = 0; iteration < NumIterations; iteration++)

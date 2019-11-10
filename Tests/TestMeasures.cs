@@ -171,9 +171,8 @@ namespace Tests
             foreach (var ctr in lstPCs)
             {
                 ctr.IsEnabledForMeasurement = true;
-                ctr.RatioThresholdSensitivity = RatioThresholdSensitivity;
             }
-            var measurementHolder = new MeasurementHolder(TestContext.TestName, lstPCs, SampleType.SampleTypeIteration, this);
+            var measurementHolder = new MeasurementHolder(TestContext.TestName, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity);
 
             var lstBigStuff = new List<byte[]>();
             LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");

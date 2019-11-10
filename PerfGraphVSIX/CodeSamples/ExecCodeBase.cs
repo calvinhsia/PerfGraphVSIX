@@ -121,14 +121,14 @@ namespace MyCodeToExecute
             await Task.Yield();
         }
 
-        public virtual async Task DoTheTest(int numIterations)
+        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f)
         {
             await DoInitializeAsync();
-            await IterateCode(numIterations);
+            await IterateCode(numIterations, Sensitivity);
             await DoCleanupAsync();
         }
 
-        public async Task IterateCode(int numIterations)
+        public async Task IterateCode(int numIterations, double Sensitivity)
         {
             try
             {
@@ -136,7 +136,8 @@ namespace MyCodeToExecute
                     Path.GetFileNameWithoutExtension(FileToExecute),
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
-                    logger);
+                    logger,
+                    Sensitivity);
 
                 var baseDumpFileName = string.Empty;
                 for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)

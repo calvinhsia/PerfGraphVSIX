@@ -81,13 +81,13 @@ namespace PerfGraphVSIX
         /// </summary>
         public float thresholdRegression;
 
-        /// <summary>
-        /// This is a scale factor (sensitivity) multiplied by the thrsholdRegression. Should be > 0, centered at 1
-        /// If the iteration is small and fast, and doesn't do much allocation, then our static thresholds might be too big, so set this to be e.g. .5 for half the threshold
-        /// Likewise, if the iteration is huge and leaky, set this >1 to increase the default theshold
-        /// Default to 1 means no effect: use the threshold defaults.
-        /// </summary>
-        public float RatioThresholdSensitivity = 1;
+        ///// <summary>
+        ///// This is a scale factor (sensitivity) multiplied by the thrsholdRegression. Should be > 0, centered at 1
+        ///// If the iteration is small and fast, and doesn't do much allocation, then our static thresholds might be too big, so set this to be e.g. .5 for half the threshold
+        ///// Likewise, if the iteration is huge and leaky, set this >1 to increase the default theshold
+        ///// Default to 1 means no effect: use the threshold defaults.
+        ///// </summary>
+        //public float RatioThresholdSensitivity = 1;
         public float ReadNextValue()
         {
             float retVal = 0;
