@@ -57,6 +57,7 @@ namespace MyCodeToExecute
         public EnvDTE.DTE g_dte;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
+        public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 3;
         public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
 
         public BuildEvents BuildEvents;
@@ -137,6 +138,7 @@ namespace MyCodeToExecute
                     SampleType.SampleTypeIteration,
                     logger);
 
+                var baseDumpFileName = string.Empty;
                 for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                 {
                     await DoIterationBodyAsync();
@@ -144,6 +146,16 @@ namespace MyCodeToExecute
                     var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
                     // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
                     await StressUtil.DoSampleAsync(measurementHolder, desc);
+                    if (numIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == numIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+                        logger.LogMessage("Taking base snapshot dump");
+                        baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                            System.Diagnostics.Process.GetCurrentProcess().Id,
+                            desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + iteration.ToString(),
+                            memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                    }
+
                     if (_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         break;
@@ -168,10 +180,16 @@ namespace MyCodeToExecute
                     {
                         logger.LogMessage("Regression!!!!!" +regres.ToString());
                     }
-                    await measurementHolder.CreateDumpAsync(
+                    var currentDumpFile = await measurementHolder.CreateDumpAsync(
                         System.Diagnostics.Process.GetCurrentProcess().Id,
                         desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + numIterations.ToString(),
                         memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+
+                    if (!string.IsNullOrEmpty(baseDumpFileName))
+                    {
+                        var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                        oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, numIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                    }
                 }
             }
             catch (OperationCanceledException)

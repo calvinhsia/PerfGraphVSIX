@@ -146,7 +146,7 @@ namespace DumperViewer
                 var sw = Stopwatch.StartNew();
                 if (string.IsNullOrEmpty(_DumpFileName))
                 {
-                    _DumpFileName = GetNewDumpFileName(Path.GetFileNameWithoutExtension(_procTarget.ProcessName));
+                    throw new InvalidOperationException("Must specify dump filename");
                 }
                 await Task.Run(() =>
                 {
@@ -184,20 +184,43 @@ namespace DumperViewer
             }
         }
 
-        public static string GetNewDumpFileName(string baseName)
+        public static string EnsureMyDir()
         {
             var dirMyTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
             if (!Directory.Exists(dirMyTemp))
             {
                 Directory.CreateDirectory(dirMyTemp);
             }
-            var pathDumpFile = string.Empty;
+            return dirMyTemp;
+        }
+        public static string GetNewResultsFolderName(string baseFolderName)
+        {
+            var dirMyTemp = EnsureMyDir();
+            int nIter = 0;
+            string pathResultsFolder;
+            while (true) // we want to let the user have multiple dumps open for comparison
+            {
+                var appendstr = nIter++ == 0 ? string.Empty : nIter.ToString();
+                pathResultsFolder = Path.Combine(
+                    dirMyTemp,
+                    $"{baseFolderName}{appendstr}");
+                if (!Directory.Exists(pathResultsFolder))
+                {
+                    Directory.CreateDirectory(pathResultsFolder);
+                    break;
+                }
+            }
+            return pathResultsFolder;
+        }
+        public static string GetNewDumpFileName(string baseFolderName, string baseDumpFileName)
+        {
+            string pathDumpFile;
             int nIter = 0;
             while (true) // we want to let the user have multiple dumps open for comparison
             {
                 pathDumpFile = Path.Combine(
-                    dirMyTemp,
-                    $"{baseName}_{nIter++}.dmp");
+                    baseFolderName,
+                    $"{baseDumpFileName}_{nIter++}.dmp");
                 if (!File.Exists(pathDumpFile))
                 {
                     break;
@@ -313,6 +336,8 @@ DumpViewer -p 1234 -t .*TextBuffer.*
      can be '|' separated or there can be multiple '-t' arguments
 
 -f <FileDumpname>  Base path of output '.dmp' for dump output. If exists, will add numerical suffix. Can be quoted.
+-b <FileDumpname1> Filename of baseline dump taken N interations before the dump in -f. Will output   
+-n # iterations baseline snap was taken before current dump
 
 -c Start ClrObjectExlorer after creating dump
 

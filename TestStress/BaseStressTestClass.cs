@@ -24,6 +24,12 @@ namespace TestStress
         protected EnvDTE.SolutionEvents _solutionEvents; // need a strong ref to survive GCs
 
         protected int DelayMultiplier = 1;
+        /// <summary>
+        /// When executing a specific iteration, take a snapshot dump of the target process
+        /// Then we can diff the counts from the final dump
+        /// The snapshot will be taken at the end of iteration NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot
+        /// </summary>
+        public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 3;
 
         public TestContext TestContext { get; set; }
 
@@ -111,7 +117,7 @@ namespace TestStress
             }
 
             _tcsSolution = new TaskCompletionSource<int>();
-            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+            await Task.Delay(TimeSpan.FromSeconds(10 * DelayMultiplier));
 
             //LogMessage($"Closing solution");
             _vsDTE.Solution.Close();
@@ -138,7 +144,7 @@ namespace TestStress
                 test._vsDTE?.ExecuteCommand("Tools.ForceGC");
                 await Task.Delay(TimeSpan.FromSeconds(1 * test.DelayMultiplier));
 
-                var res= measurementHolder.TakeMeasurement(desc);
+                var res = measurementHolder.TakeMeasurement(desc);
                 test.LogMessage(res);
             }
             catch (Exception ex)
@@ -199,11 +205,20 @@ namespace TestStress
                 logger: test);
             test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
 
-
+            var baseDumpFileName = string.Empty;
             for (int iteration = 0; iteration < NumIterations; iteration++)
             {
                 var ret = _theTestMethod.Invoke(test, parameters: null);
                 await BaseStressTestClass.TakeMeasurementAsync(test, measurementHolder, $"Iter {iteration + 1}/{NumIterations}");
+                if (NumIterations > test.NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == NumIterations - test.NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
+                    test.LogMessage($"Taking base snapshot dump");
+                    baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                        test._targetProc.Id,
+                        desc: test.TestContext.TestName + "_" + iteration.ToString(),
+                        memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                }
             }
             var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
             test.LogMessage($"Measurement Results {filenameResults}");
@@ -214,10 +229,15 @@ namespace TestStress
                 {
                     test.LogMessage($"Regression!!!!! {regres}");
                 }
-                await measurementHolder.CreateDumpAsync(
+                var currentDumpFile = await measurementHolder.CreateDumpAsync(
                     test._targetProc.Id,
                     desc: test.TestContext.TestName + "_" + NumIterations.ToString(),
                     memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+                if (!string.IsNullOrEmpty(baseDumpFileName))
+                {
+                    var oDumpAnalyzer= new DumperViewer.DumpAnalyzer(test);
+                    oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, NumIterations, test.NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                }
             }
         }
 

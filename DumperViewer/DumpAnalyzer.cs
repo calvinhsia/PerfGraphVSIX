@@ -1,4 +1,5 @@
 ﻿//using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime;
 using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
@@ -10,76 +11,152 @@ using System.Threading.Tasks;
 
 namespace DumperViewer
 {
-    internal class DumpAnalyzer
+    public class DumpAnalyzer
     {
-        private readonly ILogger _Logger;
+        private readonly ILogger logger;
 
         public DumpAnalyzer(ILogger logger)
         {
-            this._Logger = logger;
+            this.logger = logger;
         }
 
-        internal void AnalyzeDump()
+        public (Dictionary<string, int> dictTypes, Dictionary<string, int> dictStrings) AnalyzeDump(string dumpFile)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
             //  /s \\calvinhw8\c$\Users\calvinh\Documents;srv*C:\Users\calvinh\AppData\Local\Temp\Symbols*;\\ddelementary\public\CalvinH\VsDbgTestDumps\VSHeapAllocDetourDump;\\ddrps\symbols;http://symweb/ m "\\calvinhw8\c$\Users\calvinh\Documents\devenvNav2files700.dmp"
-//            var symPath = @"http://symweb";
+            //            var symPath = @"http://symweb";
+            var dictTypes = new Dictionary<string, int>();
+            var dictStrings = new Dictionary<string, int>();
+
             try
             {
-                //using (var dataTarget = DataTarget.LoadCrashDump(this._dumperViewer._DumpFileName))
-                //{
-                //    if (dataTarget.ClrVersions.Count !=1)
-                //    {
-                //        throw new InvalidOperationException($"Expected 1 ClrVersion in process. Found {dataTarget.ClrVersions.Count} ");
-                //    }
-                //    var dacLocation = dataTarget.ClrVersions[0].LocalMatchingDac;
-                //    _dumperViewer.LogMessage($"Got Dac {dacLocation}");
-                //    var runtime = dataTarget.ClrVersions[0].CreateRuntime();
-                //    _dumperViewer.LogMessage($"Got runtime {runtime}");
+                //                logger.LogMessage($"in {nameof(AnalyzeDump)} {dumpFile}");
+                using (var dataTarget = DataTarget.LoadCrashDump(dumpFile))
+                {
+                    if (dataTarget.ClrVersions.Count != 1)
+                    {
+                        throw new InvalidOperationException($"Expected 1 ClrVersion in process. Found {dataTarget.ClrVersions.Count} ");
+                    }
+                    var dacLocation = dataTarget.ClrVersions[0].LocalMatchingDac;
+                    //                    logger.LogMessage($"Got Dac {dacLocation}");
+                    var runtime = dataTarget.ClrVersions[0].CreateRuntime();
+                    //                  logger.LogMessage($"Got runtime {runtime}");
+                    var nObjCount = 0;
+                    var lstStrings = new List<ClrObject>();
+                    foreach (var obj in runtime.Heap.EnumerateObjects())
+                    {
+                        var typ = obj.Type.Name;
+                        if (typ == "System.String")
+                        {
+                            lstStrings.Add(obj);
+                        }
+                        if (!dictTypes.ContainsKey(typ))
+                        {
+                            dictTypes[typ] = 1;
+                        }
+                        else
+                        {
+                            dictTypes[typ]++;
+                        }
+                        nObjCount++;
+                    }
+                    logger.LogMessage($"Total Object Count = {nObjCount:n0}  {dumpFile}");
+                    var maxLength = 100;
+                    var strValue = string.Empty;
+                    foreach (var str in lstStrings)
+                    {
+                        var clrtype = str.Type;
+                        if (clrtype.IsString)
+                        {
+                            var addrToUse = str.Address + (uint)IntPtr.Size; // skip clsid
+                            byte[] buff = new byte[IntPtr.Size];
+                            if (runtime.ReadMemory(
+                                addrToUse,
+                                buff,
+                                IntPtr.Size,
+                                out var bytesRead
+                                ))
+                            {
+                                var len = BitConverter.ToUInt32(buff, 0);
+                                if (maxLength > 0)
+                                {
+                                    len = Math.Min(len, (uint)maxLength);
+                                }
+                                buff = new byte[len * 2];
+                                if (runtime.ReadMemory(
+                                    addrToUse + (uint)IntPtr.Size, // skip clsid, len
+                                    buff,
+                                    buff.Length,
+                                    out bytesRead
+                                    ))
+                                {
+                                    var enc = new UnicodeEncoding();
+                                    strValue = enc.GetString(buff, 0, buff.Length);
+                                    if (!dictStrings.ContainsKey(strValue))
+                                    {
+                                        dictStrings[strValue] = 1;
+                                    }
+                                    else
+                                    {
+                                        dictStrings[strValue]++;
+                                    }
+                                }
+                            }
+                        }
+                        //                        logger.LogMessage($"STR {strValue}");
+                    }
 
-
-                //}
+                    //foreach (var entry in dictTypes.OrderByDescending(kvp => kvp.Value))
+                    //{
+                    //    logger.LogMessage($"  {entry.Value,10:n0}  {entry.Key}");
+                    //}
+                }
 
                 //var dataTarget = DataTarget.AttachToProcess(_dumperViewer._procTarget.Id, msecTimeout: 5000, AttachFlag.NonInvasive);
                 //_dumperViewer.LogMessage($"Got dt {dataTarget}");
                 //var runtime = dataTarget.ClrVersions[0].CreateRuntime();
                 //_dumperViewer.LogMessage($"Got runtime {runtime}");
-                //var nObjCount = 0;
-                //var dict = new Dictionary<string, int>();
-                //foreach (var obj in runtime.Heap.EnumerateObjects())
-                //{
-                //    var typ = obj.Type.Name;
-                //    if (!dict.ContainsKey(typ))
-                //    {
-                //        dict[typ] = 1;
-                //    }
-                //    else
-                //    {
-                //        dict[typ]++;
-                //    }
-
-                //    nObjCount++;
-                //}
-                //foreach (var entry in dict.OrderByDescending(kvp=>kvp.Value))
-                //{
-                //    _dumperViewer.LogMessage($"  {entry.Value,10:n0}  {entry.Key}");
-                //}
-                //dataTarget.Dispose();
-                //_dumperViewer.LogMessage($"Got runtime {runtime} nObjs = {nObjCount:n0}");
-
             }
             catch (Exception ex)
             {
-                _Logger.LogMessage($"Exception analyzing dump {ex.ToString()}");
+                logger.LogMessage($"Exception analyzing dump {ex.ToString()}");
             }
+            return (dictTypes, dictStrings);
+        }
 
+        public void GetDiff(string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        {
+            var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
+            var resCurrent = AnalyzeDump(pathDumpCurrent);
+            var sb = new StringBuilder();
+            AnalyzeDiff(sb, dictTypes, resCurrent.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+            AnalyzeDiff(sb, dictStrings, resCurrent.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+            logger.LogMessage($"analzyed types and strings {pathDumpBase} {pathDumpCurrent}");
+            var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
+            logger.LogMessage($"Out put to {fname}");
+        }
 
+        private void AnalyzeDiff(StringBuilder sb, Dictionary<string, int> dictBase, Dictionary<string, int> dictCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        {
+            foreach (var entryCurrent in dictCurrent.Where(e => e.Value >= TotNumIterations).OrderBy(e => e.Value))
+            {
+                if (dictBase.ContainsKey(entryCurrent.Key))
+                {
+                    var baseCnt = dictBase[entryCurrent.Key];
+                    if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot == entryCurrent.Value)
+                    {
+                        var msg = string.Format("{0,3} {1,3} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
+                        sb.AppendLine(msg);
+//                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
+                    }
+                }
+            }
         }
 
         public void StartClrObjectExplorer(string _DumpFileName)
         {
             var exeNameClrObj = Path.Combine(
-               Path.GetDirectoryName( this.GetType().Assembly.Location),
+               Path.GetDirectoryName(this.GetType().Assembly.Location),
                "ClrObjExplorer.exe");
             if (!File.Exists(exeNameClrObj))
             {

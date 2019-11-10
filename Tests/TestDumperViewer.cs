@@ -38,36 +38,19 @@ namespace Tests
         }
 
         [TestMethod]
-        public void TestDumperOutOfProc()
+        public void TestDumperAnalyzeDump()
         {
-            // todo
+            var pathDumpFileBaseline = @"C:\StressNoInheritance_7_0.dmp";
+            var pathDumpFileCurrent = @"C:\StressNoInheritance_11_0.dmp";
+            int TotNumIterations = 11;
+            int NumIterationsBeforeTotalToTakeBaselineSnapshot = 3;
+            var oAnalyzer = new DumpAnalyzer(this);
+
+            oAnalyzer.GetDiff(pathDumpFileBaseline, pathDumpFileCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
 
         }
 
-        [TestMethod]
-        public void TestDumperGetData()
-        {
-            var pid = Process.GetProcessesByName("devenv")[0].Id;
-            pid = Process.GetCurrentProcess().Id;
-            var pathDumpFile = Path.Combine(Environment.CurrentDirectory, "test dump.dmp");
-            if (File.Exists(pathDumpFile))
-            {
-                File.Delete(pathDumpFile);
-            }
-            var args = new[] {
-                "-p", pid.ToString(),
-                "-f",  "\"" + pathDumpFile + "\""
-            };
-            var odumper = new DumperViewer.DumperViewerMain(args)
-            {
-                _logger = this
-            };
-            odumper.DoMain();
 
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DumperViewer")).FirstOrDefault());
-
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Done creating dump")).FirstOrDefault());
-        }
 
 
     }

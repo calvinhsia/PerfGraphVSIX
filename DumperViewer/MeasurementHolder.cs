@@ -33,6 +33,10 @@ namespace PerfGraphVSIX
     public enum MemoryAnalysisType
     {
         /// <summary>
+        /// Just create the dump. No analysis
+        /// </summary>
+        JustCreateDump = 0x1,
+        /// <summary>
         /// after creating a dump, the ClrObjectExplorer WPF app is started with the dump loaded for manual analysis
         /// </summary>
         StartClrObjectExplorer = 0x2,
@@ -107,6 +111,7 @@ namespace PerfGraphVSIX
         readonly SampleType sampleType;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
+        public string ResultsFolder;
 
         public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger)
         {
@@ -114,6 +119,14 @@ namespace PerfGraphVSIX
             this.lstPerfCounterData = lstPCData;
             this.sampleType = sampleType;
             this.logger = logger;
+            if (string.IsNullOrEmpty(TestName))
+            {
+                ResultsFolder = DumperViewerMain.EnsureMyDir();
+            }
+            else
+            {
+                ResultsFolder = DumperViewerMain.GetNewResultsFolderName(TestName);
+            }
             foreach (var entry in lstPCData)
             {
                 measurements[entry.perfCounterType] = new List<uint>();
@@ -275,12 +288,11 @@ namespace PerfGraphVSIX
             return filename;
         }
 
-        public async Task CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
+        public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
+            var pathDumpFile = DumperViewerMain.GetNewDumpFileName(ResultsFolder, desc);
             try
             {
-                var pathDumpFile = DumperViewer.DumperViewerMain.GetNewDumpFileName(baseName: string.IsNullOrEmpty(desc) ? "devenv" : desc);
-                logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
                 var arglist = new List<string>()
                     {
                         "-p", pid.ToString(),
@@ -288,6 +300,7 @@ namespace PerfGraphVSIX
                     };
                 if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjectExplorer))
                 {
+                    logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
                     arglist.Add("-c");
                 }
                 var odumper = new DumperViewerMain(arglist.ToArray())
@@ -300,6 +313,7 @@ namespace PerfGraphVSIX
             {
                 logger.LogMessage(ex.ToString());
             }
+            return pathDumpFile;
         }
 
         public override string ToString()

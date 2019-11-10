@@ -16,7 +16,7 @@ namespace TestStress
             await StartVSAsync();
 
             // the only change to existing test required: call to static method
-            await BaseStressTestClass.DoIterationsAsync(this, NumIterations:3);
+            await BaseStressTestClass.DoIterationsAsync(this, NumIterations:7);
         }
         [TestCleanup]
         public async Task Cleanup()

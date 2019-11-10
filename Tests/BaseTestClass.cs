@@ -24,9 +24,9 @@ namespace Tests
         {
             var dt = string.Format("[{0}],",
                 DateTime.Now.ToString("hh:mm:ss:fff")
-                );
+                ) + $"{Thread.CurrentThread.ManagedThreadId,2} ";
             str = string.Format(dt + str, args);
-            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
+            var msgstr = $" {str}";
 
             this.TestContext.WriteLine(msgstr);
             if (Debugger.IsAttached)
