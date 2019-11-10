@@ -143,7 +143,9 @@
                         <Label Content="Code Samples:"/>
                         <ListBox Name="lvCodeSamples" 
                                  ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests. These are sorted by LastWriteTime and the 1st one is selected when the directory changes content."
-                                 ItemsSource="{Binding LstCodeSamples }" MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
+                                 ItemsSource="{Binding LstCodeSamples }" 
+                                 MaxHeight="200"
+                                 MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

@@ -142,6 +142,7 @@
                                 _ = RefreshCodeToRunAsync();
                             }
                 );
+                // we don't handle Rename here: just save the newly renamed file to trigger the Changed event.
                 _fileSystemWatcher.Changed += h;
                 _fileSystemWatcher.Created += h;
                 _fileSystemWatcher.Deleted += h;

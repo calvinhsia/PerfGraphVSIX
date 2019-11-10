@@ -59,7 +59,7 @@ namespace DumperViewer
                         }
                         nObjCount++;
                     }
-                    logger.LogMessage($"Total Object Count = {nObjCount:n0}  {dumpFile}");
+                    logger.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dictTypes.Count} {dumpFile}");
                     var maxLength = 1024;
                     var strValue = string.Empty;
                     foreach (var str in lstStrings)
@@ -126,27 +126,31 @@ namespace DumperViewer
         {
             var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
             var resCurrent = AnalyzeDump(pathDumpCurrent);
-            var sb = new StringBuilder($"TypesAndStrings {pathDumpBase} {pathDumpCurrent}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
+            var sb = new StringBuilder();
+            sb.AppendLine($"TypesAndStrings {pathDumpBase} {pathDumpCurrent}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             AnalyzeDiff(sb, dictTypes, resCurrent.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             AnalyzeDiff(sb, dictStrings, resCurrent.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             logger.LogMessage($"analzyed types and strings {pathDumpBase} {pathDumpCurrent}");
-//            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
+            //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
             var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
             logger.LogMessage($"Out put to {fname}");
         }
 
         private void AnalyzeDiff(StringBuilder sb, Dictionary<string, int> dictBase, Dictionary<string, int> dictCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
-            foreach (var entryCurrent in dictCurrent.Where(e => e.Value >= TotNumIterations).OrderBy(e => e.Value))
+            foreach (var entryCurrent in dictCurrent.Where(e => e.Value >= TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1).OrderBy(e => e.Value))
             {
                 if (dictBase.ContainsKey(entryCurrent.Key))
                 {
                     var baseCnt = dictBase[entryCurrent.Key];
-                    if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot == entryCurrent.Value)
+                    if (baseCnt > TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
                     {
-                        var msg = string.Format("{0,3} {1,3} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
-                        sb.AppendLine(msg);
-                        //                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
+                        if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value)
+                        {
+                            var msg = string.Format("{0,3} {1,3} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
+                            sb.AppendLine(msg);
+                            //                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
+                        }
                     }
                 }
             }
