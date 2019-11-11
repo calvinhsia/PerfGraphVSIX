@@ -67,7 +67,7 @@ namespace MyCodeToExecute
         public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsDebug = new TaskCompletionSource<int>();
-        JoinableTask _tskDoPerfMonitoring;
+        public string TestName { get { return Path.GetFileNameWithoutExtension(FileToExecute); } }
 
         public BaseExecCodeClass(object[] args)
         {
@@ -77,7 +77,7 @@ namespace MyCodeToExecute
             StressUtil = args[3] as IStressUtil;
             g_dte = args[4] as EnvDTE.DTE;
 
-            logger.LogMessage("Registering events ");
+            //logger.LogMessage("Registering events ");
 
             BuildEvents = g_dte.Events.BuildEvents;
             DebuggerEvents = g_dte.Events.DebuggerEvents;
@@ -93,7 +93,7 @@ namespace MyCodeToExecute
 
         public void UnregisterEvents()
         {
-            logger.LogMessage("UnRegistering events");
+            //logger.LogMessage("UnRegistering events");
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution -= SolutionEvents_OnAfterCloseSolution;
             BuildEvents.OnBuildBegin -= BuildEvents_OnBuildBegin;
@@ -121,19 +121,19 @@ namespace MyCodeToExecute
             await Task.Yield();
         }
 
-        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f)
+        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f, int delayBetweenIterationsMsec = 1000)
         {
             await DoInitializeAsync();
-            await IterateCode(numIterations, Sensitivity);
+            await IterateCode(numIterations, Sensitivity, delayBetweenIterationsMsec);
             await DoCleanupAsync();
         }
 
-        public async Task IterateCode(int numIterations, double Sensitivity)
+        public async Task IterateCode(int numIterations, double Sensitivity, int delayBetweenIterationsMsec)
         {
             try
             {
                 var measurementHolder = new MeasurementHolder(
-                    Path.GetFileNameWithoutExtension(FileToExecute),
+                    TestName,
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
                     logger,
@@ -143,17 +143,17 @@ namespace MyCodeToExecute
                 for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                 {
                     await DoIterationBodyAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+                    await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
                     var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
                     // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
                     await StressUtil.DoSampleAsync(measurementHolder, desc);
                     if (numIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == numIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+                        await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
                         logger.LogMessage("Taking base snapshot dump");
                         baseDumpFileName = await measurementHolder.CreateDumpAsync(
                             System.Diagnostics.Process.GetCurrentProcess().Id,
-                            desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + iteration.ToString(),
+                            desc: TestName + "_" + iteration.ToString(),
                             memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
                     }
 
@@ -171,7 +171,7 @@ namespace MyCodeToExecute
                     logger.LogMessage("Cancelled Code Execution");
                 }
                 // cleanup code here: compare measurements, take a dump, examine for types, etc.
-                var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel:false);
+                var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
                 logger.LogMessage("Measurement Results " + filenameResults);
                 var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
 
@@ -179,11 +179,11 @@ namespace MyCodeToExecute
                 {
                     foreach (var regres in lstRegResults)
                     {
-                        logger.LogMessage("Regression!!!!!" +regres.ToString());
+                        logger.LogMessage("Regression!!!!!" + regres.ToString());
                     }
                     var currentDumpFile = await measurementHolder.CreateDumpAsync(
                         System.Diagnostics.Process.GetCurrentProcess().Id,
-                        desc: Path.GetFileNameWithoutExtension(FileToExecute) + "_" + numIterations.ToString(),
+                        desc: TestName + "_" + numIterations.ToString(),
                         memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
 
                     if (!string.IsNullOrEmpty(baseDumpFileName))

@@ -132,6 +132,23 @@ namespace DumperViewer
                     lstCtrsToInclude.Add(item.ToString());
                 }
                 AddGraph(this.lstRegressionAnalysis);
+                if (lstCtrsToInclude.Count == 1)
+                {
+                    var lstdata = this.lstRegressionAnalysis.Where(i => i.perfCounterData.PerfCounterName == lstCtrsToInclude[0]).First().lstData;
+                    var itmsUI = new List<UIElement>();
+                    var ffamilty = new FontFamily("Consolas");
+                    foreach (var itm in lstdata)
+                    {
+                        var sp = new StackPanel() { Orientation = Orientation.Horizontal };
+                        sp.Children.Add(new TextBlock() { Text = $"{itm.X,4:n0} {itm.Y:n0}", FontFamily = ffamilty }) ;
+                        itmsUI.Add(sp);
+                    }
+                    this.lstValues.ItemsSource = itmsUI;
+                }
+                else
+                {
+                    this.lstValues.ItemsSource = null;
+                }
             }
         }
 

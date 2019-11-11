@@ -46,12 +46,12 @@ namespace PerfGraphVSIX
         /// </summary>
         public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForVSIX = new List<PerfCounterData>()
         {
-            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" ) { IsEnabledForMeasurement=false} } ,
+            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForMeasurement=false} },
             {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process")  { IsEnabledForMeasurement=false} },
             {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process")  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" ) { IsEnabledForMeasurement=false} } ,
             {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process")  { IsEnabledForMeasurement=false} },
             {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForMeasurement=false} },
             {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID")  { IsEnabledForMeasurement=false} },
             {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process")  { IsEnabledForMeasurement=false} },
             {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process")  { IsEnabledForMeasurement=false} },

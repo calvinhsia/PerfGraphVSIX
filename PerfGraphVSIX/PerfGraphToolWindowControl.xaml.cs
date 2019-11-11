@@ -166,7 +166,7 @@
 
 
                 lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
-                lbPCounters.SelectedIndex = 1;
+                lbPCounters.SelectedIndex = 0;
                 PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
