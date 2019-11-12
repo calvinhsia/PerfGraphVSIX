@@ -146,7 +146,7 @@ namespace PerfGraphVSIX
             {
                 GC.Collect();
             }
-            var sBuilder = new StringBuilder(desc + " ");
+            var sBuilder = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
                 if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))

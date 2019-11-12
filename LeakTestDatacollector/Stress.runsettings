@@ -24,7 +24,7 @@
       <TestContainer FileName="LeakTestDatacollectorBin.dll" />
     </TestContainers>
     <TestCaseFilter>FullyQualifiedName=LeakTestDatacollector.DataCollectorStressTests.DCStressOpenCloseSolution</TestCaseFilter>
-    <TestIterations>3</TestIterations>
+    <TestIterations>11</TestIterations>
     <EnableWarmupIteration>false</EnableWarmupIteration>
   </TestConfiguration>
   <VisualStudioConfiguration>

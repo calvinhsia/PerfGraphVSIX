@@ -129,8 +129,6 @@ namespace TestStress
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
         }
 
-        public Dictionary<string, List<uint>> _measurements = new Dictionary<string, List<uint>>(); // ctrname=> measurements per iteration
-
         /// <summary>
         /// after each iteration, take measurements
         /// </summary>
