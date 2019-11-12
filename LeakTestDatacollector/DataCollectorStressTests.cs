@@ -45,7 +45,7 @@ namespace LeakTestDatacollector
     //}
 
     [TestClass]
-    public class UnitTest1
+    public class DataCollectorStressTests
     {
         /// <summary>
         /// The process we're monitoring
@@ -78,7 +78,7 @@ namespace LeakTestDatacollector
 
         bool fDidit = false;
         [TestMethod]
-        public void TestMethod1()
+        public void DCStressOpenCloseSolution()
         {
             if (!fDidit)
             {
