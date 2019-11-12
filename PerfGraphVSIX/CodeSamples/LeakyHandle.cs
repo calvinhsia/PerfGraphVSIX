@@ -42,6 +42,9 @@ namespace MyCodeToExecute
                 await oMyClass.DoTheTest(numIterations: 19, Sensitivity: .4);
             }
         }
+        string somestring = "somestring1";
+        string somestring2 = "somestring2";
+        string somestring3 = "somestring3";
         CancellationTokenSource cts = new CancellationTokenSource();
         List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
         public MyClass(object[] args) : base(args)

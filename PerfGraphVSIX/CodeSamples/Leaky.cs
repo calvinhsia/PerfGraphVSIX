@@ -29,6 +29,9 @@ namespace MyCodeToExecute
                 await oMyClass.DoTheTest(numIterations: 9, Sensitivity: .4, delayBetweenIterationsMsec: 800);
             }
         }
+        string somestring = "somestring1";
+        string somestring2 = "somestring2";
+        string somestring3 = "somestring3";
         List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
         public MyClass(object[] args) : base(args)
         {

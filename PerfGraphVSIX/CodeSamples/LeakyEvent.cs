@@ -18,6 +18,9 @@ namespace MyCodeToExecute
 
     public class MyClass : BaseExecCodeClass
     {
+        string somestring = "somestring1";
+        string somestring2 = "somestring2";
+        string somestring3 = "somestring3";
         public event EventHandler Myevent;
         class BigStuffWithLongNameSoICanSeeItBetter
         {
