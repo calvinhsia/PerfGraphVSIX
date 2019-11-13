@@ -29,7 +29,7 @@ namespace PerfGraphVSIX
         /// smaller leaks, set this to .1. If too sensitive, set this to 10 (for 10 Meg threshold) </param>
         /// <param name="DelayMultiplier">Defaults to 1. All delays (e.g. between iterations, after GC, are multiplied by this factor.
         /// Running the test with instrumented binaries (such as under http://Toolbox/MemSpect  will slow down the target process</param>
-        /// <param name="ProcNameToMonitor">To monitor VS, use 'devenv' To monitor the current process, use '', </param>
+        /// <param name="ProcNamesToMonitor">'|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. </param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"> Specifies the iteration # at which to take a baseline. 
         ///    <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
         /// e.g. 100 iterations, with <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/>=4 means take a baseline at iteartion 100-4==96;
@@ -39,7 +39,7 @@ namespace PerfGraphVSIX
             int NumIterations,
             double Sensitivity = 1.0f,
             int DelayMultiplier = 1,
-            string ProcNameToMonitor = "devenv",
+            string ProcNamesToMonitor = "devenv",
             int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4)
         {
             const string PropNameiteration = "IterationNumber";
@@ -56,7 +56,7 @@ namespace PerfGraphVSIX
             }
             testContext.Properties[PropNameRecursionPrevention] = 1;
 
-            var _theTestMethod = typ.GetMethods().Where(m => m.Name == testContext.TestName).First();
+            var _theTestMethod = typ.GetMethod(testContext.TestName);
             ILogger logger = test as ILogger;
             if (logger == null)
             {
@@ -147,7 +147,7 @@ namespace PerfGraphVSIX
                 }
                 else
                 {
-                    logger.LogMessage($"No baseline dump: not enough iterations {NumIterations} {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
+                    logger.LogMessage($"No baseline dump: not enough iterations");
                 }
                 Assert.Fail($"Leaks found");
             }

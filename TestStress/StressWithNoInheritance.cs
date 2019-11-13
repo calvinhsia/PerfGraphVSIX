@@ -16,8 +16,6 @@ namespace TestStress
         {
             await base.InitializeAsync();
 
-            // the only change to existing test required: call to static method
-            await StressUtil.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
         }
         [TestCleanup]
         public async Task Cleanup()
@@ -26,8 +24,12 @@ namespace TestStress
         }
 
         [TestMethod]
-        public async Task StressNoInheritance()
+        public async Task StressOpenCloseSln()
         {
+            // the only change to existing test required: call to static method
+            await StressUtil.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
+
+
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             await _VSHandler.OpenSolution(SolutionToLoad);
 

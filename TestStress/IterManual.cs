@@ -30,6 +30,7 @@ namespace TestStress
         }
 
         [TestMethod]
+        [Ignore]
         public async Task StressIterateManually()
         {
             await Task.Yield();
