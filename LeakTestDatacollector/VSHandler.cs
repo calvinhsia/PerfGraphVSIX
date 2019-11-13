@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -11,7 +12,7 @@ using PerfGraphVSIX;
 
 namespace LeakTestDatacollector
 {
-    public class VSHandler
+    public class VSHandler: IVisualStudio
     {
         private readonly ILogger logger;
         private readonly int DelayMultiplier;
@@ -119,6 +120,11 @@ namespace LeakTestDatacollector
 
             logger.LogMessage($"done {nameof(StartVSAsync)}");
         }
+        public void DoGarbageCollect()
+        {
+            _vsDTE.ExecuteCommand("Tools.ForceGC");
+        }
+
         public async Task<EnvDTE.DTE> GetDTEAsync(int processId, TimeSpan timeout)
         {
             EnvDTE.DTE dte;
@@ -200,7 +206,6 @@ namespace LeakTestDatacollector
 
         [DllImport("ole32.dll")]
         private static extern int CreateBindCtx(uint reserved, out IBindCtx ppbc);
-
 
     }
 }

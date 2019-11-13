@@ -69,61 +69,6 @@ namespace TestStress
             }
         }
 
-        /// <summary>
-        /// Do it all: tests need only add a single line to TestInitialize to turn a normal test into a stress test
-        /// </summary>
-        /// <param name="stressWithNoInheritance"></param>
-        /// <param name="NumIterations"></param>
-        /// <returns></returns>
-        public static async Task DoIterationsAsync(BaseStressTestClass test, int NumIterations, double Sensitivity = 1.0f)
-        {
-            test.LogMessage($"{nameof(DoIterationsAsync)} TestName = {test.TestContext.TestName}");
-            var _theTestMethod = test.GetType().GetMethods().Where(m => m.Name == test.TestContext.TestName).First();
-
-            var measurementHolder = new MeasurementHolder(
-                test.TestContext.TestName,
-                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
-                SampleType.SampleTypeIteration,
-                logger: test,
-                sensitivity: Sensitivity);
-            test.TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
-
-            var baseDumpFileName = string.Empty;
-            for (int iteration = 0; iteration < NumIterations; iteration++)
-            {
-                var ret = _theTestMethod.Invoke(test, parameters: null);
-                await BaseStressTestClass.TakeMeasurementAsync(test, measurementHolder, $"Iter {iteration + 1}/{NumIterations}");
-                if (NumIterations > test.NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == NumIterations - test.NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
-                    test.LogMessage($"Taking base snapshot dump");
-                    baseDumpFileName = await measurementHolder.CreateDumpAsync(
-                        test.TargetProc.Id,
-                        desc: test.TestContext.TestName + "_" + iteration.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                }
-            }
-            var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
-            test.LogMessage($"Measurement Results {filenameResults}");
-            var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
-            if (lstRegResults.Count > 0)
-            {
-                foreach (var regres in lstRegResults)
-                {
-                    test.LogMessage($"Regression!!!!! {regres}");
-                }
-                var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                    test.TargetProc.Id,
-                    desc: test.TestContext.TestName + "_" + NumIterations.ToString(),
-                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-                if (!string.IsNullOrEmpty(baseDumpFileName))
-                {
-                    var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(test);
-                    oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, NumIterations, test.NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                }
-            }
-        }
-
         public List<string> _lstLoggedStrings = new List<string>();
 
         public void LogMessage(string str, params object[] args)

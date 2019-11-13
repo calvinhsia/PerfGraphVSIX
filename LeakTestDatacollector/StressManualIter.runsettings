@@ -23,7 +23,8 @@
     <TestContainers>
       <TestContainer FileName="LeakTestDatacollectorBin.dll" />
     </TestContainers>
-    <TestCaseFilter>FullyQualifiedName=LeakTestDatacollector.DataCollectorStressTestsManualIter.DCStressOpenCloseSolution</TestCaseFilter>
+    <!--<TestCaseFilter>FullyQualifiedName=LeakTestDatacollector.DataCollectorStressTestsManualIterLeaky.Leak*</TestCaseFilter>-->
+    <TestCaseFilter>Name~Manual</TestCaseFilter>
     <TestIterations>1</TestIterations>
     <EnableWarmupIteration>false</EnableWarmupIteration>
   </TestConfiguration>

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PerfGraphVSIX;
 
 namespace TestStress
 {
@@ -16,7 +17,7 @@ namespace TestStress
             await base.InitializeAsync();
 
             // the only change to existing test required: call to static method
-            await BaseStressTestClass.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
+            await StressUtil.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
         }
         [TestCleanup]
         public async Task Cleanup()
