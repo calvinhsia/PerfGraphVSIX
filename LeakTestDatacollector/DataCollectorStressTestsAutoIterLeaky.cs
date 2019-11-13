@@ -26,14 +26,13 @@ using PerfGraphVSIX;
 namespace LeakTestDatacollector
 {
     [TestClass]
-    public class DataCollectorStressTests
+    public class DataCollectorStressTestsAutoIterLeaky
     {
         /// <summary>
         /// when iterating via DC, statics persist. 
         /// </summary>
         public static ILogger logger;
 
-        static VSHandler vsHandler;
         static MeasurementHolder measurementHolder;
         static int IterationNumber;
         static string baseDumpFileName;
@@ -57,20 +56,14 @@ namespace LeakTestDatacollector
                 logger = new Logger(testContext);
                 logger.LogMessage($"Starting {new StackTrace().GetFrames()[0].GetMethod().Name}");
             }
+            PerfCounterData.ProcToMonitor = Process.GetCurrentProcess();
+
             measurementHolder = new MeasurementHolder(
                 TestContext.TestName,
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                 SampleType.SampleTypeIteration,
                 logger: logger,
-                sensitivity: .1);
-
-
-            vsHandler = new VSHandler(logger, DelayMultiplier);
-            PerfCounterData.ProcToMonitor = vsHandler.TargetProc;
-
-            var vsPath = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
-
-            vsHandler.StartVSAsync(vsPath).Wait();
+                sensitivity: 1);
         }
         /// <summary>
         /// after each iteration, take measurements
@@ -82,8 +75,11 @@ namespace LeakTestDatacollector
             //                await Task.Delay(TimeSpan.FromSeconds(5 * test.DelayMultiplier));
             try
             {
-                vsHandler._vsDTE?.ExecuteCommand("Tools.ForceGC");
-                await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+                if (Process.GetCurrentProcess().Id == PerfCounterData.ProcToMonitor.Id)
+                {
+                    GC.Collect();
+                }
+                await Task.Delay(TimeSpan.FromSeconds(.1 * DelayMultiplier));
 
                 var res = measurementHolder.TakeMeasurement(desc);
                 logger.LogMessage(res);
@@ -94,7 +90,6 @@ namespace LeakTestDatacollector
             }
         }
 
-        //        [DeploymentItem("asdf")]
         [ClassCleanup]
         public static void ClassCleanup()
         {
@@ -124,8 +119,6 @@ namespace LeakTestDatacollector
                 }
                 Assert.Fail($"Leaks found. Failing test");
             }
-
-            vsHandler.ShutDownVSAsync().Wait();
         }
 
         [TestInitialize]
@@ -140,9 +133,18 @@ namespace LeakTestDatacollector
             logger.LogMessage($"{nameof(TestCleanup)}");
         }
 
+        class BigStuffWithLongNameSoICanSeeItBetter
+        {
+            readonly byte[] arr = new byte[1024 * 1024];
+            public byte[] GetArray => arr;
+        }
+
+        static readonly List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+
+
         static bool fDidit = false;
         [TestMethod]
-        public async Task DCStressOpenCloseSolution()
+        public async Task Leaky()
         {
             if (!fDidit)
             {
@@ -152,11 +154,13 @@ namespace LeakTestDatacollector
                 //TestContext.Properties[nameof(MeasurementHolder)] = measurementHolder;
                 //TestContext.Properties["ITERATION"] = 1;
             }
-            logger.LogMessage($"Starting {nameof(DCStressOpenCloseSolution)}");
-            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+            // to test if your code leaks, put it here. Repeat a lot to magnify the effect
+            for (int i = 0; i < 1; i++)
+            {
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
 
-            await vsHandler.OpenSolution(SolutionToLoad);
-            await vsHandler.CloseSolution();
+            logger.LogMessage($"Starting {nameof(Leaky)}");
             IterationNumber++;
             await TakeMeasurementAsync($"Iteration # {IterationNumber}");
             if (IterationNumber == NumITerationsAtWhichToTakeBaseSnapshot)

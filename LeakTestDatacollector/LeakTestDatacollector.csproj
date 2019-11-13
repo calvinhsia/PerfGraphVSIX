@@ -49,6 +49,8 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataCollectorStressTestsAutoIterLeaky.cs" />
+    <Compile Include="DataCollectorStressTestsManualIter.cs" />
     <Compile Include="DataCollectorStressTests.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MessageFilter.cs" />
@@ -112,6 +114,16 @@
       <Project>{006276cd-726b-4a0d-a6ea-57d99480ce1b}</Project>
       <Name>DumperViewer</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="StressManualIter.runsettings">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="StressAutoIterLeaky.runsettings">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -23,7 +23,7 @@ namespace TestStress
         /// <summary>
         /// The process we're monitoring
         /// </summary>
-        public Process TargetProc => _VSHandler._targetProc;
+        public Process TargetProc => _VSHandler.TargetProc;
         protected EnvDTE.DTE VsDTE => _VSHandler._vsDTE;
 
         protected int DelayMultiplier = 1;

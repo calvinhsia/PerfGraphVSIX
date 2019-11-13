@@ -26,7 +26,7 @@ using PerfGraphVSIX;
 namespace LeakTestDatacollector
 {
     [TestClass]
-    public class DataCollectorStressTests
+    public class DataCollectorStressTestsManualIter
     {
         /// <summary>
         /// when iterating via DC, statics persist. 
@@ -66,7 +66,6 @@ namespace LeakTestDatacollector
 
 
             vsHandler = new VSHandler(logger, DelayMultiplier);
-            PerfCounterData.ProcToMonitor = vsHandler.TargetProc;
 
             var vsPath = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
 

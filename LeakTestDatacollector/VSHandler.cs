@@ -19,7 +19,7 @@ namespace LeakTestDatacollector
         /// <summary>
         /// The process we're monitoring
         /// </summary>
-        public Process _targetProc;
+        public Process TargetProc => PerfCounterData.ProcToMonitor;
         TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
 
         EnvDTE.SolutionEvents _solutionEvents; // need a strong ref to survive GCs
@@ -76,7 +76,7 @@ namespace LeakTestDatacollector
                 _vsDTE.Events.SolutionEvents.Opened -= SolutionEvents_Opened;
                 _vsDTE.Events.SolutionEvents.AfterClosing -= SolutionEvents_AfterClosing;
                 var tcs = new TaskCompletionSource<int>();
-                _targetProc.Exited += (o, e) => // doesn't fire reliably
+                TargetProc.Exited += (o, e) => // doesn't fire reliably
                 {
                     tcs.SetResult(0);
                 };
@@ -88,14 +88,14 @@ namespace LeakTestDatacollector
                 {
                     if (await Task.WhenAny(tcs.Task, taskOneSecond) != tcs.Task)
                     {
-                        if (_targetProc.HasExited)
+                        if (TargetProc.HasExited)
                         {
                             break;
                         }
                         taskOneSecond = Task.Delay(1000);
                     }
                 }
-                if (!_targetProc.HasExited)
+                if (!TargetProc.HasExited)
                 {
                     logger.LogMessage($"******************Did not close in {timeoutForClose} secs");
                 }
@@ -108,11 +108,10 @@ namespace LeakTestDatacollector
         public async Task StartVSAsync(string vsPath)
         {
             logger.LogMessage($"{nameof(StartVSAsync)}");
-            _targetProc = Process.Start(vsPath);
-            logger.LogMessage($"Started VS PID= {_targetProc.Id}");
-            PerfCounterData.ProcToMonitor = _targetProc;
+            PerfCounterData.ProcToMonitor = Process.Start(vsPath);
+            logger.LogMessage($"Started VS PID= {TargetProc.Id}");
 
-            _vsDTE = await GetDTEAsync(_targetProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
+            _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
             _solutionEvents = _vsDTE.Events.SolutionEvents;
 
             _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
