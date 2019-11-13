@@ -13,21 +13,20 @@ namespace TestStress
     public class IterManual : BaseStressTestClass
     {
         [TestInitialize]
-        public async Task InitializeAsync()
+        public override async Task InitializeAsync()
         {
             LogMessage($"{nameof(InitializeAsync)}");
-            await base.InitializeBaseAsync();
-            await StartVSAsync();
+            await base.InitializeAsync();
             LogMessage($"done {nameof(InitializeAsync)}");
         }
 
 
         [TestCleanup]
-        public async Task Cleanup()
+        public override async Task CleanupAsync()
         {
-            LogMessage($"{nameof(Cleanup)}");
-            await base.ShutDownVSAsync();
-            LogMessage($"done {nameof(Cleanup)}");
+            LogMessage($"{nameof(CleanupAsync)}");
+            await base.CleanupAsync();
+            LogMessage($"done {nameof(CleanupAsync)}");
         }
 
         [TestMethod]
@@ -54,7 +53,10 @@ namespace TestStress
 
                     for (int iteration = 0; iteration < NumIterations; iteration++)
                     {
-                        await OpenCloseSolutionOnce(SolutionToLoad);
+                        await _VSHandler.OpenSolution(SolutionToLoad);
+
+                        await _VSHandler.CloseSolution();
+
                         await TakeMeasurementAsync(this, measurementHolder, $"Start of Iter {iteration + 1}/{NumIterations}");
                     }
                     measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);

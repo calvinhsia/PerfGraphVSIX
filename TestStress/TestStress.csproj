@@ -50,7 +50,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseStressTestClass.cs" />
-    <Compile Include="MessageFilter.cs" />
     <Compile Include="IterWithAttr.cs" />
     <Compile Include="IterManual.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,6 +62,10 @@
     <ProjectReference Include="..\DumperViewer\DumperViewer.csproj">
       <Project>{006276cd-726b-4a0d-a6ea-57d99480ce1b}</Project>
       <Name>DumperViewer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LeakTestDatacollector\LeakTestDatacollector.csproj">
+      <Project>{A46051B7-D079-4B82-816B-D74727978271}</Project>
+      <Name>LeakTestDatacollector</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

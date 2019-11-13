@@ -13,22 +13,24 @@ namespace TestStress
         [TestInitialize]
         public async Task InitAsync()
         {
-            await StartVSAsync();
+            await base.InitializeAsync();
 
             // the only change to existing test required: call to static method
-            await BaseStressTestClass.DoIterationsAsync(this, NumIterations: 7, Sensitivity: 1);
+            await BaseStressTestClass.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
         }
         [TestCleanup]
         public async Task Cleanup()
         {
-            await ShutDownVSAsync();
+            await base.CleanupAsync();
         }
 
         [TestMethod]
         public async Task StressNoInheritance()
         {
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-            await OpenCloseSolutionOnce(SolutionToLoad);
+            await _VSHandler.OpenSolution(SolutionToLoad);
+
+            await _VSHandler.CloseSolution();
         }
     }
 }

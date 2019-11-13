@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TestStress
+namespace LeakTestDatacollector
 {
     //see http://msdn.microsoft.com/en-us/library/ms228772.aspx How to: Fix 'Application is Busy' and 'Call was Rejected By Callee' Errors
     [ComImport(), Guid("00000016-0000-0000-C000-000000000046"), InterfaceTypeAttribute(ComInterfaceType.InterfaceIsIUnknown)]

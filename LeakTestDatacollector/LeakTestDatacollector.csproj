@@ -51,11 +51,11 @@
   <ItemGroup>
     <Compile Include="DataCollectorStressTests.cs" />
     <Compile Include="Logger.cs" />
+    <Compile Include="MessageFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <Content Include="Stress.runsettings">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

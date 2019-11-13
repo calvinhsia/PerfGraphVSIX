@@ -50,7 +50,7 @@ namespace TestStress
                     test.LogMessage($"Regression!!!!! {regres}");
                 }
                 await measurementHolder.CreateDumpAsync(
-                    test._targetProc.Id,
+                    test.TargetProc.Id,
                     desc: test.TestContext.TestName + "_" + attr.NumIterations.ToString(),
                     memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
             }
@@ -64,16 +64,16 @@ namespace TestStress
     public class IterWithAttr : BaseTestWithAttribute
     {
         [TestInitialize]
-        public async Task InitializeAsync()
+        public override async Task InitializeAsync()
         {
+            await base.InitializeAsync();
             LogMessage($"{nameof(InitializeAsync)}");
-            await StartVSAsync();
             await ProcessAttributesAsync(TestContext, this);
         }
         [TestCleanup]
-        public async Task Cleanup()
+        public override async Task CleanupAsync()
         {
-            await base.ShutDownVSAsync();
+            await base.CleanupAsync();
         }
 
         [TestMethod]
@@ -81,7 +81,9 @@ namespace TestStress
         public async Task StressTestWithAttribute()
         {
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-            await OpenCloseSolutionOnce(SolutionToLoad);
+            await _VSHandler.OpenSolution(SolutionToLoad);
+
+            await _VSHandler.CloseSolution();
         }
         [TestMethod]
         [MemSpectAttribute(NumIterations = 3, Sensitivity=1)]
@@ -89,8 +91,9 @@ namespace TestStress
         {
             LogMessage($"{nameof(StressTestWithAttributeNotAsync)}");
             string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-            var tsk = OpenCloseSolutionOnce(SolutionToLoad);
-            tsk.Wait();
+            _VSHandler.OpenSolution(SolutionToLoad).Wait();
+
+            _VSHandler.CloseSolution().Wait();
         }
 
     }

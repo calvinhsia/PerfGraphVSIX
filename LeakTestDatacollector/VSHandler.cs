@@ -99,6 +99,7 @@ namespace LeakTestDatacollector
                 {
                     logger.LogMessage($"******************Did not close in {timeoutForClose} secs");
                 }
+                //MessageFilter.RevokeMessageFilter();
                 _vsDTE = null;
 
             }
@@ -194,6 +195,7 @@ namespace LeakTestDatacollector
                 }
             }
 
+//            MessageFilter.RegisterMessageFilter();
             return runningObject as EnvDTE.DTE;
         }
 
