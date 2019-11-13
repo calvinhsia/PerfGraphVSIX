@@ -15,7 +15,7 @@ namespace LeakTestDatacollector
     public class VSHandler: IVisualStudio
     {
         private readonly ILogger logger;
-        private readonly int DelayMultiplier;
+        private readonly int _DelayMultiplier;
         public EnvDTE.DTE _vsDTE;
         /// <summary>
         /// The process we're monitoring
@@ -28,12 +28,12 @@ namespace LeakTestDatacollector
         public VSHandler(ILogger logger, int delayMultiplier)
         {
             this.logger = logger;
-            this.DelayMultiplier = delayMultiplier;
+            this._DelayMultiplier = delayMultiplier;
         }
 
         public async Task OpenSolution(string SolutionToLoad)
         {
-            var timeoutVSSlnEventsSecs = 15 * DelayMultiplier;
+            var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
             //LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Open(SolutionToLoad);
@@ -42,19 +42,19 @@ namespace LeakTestDatacollector
                 logger.LogMessage($"******************Solution Open event not fired in {timeoutVSSlnEventsSecs} seconds");
             }
             _tcsSolution = new TaskCompletionSource<int>();
-            await Task.Delay(TimeSpan.FromSeconds(10 * DelayMultiplier));
+            await Task.Delay(TimeSpan.FromSeconds(10 * _DelayMultiplier));
         }
 
         public async Task CloseSolution()
         {
-            var timeoutVSSlnEventsSecs = 15 * DelayMultiplier;
+            var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
             _tcsSolution = new TaskCompletionSource<int>();
             _vsDTE.Solution.Close();
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
                 logger.LogMessage($"******************Solution Close event not fired in {timeoutVSSlnEventsSecs} seconds");
             }
-            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+            await Task.Delay(TimeSpan.FromSeconds(5 * _DelayMultiplier));
         }
 
         private void SolutionEvents_AfterClosing()
@@ -82,7 +82,7 @@ namespace LeakTestDatacollector
                     tcs.SetResult(0);
                 };
                 _vsDTE.Quit();
-                var timeoutForClose = 15 * DelayMultiplier;
+                var timeoutForClose = 15 * _DelayMultiplier;
                 var taskOneSecond = Task.Delay(1000);
 
                 while (timeoutForClose > 0)
@@ -112,7 +112,7 @@ namespace LeakTestDatacollector
             PerfCounterData.ProcToMonitor = Process.Start(vsPath);
             logger.LogMessage($"Started VS PID= {TargetProc.Id}");
 
-            _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
+            _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
             _solutionEvents = _vsDTE.Events.SolutionEvents;
 
             _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?

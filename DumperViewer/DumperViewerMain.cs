@@ -184,7 +184,7 @@ namespace DumperViewer
             }
         }
 
-        public static string EnsureMyDir()
+        public static string EnsureResultsFolderExists()
         {
             var dirMyTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
             if (!Directory.Exists(dirMyTemp))
@@ -195,7 +195,7 @@ namespace DumperViewer
         }
         public static string GetNewResultsFolderName(string baseFolderName)
         {
-            var dirMyTemp = EnsureMyDir();
+            var dirMyTemp = EnsureResultsFolderExists();
             int nIter = 0;
             string pathResultsFolder;
             while (true) // we want to let the user have multiple dumps open for comparison

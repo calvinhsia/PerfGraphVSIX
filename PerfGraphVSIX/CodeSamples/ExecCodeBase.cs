@@ -62,7 +62,7 @@ namespace MyCodeToExecute
 
         public BuildEvents BuildEvents;
         public DebuggerEvents DebuggerEvents;
-        public IStressUtil StressUtil;
+        public ITakeSample itakeSample;
 
         public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
@@ -74,7 +74,7 @@ namespace MyCodeToExecute
             FileToExecute = args[0] as string;
             logger = args[1] as ILogger;
             _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
-            StressUtil = args[3] as IStressUtil;
+            itakeSample = args[3] as ITakeSample;
             g_dte = args[4] as EnvDTE.DTE;
 
             //logger.LogMessage("Registering events ");

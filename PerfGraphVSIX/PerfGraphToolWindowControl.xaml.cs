@@ -29,7 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
 
-    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, IStressUtil
+    public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;

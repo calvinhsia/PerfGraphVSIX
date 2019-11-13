@@ -115,7 +115,11 @@ namespace PerfGraphVSIX
         int nSamplesTaken;
         public string ResultsFolder;
 
-        public MeasurementHolder(string TestName, List<PerfCounterData> lstPCData, SampleType sampleType, ILogger logger, double sensitivity = 1.0f)
+        public MeasurementHolder(string TestName, 
+                    List<PerfCounterData> lstPCData, 
+                    SampleType sampleType, 
+                    ILogger logger, 
+                    double sensitivity = 1.0f)
         {
             this.TestName = TestName;
             this.lstPerfCounterData = lstPCData;
@@ -124,7 +128,7 @@ namespace PerfGraphVSIX
             this.sensitivity = sensitivity;
             if (string.IsNullOrEmpty(TestName))
             {
-                ResultsFolder = DumperViewerMain.EnsureMyDir();
+                ResultsFolder = DumperViewerMain.EnsureResultsFolderExists();
             }
             else
             {

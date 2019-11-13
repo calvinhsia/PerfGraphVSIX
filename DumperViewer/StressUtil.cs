@@ -29,11 +29,11 @@ namespace PerfGraphVSIX
         /// smaller leaks, set this to .1. If too sensitive, set this to 10 (for 10 Meg threshold) </param>
         /// <param name="DelayMultiplier">Defaults to 1. All delays (e.g. between iterations, after GC, are multiplied by this factor.
         /// Running the test with instrumented binaries (such as under http://Toolbox/MemSpect  will slow down the target process</param>
+        /// <param name="ProcNameToMonitor">To monitor VS, use 'devenv' To monitor the current process, use '', </param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"> Specifies the iteration # at which to take a baseline. 
-        /// <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
+        ///    <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
         /// e.g. 100 iterations, with <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/>=4 means take a baseline at iteartion 100-4==96;
         /// </param>
-        /// <returns></returns>
         public static async Task DoIterationsAsync(
             object test,
             int NumIterations,

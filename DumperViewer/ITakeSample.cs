@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace PerfGraphVSIX
 {
-    public interface IStressUtil
+    public interface ITakeSample
     {
         Task DoSampleAsync(MeasurementHolder measurementHolder, string descriptionOverride = "");
     }
