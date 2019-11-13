@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataCollectorStressTestsAutoIterLeaky.cs" />
+    <Compile Include="DataCollectorStressTestsManualIterLeaky.cs" />
     <Compile Include="DataCollectorStressTestsManualIter.cs" />
     <Compile Include="DataCollectorStressTests.cs" />
     <Compile Include="Logger.cs" />
@@ -122,6 +123,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="StressAutoIterLeaky.runsettings">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="StressManualIterLeaky.runsettings">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
