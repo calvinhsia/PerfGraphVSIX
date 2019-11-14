@@ -69,7 +69,21 @@ namespace PerfGraphVSIX
                         logger = new Logger(testContext);
                     }
                 }
-                logger.LogMessage($"{nameof(DoIterationsAsync)} TestName = {testContext.TestName}");
+                logger.LogMessage($@"{
+                    nameof(DoIterationsAsync)} TestName = {testContext.TestName} 
+                        CurDir = '{Environment.CurrentDirectory}'
+                        TestRunDirectory = '{testContext.TestRunDirectory}'  
+                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
+                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'");
+                /*
+                 * probs: the curdir is not empty, so results will be overwritten (might have ClrObjectExplorer open with a result dump)
+                 *       The Test*dirs are all deleted after the run.
+                                        CurDir = 'C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestStress\bin\Debug'
+                                        TestRunDirectory = 'C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-14 11_09_37'  
+                                        TestResultsDirectory='C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-14 11_09_37\In' 
+                                        TestRunResultsDirectory='C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-14 11_09_37\In\CALVINH2'
+                 * */
+
                 VSHandler vSHandler = null;
                 if (string.IsNullOrEmpty(ProcNamesToMonitor))
                 {
