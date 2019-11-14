@@ -11,9 +11,17 @@ using System.Threading.Tasks;
 
 namespace PerfGraphVSIX
 {
+    // we don't want to have dependencies on VS process, DTE objects, etc.
     public interface IVisualStudio
     {
         void DoGarbageCollect();
+        /// <summary>
+        /// We want to get the DTE of the most recently started devenv. 
+        /// 
+        /// </summary>
+        /// <param name="timeSpan">The max timespan to </param>
+        /// <returns></returns>
+        Task<bool> EnsureGotDTE(TimeSpan timeSpanAgeOfVsToUse);
     }
 
     public class StressUtil
@@ -79,6 +87,7 @@ namespace PerfGraphVSIX
             {
                 ivisualStudio = vsHandlerFld.GetValue(test) as IVisualStudio;
             }
+            await ivisualStudio.EnsureGotDTE(TimeSpan.FromSeconds(3)); // ensure we get the DTE 
 
             var measurementHolder = new MeasurementHolder(
                 testContext.TestName,

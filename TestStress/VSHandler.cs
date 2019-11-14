@@ -12,8 +12,9 @@ using PerfGraphVSIX;
 
 namespace LeakTestDatacollector
 {
-    public class VSHandler: IVisualStudio
+    public class VSHandler : IVisualStudio
     {
+        public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to profile child processes
         private readonly ILogger logger;
         private readonly int _DelayMultiplier;
         public EnvDTE.DTE _vsDTE;
@@ -25,10 +26,42 @@ namespace LeakTestDatacollector
 
         EnvDTE.SolutionEvents _solutionEvents; // need a strong ref to survive GCs
 
-        public VSHandler(ILogger logger, int delayMultiplier)
+        public VSHandler(ILogger logger, int delayMultiplier = 1)
         {
             this.logger = logger;
             this._DelayMultiplier = delayMultiplier;
+        }
+
+
+        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan)
+        {
+            if (_vsDTE == null)
+            {
+                await Task.Yield();
+                var procDevEnv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
+                logger.LogMessage($"Latest devenv = {procDevEnv.Id} starttime = {procDevEnv.StartTime}");
+                var diff = procDevEnv.StartTime > DateTime.Now - timeSpan;
+                if (procDevEnv.StartTime < DateTime.Now - timeSpan) // the process start time must have started very recently
+                {
+                    throw new InvalidOperationException($"Couldn't find {procToFind}in {timeSpan.TotalSeconds} seconds {diff} PidLatest = {procDevEnv.Id} ");
+                }
+                _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
+                _solutionEvents = _vsDTE.Events.SolutionEvents;
+
+                _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
+                _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
+            }
+            return true;
+        }
+
+
+        public async Task StartVSAsync(string vsPath)
+        {
+            logger.LogMessage($"{nameof(StartVSAsync)}");
+            PerfCounterData.ProcToMonitor = Process.Start(vsPath);
+            logger.LogMessage($"Started VS PID= {TargetProc.Id}");
+            await EnsureGotDTE(TimeSpan.FromSeconds(3));
+            logger.LogMessage($"done {nameof(StartVSAsync)}");
         }
 
         public async Task OpenSolution(string SolutionToLoad)
@@ -106,20 +139,6 @@ namespace LeakTestDatacollector
             }
         }
 
-        public async Task StartVSAsync(string vsPath)
-        {
-            logger.LogMessage($"{nameof(StartVSAsync)}");
-            PerfCounterData.ProcToMonitor = Process.Start(vsPath);
-            logger.LogMessage($"Started VS PID= {TargetProc.Id}");
-
-            _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
-            _solutionEvents = _vsDTE.Events.SolutionEvents;
-
-            _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
-            _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
-
-            logger.LogMessage($"done {nameof(StartVSAsync)}");
-        }
         public void DoGarbageCollect()
         {
             _vsDTE.ExecuteCommand("Tools.ForceGC");
@@ -200,7 +219,7 @@ namespace LeakTestDatacollector
                 }
             }
 
-//            MessageFilter.RegisterMessageFilter();
+            //            MessageFilter.RegisterMessageFilter();
             return runningObject as EnvDTE.DTE;
         }
 
