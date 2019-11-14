@@ -39,11 +39,23 @@ namespace PerfGraphVSIX
             this.textDocumentFactoryService = textDocumentFactoryService;
             _textBufferFactoryService.TextBufferCreated += (o, e) =>
             {
-                _objectTracker.AddObjectToTrack(e.TextBuffer, ObjSource.FromTextBufferFactoryService, description: e.TextBuffer.ContentType.DisplayName);
+                try
+                {
+                    _objectTracker?.AddObjectToTrack(e.TextBuffer, ObjSource.FromTextBufferFactoryService, description: e.TextBuffer.ContentType.DisplayName);
+                }
+                catch (Exception)
+                {
+                }
             };
             _projectionBufferFactoryService.ProjectionBufferCreated += (o, e) =>
             {
-                _objectTracker.AddObjectToTrack(e.TextBuffer, ObjSource.FromProjectionBufferFactoryService, description: e.TextBuffer.ContentType.DisplayName);
+                try
+                {
+                    _objectTracker?.AddObjectToTrack(e.TextBuffer, ObjSource.FromProjectionBufferFactoryService, description: e.TextBuffer.ContentType.DisplayName);
+                }
+                catch (Exception)
+                {
+                }
             };
         }
 
