@@ -24,6 +24,7 @@ namespace TestStress
         readonly List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
 
         [TestMethod]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressLeaky()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
@@ -39,6 +40,7 @@ namespace TestStress
 
         [TestMethod]
         [MemSpectAttribute(NumIterations = 3)]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressTestWithAttribute()
         {
             await ProcessAttributesAsync(this);
@@ -50,13 +52,31 @@ namespace TestStress
         }
         [TestMethod]
         [MemSpectAttribute(NumIterations = 3, Sensitivity = 1)]
+        [ExpectedException(typeof(LeakException))]
         public void StressTestWithAttributeNotAsync()
         {
-            ProcessAttributesAsync(this).Wait();
-            // to test if your code leaks, put it here. Repeat a lot to magnify the effect
-            for (int i = 0; i < 1; i++)
+            try
             {
-                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+                ProcessAttributesAsync(this).Wait();
+                // to test if your code leaks, put it here. Repeat a lot to magnify the effect
+                for (int i = 0; i < 1; i++)
+                {
+                    _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+                }
+            }
+            catch (AggregateException ex)
+            {
+                if (ex.InnerExceptions?.Count == 1)
+                {
+                    TestContext.WriteLine($"Agg exception with 1 inner {ex.ToString()}");
+                    throw ex.InnerExceptions[0];
+                }
+                TestContext.WriteLine($"Agg exception with !=1 inner {ex.ToString()}");
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                TestContext.WriteLine($"Final exception {ex.ToString()}");
             }
         }
         public async Task ProcessAttributesAsync(object test)

@@ -33,7 +33,7 @@ namespace PerfGraphVSIX
         /// </param>
         public static async Task DoIterationsAsync(
             object test,
-            int NumIterations,
+            int NumIterations = 7,
             double Sensitivity = 1.0f,
             int DelayMultiplier = 1,
             string ProcNamesToMonitor = "devenv",
@@ -163,7 +163,7 @@ namespace PerfGraphVSIX
                     {
                         logger.LogMessage($"No baseline dump: not enough iterations");
                     }
-                    Assert.Fail($"Leaks found");
+                    throw new LeakException($"Leaks found\r\n", lstRegResults);
                 }
             }
             catch (Exception ex)
@@ -172,6 +172,16 @@ namespace PerfGraphVSIX
 
                 throw;
             }
+        }
+    }
+
+    public class LeakException : Exception
+    {
+        public List<RegressionAnalysis> lstRegResults;
+
+        public LeakException(string message, List<RegressionAnalysis> lstRegResults) : base(message)
+        {
+            this.lstRegResults = lstRegResults;
         }
     }
 

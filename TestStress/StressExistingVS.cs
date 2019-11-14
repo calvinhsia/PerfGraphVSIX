@@ -66,17 +66,75 @@ namespace TestStress
         }
 
         [TestMethod]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressStartVSApexSimNoVSHandler() // Apex starts VS and we'll look for it. Simulate by starting vs directly in TestInitialize
         {
-            VSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
             // the only change to existing test required: call to static method
             await StressUtil.DoIterationsAsync(this, NumIterations: 3);
 
-            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-            await VSHandler.OpenSolution(SolutionToLoad);
 
-            await VSHandler.CloseSolution();
+            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+            if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
+            {
+                throw new InvalidOperationException("null vshandler");
+            }
+            await vSHandler.OpenSolution(SolutionToLoad);
+
+            await vSHandler.CloseSolution();
         }
+
+        [TestClass]
+        public class StressExistingVSNoVSHandlerFieldLater
+        {
+            ILogger logger;
+            public TestContext TestContext { get; set; }
+            [TestInitialize]
+            public void TestInitialize()
+            {
+                logger = new Logger(TestContext);
+                logger.LogMessage($"TestInit : not starting VS immediately");
+                var tsk = Task.Run(async () =>
+                {
+                    int nDelay = 5;
+                    if (System.Diagnostics.Debugger.IsAttached)
+                    {
+                        nDelay = 30;
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(nDelay));
+                    logger.LogMessage($"TestInit : starting VS after {nDelay} secs delay");
+                    System.Diagnostics.Process.Start(BaseStressTestClass.vsPath); // simulate Apex starting VS
+                });
+
+            }
+
+            [TestCleanup]
+            public void TestCleanup()
+            {
+                VSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
+                VSHandler.ShutDownVSAsync().Wait();
+            }
+
+            [TestMethod]
+            [ExpectedException(typeof(LeakException))]
+            public async Task StressStartVSLaterApexSimNoVSHandler() // Apex starts VS and we'll look for it. Simulate by starting vs directly in TestInitialize
+            {
+                // the only change to existing test required: call to static method
+                await StressUtil.DoIterationsAsync(this, NumIterations: 3);
+
+
+                if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
+                {
+                    throw new InvalidOperationException("null vshandler");
+                }
+
+                string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+                await vSHandler.OpenSolution(SolutionToLoad);
+
+                await vSHandler.CloseSolution();
+            }
+        }
+
     }
+
 
 }

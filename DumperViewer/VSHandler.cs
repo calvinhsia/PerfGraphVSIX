@@ -34,7 +34,7 @@ namespace LeakTestDatacollector
         }
 
         /// <summary>
-        /// We don't want an old VS session: we want to find the devenv process that was started by the test: within timeSpan seconds
+        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
         /// </summary>
         /// <param name="timeSpan"></param>
         /// <returns></returns>
@@ -42,27 +42,46 @@ namespace LeakTestDatacollector
         {
             if (_vsDTE == null)
             {
-                logger.LogMessage($"{nameof(EnsureGotDTE)}");
-                await Task.Yield();
-                var procDevEnv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
-                logger.LogMessage($"Latest devenv = {procDevEnv.Id} starttime = {procDevEnv.StartTime}");
-                if (timeSpan == default)
+                await Task.Run(async () =>
                 {
-                    timeSpan = TimeSpan.FromSeconds(3);
-                }
-                var diff = procDevEnv.StartTime > DateTime.Now - timeSpan;
-                if (procDevEnv.StartTime < DateTime.Now - timeSpan) // the process start time must have started very recently
-                {
-                    throw new InvalidOperationException($"Couldn't find {procToFind}in {timeSpan.TotalSeconds} seconds {diff} PidLatest = {procDevEnv.Id} ");
-                }
-                PerfCounterData.ProcToMonitor = procDevEnv;
-                vsProc = procDevEnv;
-                _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
-                _solutionEvents = _vsDTE.Events.SolutionEvents;
+                    if (timeSpan == default)
+                    {
+                        timeSpan = TimeSpan.FromSeconds(10);
+                    }
+                    logger.LogMessage($"{nameof(EnsureGotDTE)}");
+                    await Task.Yield();
+                    Process procDevenv;
+                    bool GetTargetDevenvProcess()
+                    {
+                        bool fGotit = false;
+                        procDevenv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
+                        var dtNow = DateTime.Now;
+                        var diff = procDevenv.StartTime > dtNow - timeSpan;
+                        if (procDevenv.StartTime > dtNow - timeSpan) // the process start time must have started very recently
+                        {
+                            logger.LogMessage($"Latest devenv = {procDevenv.Id} starttime = {procDevenv.StartTime}");
+                            fGotit = true;
+                        }
+                        return fGotit;
+                    }
+                    if (!GetTargetDevenvProcess())
+                    {
+                        logger.LogMessage($"Didn't find Devenv. Waiting til it starts {timeSpan.TotalSeconds:n0} secs");
+                        await Task.Delay(timeSpan);
+                        if (!GetTargetDevenvProcess())
+                        {
+                            throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
+                        }
+                    }
+                    PerfCounterData.ProcToMonitor = procDevenv;
+                    vsProc = procDevenv;
+                    _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
+                    _solutionEvents = _vsDTE.Events.SolutionEvents;
 
-                _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
-                _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
-                logger.LogMessage($"{nameof(EnsureGotDTE)} done");
+                    _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
+                    _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
+                    logger.LogMessage($"{nameof(EnsureGotDTE)} done");
+                });
             }
             return true;
         }

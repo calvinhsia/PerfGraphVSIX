@@ -24,6 +24,7 @@ namespace TestStress
         }
 
         [TestMethod]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressOpenCloseSln()
         {
             // the only change to existing test required: call to static method
