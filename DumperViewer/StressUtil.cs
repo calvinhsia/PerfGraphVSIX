@@ -26,6 +26,7 @@ namespace PerfGraphVSIX
 
     public class StressUtil
     {
+        public const string PropNameVSHandler = "VSHandler";
         /// <summary>
         /// Do it all: tests need only add a single call to turn the test into a stress test
         /// The call can be made from the TestInitialize or the beginning of the TestMethod
@@ -87,6 +88,10 @@ namespace PerfGraphVSIX
             {
                 ivisualStudio = vsHandlerFld.GetValue(test) as IVisualStudio;
             }
+            if (ivisualStudio == null)
+            {
+                ivisualStudio = testContext.Properties[PropNameVSHandler] as IVisualStudio;
+            }
             await ivisualStudio.EnsureGotDTE(TimeSpan.FromSeconds(3)); // ensure we get the DTE 
 
             var measurementHolder = new MeasurementHolder(
@@ -113,7 +118,6 @@ namespace PerfGraphVSIX
                 else
                 {
                     ivisualStudio?.DoGarbageCollect();
-                    //todo: forcegc                 test.VsDTE?.ExecuteCommand("Tools.ForceGC");
                 }
                 await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
 

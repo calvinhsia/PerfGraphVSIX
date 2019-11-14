@@ -13,7 +13,6 @@ namespace TestStress
     [TestClass]
     public class StressExistingVS
     {
-        System.Diagnostics.Process procVS;
         ILogger logger;
         public TestContext TestContext { get; set; }
         VSHandler _VSHandler;
@@ -21,7 +20,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(TestContext);
-            procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath);
+            var procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath);
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
         }
@@ -29,7 +28,7 @@ namespace TestStress
         [TestCleanup]
         public void TestCleanup()
         {
-
+            _VSHandler.ShutDownVSAsync().Wait();
         }
 
         [TestMethod]
@@ -42,8 +41,43 @@ namespace TestStress
             await _VSHandler.OpenSolution(SolutionToLoad);
 
             await _VSHandler.CloseSolution();
-
-
         }
     }
+
+    [TestClass]
+    public class StressExistingVSNoVSHandlerField
+    {
+        System.Diagnostics.Process procVS;
+        ILogger logger;
+        public TestContext TestContext { get; set; }
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            logger = new Logger(TestContext);
+            procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath);
+            logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            VSHandler VSHandler =  TestContext.Properties[StressUtil.PropNameVSHandler]  as VSHandler;
+            VSHandler.ShutDownVSAsync().Wait();
+
+        }
+
+        [TestMethod]
+        public async Task StressStartVSApexSimNoVSHandler() // Apex starts VS and we'll look for it. Simulate by starting vs directly in TestInitialize
+        {
+            VSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
+            // the only change to existing test required: call to static method
+            await StressUtil.DoIterationsAsync(this, NumIterations: 3);
+
+            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+            await VSHandler.OpenSolution(SolutionToLoad);
+
+            await VSHandler.CloseSolution();
+        }
+    }
+
 }

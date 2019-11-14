@@ -37,6 +37,7 @@ namespace LeakTestDatacollector
         {
             if (_vsDTE == null)
             {
+                logger.LogMessage($"{nameof(EnsureGotDTE)}");
                 await Task.Yield();
                 var procDevEnv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
                 logger.LogMessage($"Latest devenv = {procDevEnv.Id} starttime = {procDevEnv.StartTime}");
@@ -45,11 +46,13 @@ namespace LeakTestDatacollector
                 {
                     throw new InvalidOperationException($"Couldn't find {procToFind}in {timeSpan.TotalSeconds} seconds {diff} PidLatest = {procDevEnv.Id} ");
                 }
+                PerfCounterData.ProcToMonitor = procDevEnv;
                 _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
                 _solutionEvents = _vsDTE.Events.SolutionEvents;
 
                 _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                 _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
+                logger.LogMessage($"{nameof(EnsureGotDTE)} done");
             }
             return true;
         }
