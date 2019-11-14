@@ -110,7 +110,7 @@ namespace PerfGraphVSIX
                 }
 
                 var measurementHolder = new MeasurementHolder(
-                    testContext.TestName,
+                    testContext,
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
                     logger: logger,
@@ -168,10 +168,12 @@ namespace PerfGraphVSIX
                     if (!string.IsNullOrEmpty(baseDumpFileName))
                     {
                         var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                        oDumpAnalyzer.GetDiff(baseDumpFileName,
+                        var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
                                         currentDumpFile,
                                         NumIterations,
                                         NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                        var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
+                        logger.LogMessage("DumpDiff Analysis" + fname);
                     }
                     else
                     {

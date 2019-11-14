@@ -267,7 +267,7 @@
             lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
             {
                 measurementHolderInteractiveUser = new MeasurementHolder(
-                    TestName: string.Empty,
+                    TestNameOrTestContext: string.Empty,
                     lstPCData: PerfCounterData._lstPerfCounterDefinitionsForVSIX, 
                     sampleType: SampleType.SampleTypeNormal,
                     logger: this);

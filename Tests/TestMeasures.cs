@@ -49,7 +49,7 @@ namespace Tests
         {
             await Task.Yield();
             var x = new MeasurementHolder(
-                nameof(TestMeasureRegressionVerifyGraph), 
+                TestContext, 
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p=>p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(), 
                 SampleType.SampleTypeIteration, this);
             for (int iter = 0; iter < 10; iter++)
@@ -172,7 +172,7 @@ namespace Tests
             {
                 ctr.IsEnabledForMeasurement = true;
             }
-            var measurementHolder = new MeasurementHolder(TestContext.TestName, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity);
+            var measurementHolder = new MeasurementHolder(TestContext, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity);
 
             var lstBigStuff = new List<byte[]>();
             LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");

@@ -122,7 +122,7 @@ namespace DumperViewer
             return (dictTypes, dictStrings);
         }
 
-        public void GetDiff(string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        public StringBuilder GetDiff(string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
             var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
             var resCurrent = AnalyzeDump(pathDumpCurrent);
@@ -132,8 +132,7 @@ namespace DumperViewer
             AnalyzeDiff(sb, dictStrings, resCurrent.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             logger.LogMessage($"analzyed types and strings {pathDumpBase} {pathDumpCurrent}");
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
-            var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
-            logger.LogMessage($"Out put to {fname}");
+            return sb;
         }
 
         private void AnalyzeDiff(StringBuilder sb, Dictionary<string, int> dictBase, Dictionary<string, int> dictCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)

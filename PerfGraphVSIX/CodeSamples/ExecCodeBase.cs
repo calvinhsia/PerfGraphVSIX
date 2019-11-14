@@ -189,7 +189,9 @@ namespace MyCodeToExecute
                     if (!string.IsNullOrEmpty(baseDumpFileName))
                     {
                         var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                        oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, numIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                        var sb = oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, numIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                        var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
+                        logger.LogMessage("DumpDiff Analysis"+ fname);
                     }
                 }
             }

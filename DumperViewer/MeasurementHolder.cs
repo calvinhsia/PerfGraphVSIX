@@ -1,4 +1,5 @@
 ﻿using DumperViewer;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -114,25 +115,43 @@ namespace PerfGraphVSIX
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
         public string ResultsFolder;
+        readonly TestContext testContext;
 
-        public MeasurementHolder(string TestName, 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="TestNameOrTestContext">When running from MSTest, the TestContext can be used to get TestName as well as various other properties. When run from VSix, the compiled code test name
+        ///         When run from command line there will be no TestContext</param>
+        /// <param name="lstPCData">The list of PerfCounters to use.</param>
+        /// <param name="sampleType"></param>
+        /// <param name="logger"></param>
+        /// <param name="sensitivity"></param>
+        public MeasurementHolder(object TestNameOrTestContext, 
                     List<PerfCounterData> lstPCData, 
                     SampleType sampleType, 
                     ILogger logger, 
                     double sensitivity = 1.0f)
         {
-            this.TestName = TestName;
+            if (TestNameOrTestContext is TestContext)
+            {
+                this.testContext = TestNameOrTestContext as TestContext;
+                this.TestName = testContext.TestName;
+            }
+            else
+            {
+                this.TestName = TestNameOrTestContext as string;
+            }
             this.lstPerfCounterData = lstPCData;
             this.sampleType = sampleType;
             this.logger = logger;
             this.sensitivity = sensitivity;
-            if (string.IsNullOrEmpty(TestName))
+            if (string.IsNullOrEmpty(this.TestName))
             {
                 ResultsFolder = DumperViewerMain.EnsureResultsFolderExists();
             }
             else
             {
-                ResultsFolder = DumperViewerMain.GetNewResultsFolderName(TestName);
+                ResultsFolder = DumperViewerMain.GetNewResultsFolderName(this.TestName);
             }
             foreach (var entry in lstPCData)
             {

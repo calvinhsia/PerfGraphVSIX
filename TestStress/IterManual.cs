@@ -44,7 +44,7 @@ namespace TestStress
                     await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
 
                     var measurementHolder = new MeasurementHolder(
-                        nameof(StressIterateManually),
+                        TestContext,
                         PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                         SampleType.SampleTypeIteration,
                         logger: this, 
