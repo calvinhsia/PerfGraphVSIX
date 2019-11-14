@@ -27,7 +27,7 @@ namespace TestStress
         public async Task StressLeaky()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
-            await StressUtil.DoIterationsAsync(this, NumIterations: 11, Sensitivity: 1);
+            await StressUtil.DoIterationsAsync(this, NumIterations: 11, Sensitivity: 1, ProcNamesToMonitor:"");
 
             // to test if your code leaks, put it here. Repeat a lot to magnify the effect
             for (int i = 0; i < 1; i++)
@@ -64,7 +64,7 @@ namespace TestStress
             MemSpectAttribute attr = (MemSpectAttribute)(test.GetType().GetMethod(TestContext.TestName).GetCustomAttribute(typeof(MemSpectAttribute)));
 
 //            MemSpectAttribute attr = (MemSpectAttribute)_theTestMethod.GetCustomAttribute(typeof(MemSpectAttribute)));
-            await StressUtil.DoIterationsAsync(this, NumIterations: attr.NumIterations, attr.Sensitivity);
+            await StressUtil.DoIterationsAsync(this, NumIterations: attr.NumIterations, attr.Sensitivity, ProcNamesToMonitor: "");
 
         }
 

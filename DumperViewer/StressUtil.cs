@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using LeakTestDatacollector;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,19 +12,6 @@ using System.Threading.Tasks;
 
 namespace PerfGraphVSIX
 {
-    // we don't want to have dependencies on VS process, DTE objects, etc.
-    public interface IVisualStudio
-    {
-        void DoGarbageCollect();
-        /// <summary>
-        /// We want to get the DTE of the most recently started devenv. 
-        /// 
-        /// </summary>
-        /// <param name="timeSpan">The max timespan to </param>
-        /// <returns></returns>
-        Task<bool> EnsureGotDTE(TimeSpan timeSpanAgeOfVsToUse);
-    }
-
     public class StressUtil
     {
         public const string PropNameVSHandler = "VSHandler";
@@ -53,116 +41,136 @@ namespace PerfGraphVSIX
         {
             const string PropNameiteration = "IterationNumber";
             const string PropNameRecursionPrevention = "RecursionPrevention";
-            var typ = test.GetType();
-            var methGetContext = typ.GetMethod($"get_{nameof(TestContext)}");
-            if (methGetContext == null || !(methGetContext.Invoke(test, null) is TestContext testContext))
-            {
-                throw new InvalidOperationException("can't get TestContext from test. Test must have 'public TestContext TestContext { get; set; }' (perhaps inherited)");
-            }
-            if (testContext.Properties[PropNameRecursionPrevention] != null)
-            {
-                return;
-            }
-            testContext.Properties[PropNameRecursionPrevention] = 1;
-
-            var _theTestMethod = typ.GetMethod(testContext.TestName);
             ILogger logger = test as ILogger;
-            if (logger == null)
+            try
             {
-                var loggerFld = typ.GetField("logger");
-                if (loggerFld != null)
+                var typ = test.GetType();
+                var methGetContext = typ.GetMethod($"get_{nameof(TestContext)}");
+                if (methGetContext == null || !(methGetContext.Invoke(test, null) is TestContext testContext))
                 {
-                    logger = loggerFld.GetValue(test) as ILogger;
+                    throw new InvalidOperationException("can't get TestContext from test. Test must have 'public TestContext TestContext { get; set; }' (perhaps inherited)");
                 }
+                if (testContext.Properties[PropNameRecursionPrevention] != null)
+                {
+                    return;
+                }
+                testContext.Properties[PropNameRecursionPrevention] = 1;
+
+                var _theTestMethod = typ.GetMethod(testContext.TestName);
                 if (logger == null)
                 {
-                    logger = new Logger(testContext);
+                    var loggerFld = typ.GetField("logger");
+                    if (loggerFld != null)
+                    {
+                        logger = loggerFld.GetValue(test) as ILogger;
+                    }
+                    if (logger == null)
+                    {
+                        logger = new Logger(testContext);
+                    }
                 }
-            }
-            logger.LogMessage($"{nameof(DoIterationsAsync)} TestName = {testContext.TestName}");
-
-            // we don't want to add DTE refs to this project
-            var vsHandlerFld = typ.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(m => m.FieldType.Name == "VSHandler").FirstOrDefault();
-            IVisualStudio ivisualStudio = null;
-            if (vsHandlerFld != null)
-            {
-                ivisualStudio = vsHandlerFld.GetValue(test) as IVisualStudio;
-            }
-            if (ivisualStudio == null)
-            {
-                ivisualStudio = testContext.Properties[PropNameVSHandler] as IVisualStudio;
-            }
-            await ivisualStudio.EnsureGotDTE(TimeSpan.FromSeconds(3)); // ensure we get the DTE 
-
-            var measurementHolder = new MeasurementHolder(
-                testContext.TestName,
-                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
-                SampleType.SampleTypeIteration,
-                logger: logger,
-                sensitivity: Sensitivity);
-
-            var baseDumpFileName = string.Empty;
-            testContext.Properties[PropNameiteration] = 0;
-            for (int iteration = 0; iteration < NumIterations; iteration++)
-            {
-                var result = _theTestMethod.Invoke(test, parameters: null);
-                if (_theTestMethod.ReturnType.Name == "Task")
+                logger.LogMessage($"{nameof(DoIterationsAsync)} TestName = {testContext.TestName}");
+                VSHandler vSHandler = null;
+                if (string.IsNullOrEmpty(ProcNamesToMonitor))
                 {
-                    var resultTask = (Task)result;
-                    await resultTask;
-                }
-                if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
-                {
-                    GC.Collect();
+                    PerfCounterData.ProcToMonitor = Process.GetCurrentProcess();
                 }
                 else
                 {
-                    ivisualStudio?.DoGarbageCollect();
+                    // we don't want to add DTE refs to this project
+                    var vsHandlerFld = typ.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(m => m.FieldType.Name == "VSHandler").FirstOrDefault();
+                    if (vsHandlerFld != null)
+                    {
+                        vSHandler = vsHandlerFld.GetValue(test) as VSHandler;
+                    }
+                    if (vSHandler == null)
+                    {
+                        vSHandler = testContext.Properties[PropNameVSHandler] as VSHandler;
+                        if (vSHandler == null)
+                        {
+                            vSHandler = new VSHandler(logger, DelayMultiplier);
+                            testContext.Properties[PropNameVSHandler] = vSHandler;
+                        }
+                    }
+                    await vSHandler?.EnsureGotDTE(); // ensure we get the DTE 
                 }
-                await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
 
-                var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
-                logger.LogMessage(res);
+                var measurementHolder = new MeasurementHolder(
+                    testContext.TestName,
+                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                    SampleType.SampleTypeIteration,
+                    logger: logger,
+                    sensitivity: Sensitivity);
 
-                if (NumIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot &&
-                    iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                var baseDumpFileName = string.Empty;
+                testContext.Properties[PropNameiteration] = 0;
+                for (int iteration = 0; iteration < NumIterations; iteration++)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
-                    logger.LogMessage($"Taking base snapshot dump");
-                    baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                    var result = _theTestMethod.Invoke(test, parameters: null);
+                    if (_theTestMethod.ReturnType.Name == "Task")
+                    {
+                        var resultTask = (Task)result;
+                        await resultTask;
+                    }
+                    if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
+                    {
+                        GC.Collect();
+                    }
+                    else
+                    {
+                        vSHandler?.DoGarbageCollect();
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+
+                    var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
+                    logger.LogMessage(res);
+
+                    if (NumIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot &&
+                        iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+                        logger.LogMessage($"Taking base snapshot dump");
+                        baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                            PerfCounterData.ProcToMonitor.Id,
+                            desc: testContext.TestName + "_" + iteration.ToString(),
+                            memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                    }
+                    testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
+                }
+                var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+                logger.LogMessage($"Measurement Results {filenameResultsCSV}");
+                var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
+                    .Where(r => r.IsRegression).ToList();
+                if (lstRegResults.Count > 0)
+                {
+                    foreach (var regres in lstRegResults)
+                    {
+                        logger.LogMessage($"Regression!!!!! {regres}");
+                    }
+                    var currentDumpFile = await measurementHolder.CreateDumpAsync(
                         PerfCounterData.ProcToMonitor.Id,
-                        desc: testContext.TestName + "_" + iteration.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                        desc: testContext.TestName + "_" + NumIterations.ToString(),
+                        memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+                    if (!string.IsNullOrEmpty(baseDumpFileName))
+                    {
+                        var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                        oDumpAnalyzer.GetDiff(baseDumpFileName,
+                                        currentDumpFile,
+                                        NumIterations,
+                                        NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                    }
+                    else
+                    {
+                        logger.LogMessage($"No baseline dump: not enough iterations");
+                    }
+                    Assert.Fail($"Leaks found");
                 }
-                testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
             }
-            var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
-            logger.LogMessage($"Measurement Results {filenameResultsCSV}");
-            var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
-                .Where(r => r.IsRegression).ToList();
-            if (lstRegResults.Count > 0)
+            catch (Exception ex)
             {
-                foreach (var regres in lstRegResults)
-                {
-                    logger.LogMessage($"Regression!!!!! {regres}");
-                }
-                var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                    PerfCounterData.ProcToMonitor.Id,
-                    desc: testContext.TestName + "_" + NumIterations.ToString(),
-                    memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-                if (!string.IsNullOrEmpty(baseDumpFileName))
-                {
-                    var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                    oDumpAnalyzer.GetDiff(baseDumpFileName,
-                                    currentDumpFile,
-                                    NumIterations,
-                                    NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                }
-                else
-                {
-                    logger.LogMessage($"No baseline dump: not enough iterations");
-                }
-                Assert.Fail($"Leaks found");
+                logger.LogMessage(ex.ToString());
+
+                throw;
             }
         }
     }

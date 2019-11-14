@@ -29,8 +29,7 @@ namespace TestStress
             LogMessage($"done {nameof(CleanupAsync)}");
         }
 
-        [TestMethod]
-        [Ignore]
+//        [TestMethod]
         public async Task StressIterateManually()
         {
             await Task.Yield();

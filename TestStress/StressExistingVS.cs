@@ -31,7 +31,7 @@ namespace TestStress
             _VSHandler.ShutDownVSAsync().Wait();
         }
 
-        [TestMethod]
+//        [TestMethod]
         public async Task StressStartVSApexSim() // Apex starts VS and we'll look for it. Simulate by starting vs directly in TestInitialize
         {
             // the only change to existing test required: call to static method
@@ -54,7 +54,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(TestContext);
-            procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath);
+            procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath); // simulate Apex starting VS
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
         }
 
@@ -63,7 +63,6 @@ namespace TestStress
         {
             VSHandler VSHandler =  TestContext.Properties[StressUtil.PropNameVSHandler]  as VSHandler;
             VSHandler.ShutDownVSAsync().Wait();
-
         }
 
         [TestMethod]

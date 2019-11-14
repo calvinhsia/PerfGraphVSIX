@@ -12,16 +12,17 @@ using PerfGraphVSIX;
 
 namespace LeakTestDatacollector
 {
-    public class VSHandler : IVisualStudio
+    public class VSHandler
     {
-        public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to profile child processes
+        public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
         private readonly ILogger logger;
         private readonly int _DelayMultiplier;
         public EnvDTE.DTE _vsDTE;
         /// <summary>
-        /// The process we're monitoring
+        /// The process we're monitoring may be different from vs: e.g. servicehub
+        /// We need the vsProc to get DTE so we can force GC between iterations, automate via DTE, etc.
         /// </summary>
-        public Process TargetProc => PerfCounterData.ProcToMonitor;
+        public Process vsProc;
         TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
 
         EnvDTE.SolutionEvents _solutionEvents; // need a strong ref to survive GCs
@@ -32,8 +33,12 @@ namespace LeakTestDatacollector
             this._DelayMultiplier = delayMultiplier;
         }
 
-
-        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan)
+        /// <summary>
+        /// We don't want an old VS session: we want to find the devenv process that was started by the test: within timeSpan seconds
+        /// </summary>
+        /// <param name="timeSpan"></param>
+        /// <returns></returns>
+        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
         {
             if (_vsDTE == null)
             {
@@ -41,13 +46,18 @@ namespace LeakTestDatacollector
                 await Task.Yield();
                 var procDevEnv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
                 logger.LogMessage($"Latest devenv = {procDevEnv.Id} starttime = {procDevEnv.StartTime}");
+                if (timeSpan == default)
+                {
+                    timeSpan = TimeSpan.FromSeconds(3);
+                }
                 var diff = procDevEnv.StartTime > DateTime.Now - timeSpan;
                 if (procDevEnv.StartTime < DateTime.Now - timeSpan) // the process start time must have started very recently
                 {
                     throw new InvalidOperationException($"Couldn't find {procToFind}in {timeSpan.TotalSeconds} seconds {diff} PidLatest = {procDevEnv.Id} ");
                 }
                 PerfCounterData.ProcToMonitor = procDevEnv;
-                _vsDTE = await GetDTEAsync(TargetProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
+                vsProc = procDevEnv;
+                _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
                 _solutionEvents = _vsDTE.Events.SolutionEvents;
 
                 _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
@@ -61,9 +71,9 @@ namespace LeakTestDatacollector
         public async Task StartVSAsync(string vsPath)
         {
             logger.LogMessage($"{nameof(StartVSAsync)}");
-            PerfCounterData.ProcToMonitor = Process.Start(vsPath);
-            logger.LogMessage($"Started VS PID= {TargetProc.Id}");
-            await EnsureGotDTE(TimeSpan.FromSeconds(3));
+            vsProc = Process.Start(vsPath);
+            logger.LogMessage($"Started VS PID= {vsProc.Id}");
+            await EnsureGotDTE();
             logger.LogMessage($"done {nameof(StartVSAsync)}");
         }
 
@@ -113,7 +123,7 @@ namespace LeakTestDatacollector
                 _vsDTE.Events.SolutionEvents.Opened -= SolutionEvents_Opened;
                 _vsDTE.Events.SolutionEvents.AfterClosing -= SolutionEvents_AfterClosing;
                 var tcs = new TaskCompletionSource<int>();
-                TargetProc.Exited += (o, e) => // doesn't fire reliably
+                vsProc.Exited += (o, e) => // doesn't fire reliably
                 {
                     tcs.SetResult(0);
                 };
@@ -125,14 +135,14 @@ namespace LeakTestDatacollector
                 {
                     if (await Task.WhenAny(tcs.Task, taskOneSecond) != tcs.Task)
                     {
-                        if (TargetProc.HasExited)
+                        if (vsProc.HasExited)
                         {
                             break;
                         }
                         taskOneSecond = Task.Delay(1000);
                     }
                 }
-                if (!TargetProc.HasExited)
+                if (!vsProc.HasExited)
                 {
                     logger.LogMessage($"******************Did not close in {timeoutForClose} secs");
                 }
