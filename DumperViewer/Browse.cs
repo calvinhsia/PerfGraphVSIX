@@ -11,6 +11,7 @@ namespace PerfGraphVSIX
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Reflection;
     using System.Text;
@@ -435,13 +436,13 @@ namespace PerfGraphVSIX
             return sb.ToString();
         }
 
-        public static string WriteOutputToTempFile(string strToOutput, string fExt = "txt", bool fStartIt = true, string FileNameToUse = "")
+        public static string WriteOutputToTempFile(string strToOutput, string fExt = "txt", bool fStartIt = true)
         {
-            var tmpFileName = string.IsNullOrEmpty(FileNameToUse)?  System.IO.Path.GetTempFileName(): FileNameToUse; //"C:\Users\calvinh\AppData\Local\Temp\tmp8509.tmp"
-            System.IO.File.WriteAllText(tmpFileName, strToOutput, new UnicodeEncoding(bigEndian: false, byteOrderMark: true));
+            var tmpFileName = System.IO.Path.GetTempFileName(); //"C:\Users\calvinh\AppData\Local\Temp\tmp8509.tmp"
+            File.WriteAllText(tmpFileName, strToOutput, new UnicodeEncoding(bigEndian: false, byteOrderMark: true));
             var filename = System.IO.Path.ChangeExtension(tmpFileName, fExt);
 
-            System.IO.File.Move(tmpFileName, filename); // rename
+            File.Move(tmpFileName, filename); // rename
             if (fStartIt)
             {
                 Process.Start(filename);

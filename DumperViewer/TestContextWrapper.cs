@@ -69,6 +69,16 @@ namespace DumperViewer
                 return meth.Invoke(_testContext, null) as string;
             }
         }
+
+        public string TestDeploymentDir
+        {
+            get
+            {
+                var meth = _testContext.GetType().GetMethod($"get_{nameof(TestDeploymentDir)}");
+                return meth.Invoke(_testContext, null) as string;
+            }
+        }
+
         public void WriteLine(string str)
         {
             this.WriteLine(str, new object[] { null });
@@ -77,6 +87,11 @@ namespace DumperViewer
         public void WriteLine(string str, object[] args)
         {
             methodInfoWriteLine.Invoke(_testContext, new object[] { str, args });
+        }
+        public void AddResultsFile(string filename)
+        {
+            var meth = _testContext.GetType().GetMethod($"get_{nameof(TestDeploymentDir)}");
+            meth.Invoke(_testContext, new object[] { filename});
         }
 
     }

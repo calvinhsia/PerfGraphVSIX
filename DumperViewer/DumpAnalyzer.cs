@@ -127,10 +127,12 @@ namespace DumperViewer
             var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
             var resCurrent = AnalyzeDump(pathDumpCurrent);
             var sb = new StringBuilder();
+            sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations-NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
+            sb.AppendLine($"Below are the counts of Types and Strings in each dump. The 1st column is the number in the 1st dump, the 2nd is the number found in the 2nd dump and the last is the Type or String");
             sb.AppendLine($"TypesAndStrings {pathDumpBase} {pathDumpCurrent}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             AnalyzeDiff(sb, dictTypes, resCurrent.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             AnalyzeDiff(sb, dictStrings, resCurrent.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
-            logger.LogMessage($"analzyed types and strings {pathDumpBase} {pathDumpCurrent}");
+            logger.LogMessage($"analyzed types and strings {pathDumpBase} {pathDumpCurrent}");
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
             return sb;
         }
@@ -146,7 +148,7 @@ namespace DumperViewer
                     {
                         if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value)
                         {
-                            var msg = string.Format("{0,3} {1,3} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
+                            var msg = string.Format("{0,5} {1,5} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
                             sb.AppendLine(msg);
                             //                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
                         }

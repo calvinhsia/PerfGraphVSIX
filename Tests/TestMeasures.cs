@@ -190,7 +190,7 @@ namespace Tests
                 var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
                 LogMessage(res);
             }
-            var filename = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+            var filename = measurementHolder.DumpOutMeasurementsToCsv();
             LogMessage($"Results file name = {filename}");
             var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
             return lstRegResults.Count > 0;

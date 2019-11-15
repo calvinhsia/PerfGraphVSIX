@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -113,6 +114,9 @@ namespace PerfGraphVSIX
         readonly double sensitivity;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
+        /// <summary>
+        /// unique folder per test.
+        /// </summary>
         public string ResultsFolder;
         readonly TestContextWrapper testContext;
 
@@ -125,10 +129,10 @@ namespace PerfGraphVSIX
         /// <param name="sampleType"></param>
         /// <param name="logger"></param>
         /// <param name="sensitivity"></param>
-        public MeasurementHolder(object TestNameOrTestContext, 
-                    List<PerfCounterData> lstPCData, 
-                    SampleType sampleType, 
-                    ILogger logger, 
+        public MeasurementHolder(object TestNameOrTestContext,
+                    List<PerfCounterData> lstPCData,
+                    SampleType sampleType,
+                    ILogger logger,
                     double sensitivity = 1.0f)
         {
             if (TestNameOrTestContext is TestContextWrapper)
@@ -144,13 +148,18 @@ namespace PerfGraphVSIX
             this.sampleType = sampleType;
             this.logger = logger;
             this.sensitivity = sensitivity;
-            if (string.IsNullOrEmpty(this.TestName))
+
+            if (this.testContext == null)
             {
-                ResultsFolder = DumperViewerMain.EnsureResultsFolderExists();
+                ResultsFolder = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), this.TestName);
             }
             else
             {
-                ResultsFolder = DumperViewerMain.GetNewResultsFolderName(this.TestName);
+                ResultsFolder = Path.Combine(this.testContext.TestDeploymentDir, this.TestName);
+            }
+            if (!Directory.Exists(ResultsFolder))
+            {
+                Directory.CreateDirectory(ResultsFolder);
             }
             foreach (var entry in lstPCData)
             {
@@ -254,7 +263,8 @@ namespace PerfGraphVSIX
             if (showGraph)
             {
                 var tcs = new TaskCompletionSource<int>();
-                var timeoutEnabled = Process.GetCurrentProcess().ProcessName.IndexOf("testhost", StringComparison.InvariantCultureIgnoreCase) > 0;
+                // if we're running in testhost process, then we want a timeout
+                var timeoutEnabled = this.testContext != null;
                 logger.LogMessage($"Showing graph  timeoutenabled ={timeoutEnabled}");
                 var thr = new Thread((o) =>
                 {
@@ -267,6 +277,7 @@ namespace PerfGraphVSIX
                             //                            graphWin.WindowState = WindowState.Maximized;
                         }
                         graphWin.ShowDialog();
+                        logger.LogMessage($"finished showing graph");
                     }
                     catch (Exception ex)
                     {
@@ -281,10 +292,52 @@ namespace PerfGraphVSIX
                     logger.LogMessage($"Timedout showing graph");
                 }
             }
+            // do this after showgraph else hang
+            foreach (var item in lstResults)
+            {
+                using (var chart = new Chart())
+                {
+                    chart.Titles.Add(item.ToString());
+                    chart.Size = new System.Drawing.Size(1200, 800);
+                    chart.Series.Clear();
+                    chart.ChartAreas.Clear();
+                    ChartArea chartArea = new ChartArea("ChartArea");
+                    chartArea.AxisY.LabelStyle.Format = "{0:n0}";
+                    chartArea.AxisY.Title = item.perfCounterData.PerfCounterName;
+                    chartArea.AxisX.Title = "Iteration";
+                    chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
+                    chart.ChartAreas.Add(chartArea);
+                    chartArea.AxisY.IsStartedFromZero = false;
+                    var series = new Series
+                    {
+                        ChartType = SeriesChartType.Line,
+                        Name = item.perfCounterData.PerfCounterName
+                    };
+                    chart.Series.Add(series);
+                    for (int i = 0; i < item.lstData.Count; i++)
+                    {
+                        var dp = new DataPoint(i, item.lstData[i].Y);
+                        series.Points.Add(dp);
+                    }
+                    // now show trend line
+                    var seriesTrendLine = new Series()
+                    {
+                        ChartType = SeriesChartType.Line
+                    };
+                    chart.Series.Add(seriesTrendLine);
+                    var dp0 = new DataPoint(0, item.yintercept);
+                    seriesTrendLine.Points.Add(dp0);
+                    var dp1 = new DataPoint(item.lstData.Count - 1, (item.lstData.Count - 1) * item.slope + item.yintercept);
+                    seriesTrendLine.Points.Add(dp1);
+                    var fname = Path.Combine(ResultsFolder, $"Graph {item.perfCounterData.PerfCounterName}.png");
+                    chart.SaveImage(fname, ChartImageFormat.Png);
+                }
+            }
+
             return lstResults;
         }
 
-        public string DumpOutMeasurementsToTempFile(bool StartExcel)
+        public string DumpOutMeasurementsToCsv()
         {
             var sb = new StringBuilder();
             var lst = new List<string>();
@@ -310,13 +363,14 @@ namespace PerfGraphVSIX
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
             }
-            var filename = BrowseList.WriteOutputToTempFile(sb.ToString(), fExt: "csv", fStartIt: StartExcel);
+            var filename = Path.Combine(ResultsFolder, $"Measurements.csv");
+            File.WriteAllText(filename, sb.ToString());
             return filename;
         }
 
         public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
-            var pathDumpFile = DumperViewerMain.GetNewFileName(ResultsFolder, desc);
+            var pathDumpFile = Path.ChangeExtension( Path.Combine(ResultsFolder, desc),".dmp");
             try
             {
                 var arglist = new List<string>()

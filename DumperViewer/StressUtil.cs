@@ -75,17 +75,31 @@ namespace PerfGraphVSIX
                 }
                 logger.LogMessage($@"{
                     nameof(DoIterationsAsync)} TestName = {testContext.TestName} 
-                        CurDir = '{Environment.CurrentDirectory}'
-                        TestRunDirectory = '{testContext.TestRunDirectory}'  
-                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
-                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'");
+                                        NumIterations = {NumIterations}
+                                        Sensitivity = {Sensitivity}
+                                        CurDir = '{Environment.CurrentDirectory}'
+                                        TestDeploymentDir = '{testContext.TestDeploymentDir}'
+                                        TestRunDirectory = '{testContext.TestRunDirectory}'  
+                                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
+                                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
+                ");
                 /*
                  * probs: the curdir is not empty, so results will be overwritten (might have ClrObjectExplorer open with a result dump)
                  *       The Test*dirs are all deleted after the run.
+                 *       Can use a Runsettings   
+                 *               <DeleteDeploymentDirectoryAfterTestRunIsComplete>False</DeleteDeploymentDirectoryAfterTestRunIsComplete>
+                 *              https://docs.microsoft.com/en-us/visualstudio/test/configure-unit-tests-by-using-a-dot-runsettings-file?view=vs-2019
                                         CurDir = 'C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestStress\bin\Debug'
-                                        TestRunDirectory = 'C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-14 11_09_37'  
-                                        TestResultsDirectory='C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-14 11_09_37\In' 
-                                        TestRunResultsDirectory='C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-14 11_09_37\In\CALVINH2'
+                                        TestDeploymentDir = 'C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-15 12_04_59\Out'
+                                        TestRunDirectory = 'C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-15 12_04_59'  
+                                        TestResultsDirectory='C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-15 12_04_59\In' 
+                                        TestRunResultsDirectory='C:\Users\calvinh\Source\Repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-15 12_04_59\In\CALVINH2'
+                    apex local:
+                        CurDir = 'C:\VS\src\Tests\Stress\Project\TestResults\Deploy_calvinh 2019-11-14 18_09_34\Out'
+                        TestRunDirectory = 'C:\VS\src\Tests\Stress\Project\TestResults\Deploy_calvinh 2019-11-14 18_09_34'  
+                        TestResultsDirectory='C:\VS\src\Tests\Stress\Project\TestResults\Deploy_calvinh 2019-11-14 18_09_34\In' 
+                        TestRunResultsDirectory='C:\VS\src\Tests\Stress\Project\TestResults\Deploy_calvinh 2019-11-14 18_09_34\In\calvinhW7'
+
                  * */
 
                 VSHandler vSHandler = null;
@@ -162,7 +176,7 @@ namespace PerfGraphVSIX
                 }
                 if (NumIterations > 2) // don't want to do leak analysis unless enough iterations
                 {
-                    var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+                    var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToCsv();
                     logger.LogMessage($"Measurement Results {filenameResultsCSV}");
                     var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
                         .Where(r => r.IsRegression).ToList();
@@ -183,7 +197,9 @@ namespace PerfGraphVSIX
                                             currentDumpFile,
                                             NumIterations,
                                             NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                            var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
+                            var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
+                            File.WriteAllText(fname, sb.ToString());
+                            Process.Start(fname);
                             logger.LogMessage("DumpDiff Analysis" + fname);
                         }
                         else

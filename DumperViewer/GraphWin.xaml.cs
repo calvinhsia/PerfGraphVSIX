@@ -164,7 +164,8 @@ namespace DumperViewer
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            this.measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: true);
+            var filename = this.measurementHolder.DumpOutMeasurementsToCsv();
+            System.Diagnostics.Process.Start(filename);
         }
     }
 }

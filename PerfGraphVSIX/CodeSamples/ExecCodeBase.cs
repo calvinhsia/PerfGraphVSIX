@@ -171,7 +171,7 @@ namespace MyCodeToExecute
                     logger.LogMessage("Cancelled Code Execution");
                 }
                 // cleanup code here: compare measurements, take a dump, examine for types, etc.
-                var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+                var filenameResults = measurementHolder.DumpOutMeasurementsToCsv();
                 logger.LogMessage("Measurement Results " + filenameResults);
                 var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
 
@@ -189,8 +189,14 @@ namespace MyCodeToExecute
                     if (!string.IsNullOrEmpty(baseDumpFileName))
                     {
                         var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                        var sb = oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, numIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                        var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
+                        var sb = oDumpAnalyzer.GetDiff(
+                            baseDumpFileName, 
+                            currentDumpFile, 
+                            numIterations, 
+                            NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                        var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
+                        File.WriteAllText(fname, sb.ToString());
+                        System.Diagnostics.Process.Start(fname);
                         logger.LogMessage("DumpDiff Analysis"+ fname);
                     }
                 }

@@ -59,7 +59,7 @@ namespace LeakTestDatacollector
                         var diff = procDevenv.StartTime > dtNow - timeSpan;
                         if (procDevenv.StartTime > dtNow - timeSpan) // the process start time must have started very recently
                         {
-                            logger.LogMessage($"Latest devenv = {procDevenv.Id} starttime = {procDevenv.StartTime}");
+                            logger.LogMessage($"Latest devenv PID= {procDevenv.Id} starttime = {procDevenv.StartTime}");
                             fGotit = true;
                         }
                         return fGotit;
@@ -80,7 +80,7 @@ namespace LeakTestDatacollector
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
-                    logger.LogMessage($"{nameof(EnsureGotDTE)} done {procDevenv.Id}");
+                    logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id}");
                 });
             }
             return true;
