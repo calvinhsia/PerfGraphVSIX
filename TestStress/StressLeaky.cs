@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections;
 
 namespace TestStress
 {
@@ -90,4 +91,80 @@ namespace TestStress
 
 
     }
-}
+
+
+    public class MyTestContext : TestContext
+    {
+        private readonly TestContext testContext;
+
+        public MyTestContext(TestContext testContext)
+        {
+            this.testContext = testContext;
+        }
+
+        public override IDictionary Properties { get { return testContext.Properties; } }
+
+        public override System.Data.DataRow DataRow => throw new NotImplementedException();
+
+        public override System.Data.Common.DbConnection DataConnection => throw new NotImplementedException();
+
+        public override void AddResultFile(string fileName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void BeginTimer(string timerName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EndTimer(string timerName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void WriteLine(string message)
+        {
+            testContext.WriteLine(message);
+        }
+
+        public override void WriteLine(string format, params object[] args)
+        {
+            testContext.WriteLine(format, args);
+        }
+    }
+
+    public class MyBaseWithContext
+    {
+        public TestContext TestContext { get; set; }
+
+    }
+    [TestClass]
+    public class StressLeakyClassWithBase : MyBaseWithContext
+    {
+
+        class BigStuffWithLongNameSoICanSeeItBetter
+        {
+            readonly byte[] arr = new byte[1024 * 1024];
+            public byte[] GetArray => arr;
+        }
+
+        readonly List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+
+        [TestMethod]
+        public async Task StressLeakyWithBase()
+        {
+
+            this.TestContext = new MyTestContext(TestContext);
+            // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
+            await StressUtil.DoIterationsAsync(this, NumIterations: 1, ProcNamesToMonitor: "");
+
+            // to test if your code leaks, put it here. Repeat a lot to magnify the effect
+            for (int i = 0; i < 1; i++)
+            {
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+        }
+
+    }
+    }

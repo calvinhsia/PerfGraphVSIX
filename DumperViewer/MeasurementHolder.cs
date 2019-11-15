@@ -115,7 +115,7 @@ namespace PerfGraphVSIX
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
         public string ResultsFolder;
-        readonly TestContext testContext;
+        readonly TestContextWrapper testContext;
 
         /// <summary>
         /// 
@@ -132,9 +132,9 @@ namespace PerfGraphVSIX
                     ILogger logger, 
                     double sensitivity = 1.0f)
         {
-            if (TestNameOrTestContext is TestContext)
+            if (TestNameOrTestContext is TestContextWrapper)
             {
-                this.testContext = TestNameOrTestContext as TestContext;
+                this.testContext = TestNameOrTestContext as TestContextWrapper;
                 this.TestName = testContext.TestName;
             }
             else

@@ -1,4 +1,5 @@
-﻿using LeakTestDatacollector;
+﻿using DumperViewer;
+using LeakTestDatacollector;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -46,10 +47,13 @@ namespace PerfGraphVSIX
             {
                 var typ = test.GetType();
                 var methGetContext = typ.GetMethod($"get_{nameof(TestContext)}");
-                if (methGetContext == null || !(methGetContext.Invoke(test, null) is TestContext testContext))
+                if (methGetContext == null)
                 {
                     throw new InvalidOperationException("can't get TestContext from test. Test must have 'public TestContext TestContext { get; set; }' (perhaps inherited)");
                 }
+                var val = methGetContext.Invoke(test, null);
+                TestContextWrapper testContext =new TestContextWrapper(val);
+
                 if (testContext.Properties[PropNameRecursionPrevention] != null)
                 {
                     return;
@@ -204,10 +208,10 @@ namespace PerfGraphVSIX
     public class Logger : ILogger
     {
         public static List<string> _lstLoggedStrings = new List<string>();
-        private readonly TestContext testContext;
+        private readonly TestContextWrapper testContext;
         private string logFilePath;
 
-        public Logger(TestContext testContext)
+        public Logger(TestContextWrapper testContext)
         {
             this.testContext = testContext;
         }

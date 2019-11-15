@@ -1,4 +1,5 @@
-﻿using EnvDTE;
+﻿using DumperViewer;
+using EnvDTE;
 using LeakTestDatacollector;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
@@ -19,7 +20,7 @@ namespace TestStress
         [TestInitialize]
         public void TestInitialize()
         {
-            logger = new Logger(TestContext);
+            logger = new Logger(new TestContextWrapper(TestContext));
             var procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath);
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
@@ -31,7 +32,7 @@ namespace TestStress
             _VSHandler.ShutDownVSAsync().Wait();
         }
 
-//        [TestMethod]
+        //        [TestMethod]
         public async Task StressStartVSApexSim() // Apex starts VS and we'll look for it. Simulate by starting vs directly in TestInitialize
         {
             // the only change to existing test required: call to static method
@@ -53,7 +54,7 @@ namespace TestStress
         [TestInitialize]
         public void TestInitialize()
         {
-            logger = new Logger(TestContext);
+            logger = new Logger(new TestContextWrapper(TestContext));
             procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath); // simulate Apex starting VS
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
         }
@@ -61,7 +62,7 @@ namespace TestStress
         [TestCleanup]
         public void TestCleanup()
         {
-            VSHandler VSHandler =  TestContext.Properties[StressUtil.PropNameVSHandler]  as VSHandler;
+            VSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
             VSHandler.ShutDownVSAsync().Wait();
         }
 
@@ -98,7 +99,7 @@ namespace TestStress
             [TestInitialize]
             public void TestInitialize()
             {
-                logger = new Logger(TestContext);
+                logger = new Logger(new TestContextWrapper(TestContext));
                 logger.LogMessage($"TestInit : not starting VS immediately");
                 var tsk = Task.Run(async () =>
                 {

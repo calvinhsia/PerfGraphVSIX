@@ -147,6 +147,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="StressUtil.cs" />
+    <Compile Include="TestContextWrapper.cs" />
     <Compile Include="VSHandler.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
