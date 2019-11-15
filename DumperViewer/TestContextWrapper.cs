@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,16 +16,25 @@ namespace DumperViewer
     public class TestContextWrapper
     {
         readonly object _testContext;
+
+        // +		$exception	{"Cannot bind to the target method because its signature or security transparency is not compatible with that of the delegate type."}	System.ArgumentException
+        //delegate void DelWriteLine(string str, object[] args);
+        //readonly DelWriteLine delWriteLine;
+        readonly MethodInfo methodInfoWriteLine;
+        readonly MethodInfo methodInfoTestName;
+
         public TestContextWrapper(object testContext)
         {
             this._testContext = testContext;
+            // we'll cache the common ones
+            methodInfoWriteLine = _testContext.GetType().GetMethods().Where(m => m.Name == nameof(WriteLine) && m.GetParameters().Length == 2).First();
+            methodInfoTestName = _testContext.GetType().GetMethod($"get_{nameof(TestName)}");
         }
         public string TestName
         {
             get
             {
-                var meth = _testContext.GetType().GetMethod($"get_{nameof(TestName)}");
-                return meth.Invoke(_testContext, null) as string;
+                return methodInfoTestName.Invoke(_testContext, null) as string;
             }
         }
         public IDictionary Properties
@@ -66,8 +76,7 @@ namespace DumperViewer
 
         public void WriteLine(string str, object[] args)
         {
-            var meth = _testContext.GetType().GetMethods().Where(m => m.Name == nameof(WriteLine) && m.GetParameters().Length == 2).First();
-            meth.Invoke(_testContext, new object[] { str, args });
+            methodInfoWriteLine.Invoke(_testContext, new object[] { str, args });
         }
 
     }

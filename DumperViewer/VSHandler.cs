@@ -170,28 +170,26 @@ namespace LeakTestDatacollector
 
             }
         }
-
-        public async Task DoGarbageCollectAsync()
+        public async Task DteExecuteCommand(string strCommand, int timeoutSecs = 60)
         {
-            var timeoutDoGCsecs = 60;
-            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutDoGCsecs));
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSecs));
             var didGC = false;
             while (!timeoutTask.IsCompleted && !didGC)
             {
                 try
                 {
-                    _vsDTE.ExecuteCommand("Tools.ForceGC");
+                    _vsDTE.ExecuteCommand(strCommand);
                     didGC = true;
                 }
                 catch (COMException) // System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
                 {
-                    logger.LogMessage($"Couldn't do GC: retry");
+                    logger.LogMessage($"Couldn't do {strCommand}: retry");
                     await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                 }
             }
             if (!didGC)
             {
-                logger.LogMessage($"Couldn't do GC in {timeoutDoGCsecs} secs");
+                logger.LogMessage($"Couldn't do {strCommand} in {timeoutSecs} secs");
             }
         }
 

@@ -141,7 +141,7 @@ namespace PerfGraphVSIX
                         // we just finished executing the user code. The IDE might be busy executing the last request.
                         // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
                         await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                        vSHandler?.DoGarbageCollectAsync();
+                        vSHandler?.DteExecuteCommand("Tools.ForceGC");
                     }
                     await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
 
@@ -160,7 +160,7 @@ namespace PerfGraphVSIX
                     }
                     testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
                 }
-                if (NumIterations > 2)
+                if (NumIterations > 2) // don't want to do leak analysis unless enough iterations
                 {
                     var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
                     logger.LogMessage($"Measurement Results {filenameResultsCSV}");
