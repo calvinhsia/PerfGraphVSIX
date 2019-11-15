@@ -48,23 +48,25 @@ namespace Tests
         public async Task TestMeasureRegressionVerifyGraph()
         {
             await Task.Yield();
-            var x = new MeasurementHolder(
-                TestContext, 
-                PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p=>p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(), 
-                SampleType.SampleTypeIteration, this);
-            for (int iter = 0; iter < 10; iter++)
+            using (var x = new MeasurementHolder(
+                TestContext,
+                PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
+                SampleType.SampleTypeIteration, this))
             {
-                foreach (var ctr in x.lstPerfCounterData)
+                for (int iter = 0; iter < 10; iter++)
                 {
-                    var val = 10000 + (uint)iter;
-                    if (iter == 5 && ctr.perfCounterType == PerfCounterType.KernelHandleCount)
+                    foreach (var ctr in x.lstPerfCounterData)
                     {
-                        val += 1;
+                        var val = 10000 + (uint)iter;
+                        if (iter == 5 && ctr.perfCounterType == PerfCounterType.KernelHandleCount)
+                        {
+                            val += 1;
+                        }
+                        x.measurements[ctr.perfCounterType].Add(val);
                     }
-                    x.measurements[ctr.perfCounterType].Add(val);
                 }
+                var res = await x.CalculateRegressionAsync(showGraph: true);
             }
-            var res = await x.CalculateRegressionAsync(showGraph: true);
         }
 
         [TestMethod]
@@ -172,27 +174,29 @@ namespace Tests
             {
                 ctr.IsEnabledForMeasurement = true;
             }
-            var measurementHolder = new MeasurementHolder(TestContext, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity);
-
-            var lstBigStuff = new List<byte[]>();
-            LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");
-            for (int i = 0; i < nIter; i++)
+            List<RegressionAnalysis> lstRegResults;
+            using (var measurementHolder = new MeasurementHolder(TestContext, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity))
             {
-                if (action != null)
+                var lstBigStuff = new List<byte[]>();
+                LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");
+                for (int i = 0; i < nIter; i++)
                 {
-                    action();
+                    if (action != null)
+                    {
+                        action();
+                    }
+                    else
+                    {
+                        lstBigStuff.Add(new byte[nArraySize]);
+                    }
+                    //                lstBigStuff.Add(new int[10000000]);
+                    var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
+                    LogMessage(res);
                 }
-                else
-                {
-                    lstBigStuff.Add(new byte[nArraySize]);
-                }
-                //                lstBigStuff.Add(new int[10000000]);
-                var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
-                LogMessage(res);
+                var filename = measurementHolder.DumpOutMeasurementsToCsv();
+                LogMessage($"Results file name = {filename}");
+                lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
             }
-            var filename = measurementHolder.DumpOutMeasurementsToCsv();
-            LogMessage($"Results file name = {filename}");
-            var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
             return lstRegResults.Count > 0;
         }
 

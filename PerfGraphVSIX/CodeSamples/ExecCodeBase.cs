@@ -132,72 +132,73 @@ namespace MyCodeToExecute
         {
             try
             {
-                var measurementHolder = new MeasurementHolder(
+                using (var measurementHolder = new MeasurementHolder(
                     TestName,
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
                     logger,
-                    Sensitivity);
-
-                var baseDumpFileName = string.Empty;
-                for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
+                    Sensitivity))
                 {
-                    await DoIterationBodyAsync();
-                    await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
-                    var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
-                    // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
-                    await itakeSample.DoSampleAsync(measurementHolder, desc);
-                    if (numIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == numIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    var baseDumpFileName = string.Empty;
+                    for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
-                        logger.LogMessage("Taking base snapshot dump");
-                        baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                        await DoIterationBodyAsync();
+                        await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
+                        var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
+                        // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
+                        await itakeSample.DoSampleAsync(measurementHolder, desc);
+                        if (numIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == numIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
+                            logger.LogMessage("Taking base snapshot dump");
+                            baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                                System.Diagnostics.Process.GetCurrentProcess().Id,
+                                desc: TestName + "_" + iteration.ToString(),
+                                memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                        }
+
+                        if (_CancellationTokenExecuteCode.IsCancellationRequested)
+                        {
+                            break;
+                        }
+                    }
+                    if (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                    {
+                        logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
+                    }
+                    else
+                    {
+                        logger.LogMessage("Cancelled Code Execution");
+                    }
+                    // cleanup code here: compare measurements, take a dump, examine for types, etc.
+                    var filenameResults = measurementHolder.DumpOutMeasurementsToCsv();
+                    logger.LogMessage("Measurement Results " + filenameResults);
+                    var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+
+                    if (lstRegResults.Count > 0)
+                    {
+                        foreach (var regres in lstRegResults)
+                        {
+                            logger.LogMessage("Regression!!!!!" + regres.ToString());
+                        }
+                        var currentDumpFile = await measurementHolder.CreateDumpAsync(
                             System.Diagnostics.Process.GetCurrentProcess().Id,
-                            desc: TestName + "_" + iteration.ToString(),
-                            memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                    }
+                            desc: TestName + "_" + numIterations.ToString(),
+                            memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
 
-                    if (_CancellationTokenExecuteCode.IsCancellationRequested)
-                    {
-                        break;
-                    }
-                }
-                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
-                {
-                    logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
-                }
-                else
-                {
-                    logger.LogMessage("Cancelled Code Execution");
-                }
-                // cleanup code here: compare measurements, take a dump, examine for types, etc.
-                var filenameResults = measurementHolder.DumpOutMeasurementsToCsv();
-                logger.LogMessage("Measurement Results " + filenameResults);
-                var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
-
-                if (lstRegResults.Count > 0)
-                {
-                    foreach (var regres in lstRegResults)
-                    {
-                        logger.LogMessage("Regression!!!!!" + regres.ToString());
-                    }
-                    var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                        System.Diagnostics.Process.GetCurrentProcess().Id,
-                        desc: TestName + "_" + numIterations.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-
-                    if (!string.IsNullOrEmpty(baseDumpFileName))
-                    {
-                        var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                        var sb = oDumpAnalyzer.GetDiff(
-                            baseDumpFileName, 
-                            currentDumpFile, 
-                            numIterations, 
-                            NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                        var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
-                        File.WriteAllText(fname, sb.ToString());
-                        System.Diagnostics.Process.Start(fname);
-                        logger.LogMessage("DumpDiff Analysis"+ fname);
+                        if (!string.IsNullOrEmpty(baseDumpFileName))
+                        {
+                            var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                            var sb = oDumpAnalyzer.GetDiff(
+                                baseDumpFileName,
+                                currentDumpFile,
+                                numIterations,
+                                NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                            var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
+                            File.WriteAllText(fname, sb.ToString());
+                            System.Diagnostics.Process.Start(fname);
+                            logger.LogMessage("DumpDiff Analysis" + fname);
+                        }
                     }
                 }
             }

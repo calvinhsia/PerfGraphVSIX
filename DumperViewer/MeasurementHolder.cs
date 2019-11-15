@@ -101,7 +101,7 @@ namespace PerfGraphVSIX
         }
     }
 
-    public class MeasurementHolder
+    public class MeasurementHolder: IDisposable
     {
         public string TestName;
 
@@ -482,6 +482,21 @@ namespace PerfGraphVSIX
                 total += dy * dy;
             }
             return total;
+        }
+
+        public void Dispose()
+        {
+            if (this.testContext != null && logger != null && logger is Logger myLogger)
+            {
+                var sb = new StringBuilder();
+                foreach (var str in myLogger._lstLoggedStrings)
+                {
+                    sb.AppendLine(str);
+                }
+                var filename = Path.Combine(ResultsFolder, "StressTestLog.log");
+                File.WriteAllText(filename, sb.ToString());
+                this.testContext.AddResultsFile(filename);
+            }
         }
     }
     public struct PointF

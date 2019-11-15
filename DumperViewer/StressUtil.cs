@@ -128,85 +128,86 @@ namespace PerfGraphVSIX
                     await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 }
 
-                var measurementHolder = new MeasurementHolder(
+                using (var measurementHolder = new MeasurementHolder(
                     testContext,
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
                     logger: logger,
-                    sensitivity: Sensitivity);
-
-                var baseDumpFileName = string.Empty;
-                testContext.Properties[PropNameiteration] = 0;
-
-                for (int iteration = 0; iteration < NumIterations; iteration++)
+                    sensitivity: Sensitivity))
                 {
-                    var result = _theTestMethod.Invoke(test, parameters: null);
-                    if (_theTestMethod.ReturnType.Name == "Task")
-                    {
-                        var resultTask = (Task)result;
-                        await resultTask;
-                    }
-                    if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
-                    {
-                        GC.Collect();
-                    }
-                    else
-                    {
-                        // we just finished executing the user code. The IDE might be busy executing the last request.
-                        // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
-                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                        vSHandler?.DteExecuteCommand("Tools.ForceGC");
-                        await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
-                    }
+                    var baseDumpFileName = string.Empty;
+                    testContext.Properties[PropNameiteration] = 0;
 
-                    var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
-                    logger.LogMessage(res);
-
-                    if (NumIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot &&
-                        iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    for (int iteration = 0; iteration < NumIterations; iteration++)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier)).ConfigureAwait(false);
-                        logger.LogMessage($"Taking base snapshot dump");
-                        baseDumpFileName = await measurementHolder.CreateDumpAsync(
-                            PerfCounterData.ProcToMonitor.Id,
-                            desc: testContext.TestName + "_" + iteration.ToString(),
-                            memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                    }
-                    testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
-                }
-                if (NumIterations > 2) // don't want to do leak analysis unless enough iterations
-                {
-                    var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToCsv();
-                    logger.LogMessage($"Measurement Results {filenameResultsCSV}");
-                    var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
-                        .Where(r => r.IsRegression).ToList();
-                    if (lstRegResults.Count > 0)
-                    {
-                        foreach (var regres in lstRegResults)
+                        var result = _theTestMethod.Invoke(test, parameters: null);
+                        if (_theTestMethod.ReturnType.Name == "Task")
                         {
-                            logger.LogMessage($"Regression!!!!! {regres}");
+                            var resultTask = (Task)result;
+                            await resultTask;
                         }
-                        var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                            PerfCounterData.ProcToMonitor.Id,
-                            desc: testContext.TestName + "_" + NumIterations.ToString(),
-                            memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-                        if (!string.IsNullOrEmpty(baseDumpFileName))
+                        if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
                         {
-                            var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                            var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
-                                            currentDumpFile,
-                                            NumIterations,
-                                            NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                            var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
-                            File.WriteAllText(fname, sb.ToString());
-                            Process.Start(fname);
-                            logger.LogMessage("DumpDiff Analysis" + fname);
+                            GC.Collect();
                         }
                         else
                         {
-                            logger.LogMessage($"No baseline dump: not enough iterations");
+                            // we just finished executing the user code. The IDE might be busy executing the last request.
+                            // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                            await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                            vSHandler?.DteExecuteCommand("Tools.ForceGC");
+                            await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
                         }
-                        throw new LeakException($"Leaks found\r\n", lstRegResults);
+
+                        var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
+                        logger.LogMessage(res);
+
+                        if (NumIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot &&
+                            iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier)).ConfigureAwait(false);
+                            logger.LogMessage($"Taking base snapshot dump");
+                            baseDumpFileName = await measurementHolder.CreateDumpAsync(
+                                PerfCounterData.ProcToMonitor.Id,
+                                desc: testContext.TestName + "_" + iteration.ToString(),
+                                memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                        }
+                        testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
+                    }
+                    if (NumIterations > 2) // don't want to do leak analysis unless enough iterations
+                    {
+                        var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToCsv();
+                        logger.LogMessage($"Measurement Results {filenameResultsCSV}");
+                        var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
+                            .Where(r => r.IsRegression).ToList();
+                        if (lstRegResults.Count > 0)
+                        {
+                            foreach (var regres in lstRegResults)
+                            {
+                                logger.LogMessage($"Regression!!!!! {regres}");
+                            }
+                            var currentDumpFile = await measurementHolder.CreateDumpAsync(
+                                PerfCounterData.ProcToMonitor.Id,
+                                desc: testContext.TestName + "_" + NumIterations.ToString(),
+                                memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+                            if (!string.IsNullOrEmpty(baseDumpFileName))
+                            {
+                                var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                                var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
+                                                currentDumpFile,
+                                                NumIterations,
+                                                NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                                var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
+                                File.WriteAllText(fname, sb.ToString());
+                                Process.Start(fname);
+                                logger.LogMessage("DumpDiff Analysis" + fname);
+                            }
+                            else
+                            {
+                                logger.LogMessage($"No baseline dump: not enough iterations");
+                            }
+                            throw new LeakException($"Leaks found\r\n", lstRegResults);
+                        }
                     }
                 }
             }
@@ -229,45 +230,4 @@ namespace PerfGraphVSIX
         }
     }
 
-    public class Logger : ILogger
-    {
-        public static List<string> _lstLoggedStrings = new List<string>();
-        private readonly TestContextWrapper testContext;
-        private string logFilePath;
-
-        public Logger(TestContextWrapper testContext)
-        {
-            this.testContext = testContext;
-        }
-
-        public void LogMessage(string str, params object[] args)
-        {
-            try
-            {
-                var dt = string.Format("[{0}],",
-                DateTime.Now.ToString("hh:mm:ss:fff")
-                );
-                str = string.Format(dt + str, args);
-                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
-
-                testContext.WriteLine(msgstr);
-                if (Debugger.IsAttached)
-                {
-                    Debug.WriteLine(msgstr);
-                }
-                _lstLoggedStrings.Add(msgstr);
-
-                if (string.IsNullOrEmpty(logFilePath))
-                {
-                    //   logFilePath = @"c:\Test\StressDataCollector.log";
-                    logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TestStressDataCollector.log"); //can't use the Test deployment folder because it gets cleaned up
-                }
-                File.AppendAllText(logFilePath, msgstr + Environment.NewLine);
-            }
-            catch (Exception)
-            {
-            }
-
-        }
-    }
 }

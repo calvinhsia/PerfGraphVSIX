@@ -123,6 +123,7 @@
     </Compile>
     <Compile Include="ILogger.cs" />
     <Compile Include="ITakeSample.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />
     <Compile Include="MessageFilter.cs" />
