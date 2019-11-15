@@ -16,7 +16,7 @@ namespace PerfGraphVSIX
     public class StressUtil
     {
         public const string PropNameVSHandler = "VSHandler";
-        public const string PropNameiteration = "IterationNumber";
+        public const string PropNameIteration = "IterationNumber";
         /// <summary>
         /// Do it all: tests need only add a single call to turn the test into a stress test
         /// The call can be made from the TestInitialize or the beginning of the TestMethod
@@ -136,7 +136,7 @@ namespace PerfGraphVSIX
                     sensitivity: Sensitivity))
                 {
                     var baseDumpFileName = string.Empty;
-                    testContext.Properties[PropNameiteration] = 0;
+                    testContext.Properties[PropNameIteration] = 0;
 
                     for (int iteration = 0; iteration < NumIterations; iteration++)
                     {
@@ -172,7 +172,7 @@ namespace PerfGraphVSIX
                                 desc: testContext.TestName + "_" + iteration.ToString(),
                                 memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
                         }
-                        testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
+                        testContext.Properties[PropNameIteration] = (int)(testContext.Properties[PropNameIteration]) + 1;
                     }
                     if (NumIterations > 2) // don't want to do leak analysis unless enough iterations
                     {
