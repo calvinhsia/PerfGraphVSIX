@@ -52,7 +52,7 @@ namespace PerfGraphVSIX
                     throw new InvalidOperationException("can't get TestContext from test. Test must have 'public TestContext TestContext { get; set; }' (perhaps inherited)");
                 }
                 var val = methGetContext.Invoke(test, null);
-                TestContextWrapper testContext =new TestContextWrapper(val);
+                TestContextWrapper testContext = new TestContextWrapper(val);
 
                 if (testContext.Properties[PropNameRecursionPrevention] != null)
                 {
@@ -155,35 +155,38 @@ namespace PerfGraphVSIX
                     }
                     testContext.Properties[PropNameiteration] = (int)(testContext.Properties[PropNameiteration]) + 1;
                 }
-                var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
-                logger.LogMessage($"Measurement Results {filenameResultsCSV}");
-                var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
-                    .Where(r => r.IsRegression).ToList();
-                if (lstRegResults.Count > 0)
+                if (NumIterations > 2)
                 {
-                    foreach (var regres in lstRegResults)
+                    var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
+                    logger.LogMessage($"Measurement Results {filenameResultsCSV}");
+                    var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
+                        .Where(r => r.IsRegression).ToList();
+                    if (lstRegResults.Count > 0)
                     {
-                        logger.LogMessage($"Regression!!!!! {regres}");
+                        foreach (var regres in lstRegResults)
+                        {
+                            logger.LogMessage($"Regression!!!!! {regres}");
+                        }
+                        var currentDumpFile = await measurementHolder.CreateDumpAsync(
+                            PerfCounterData.ProcToMonitor.Id,
+                            desc: testContext.TestName + "_" + NumIterations.ToString(),
+                            memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+                        if (!string.IsNullOrEmpty(baseDumpFileName))
+                        {
+                            var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                            var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
+                                            currentDumpFile,
+                                            NumIterations,
+                                            NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                            var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
+                            logger.LogMessage("DumpDiff Analysis" + fname);
+                        }
+                        else
+                        {
+                            logger.LogMessage($"No baseline dump: not enough iterations");
+                        }
+                        throw new LeakException($"Leaks found\r\n", lstRegResults);
                     }
-                    var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                        PerfCounterData.ProcToMonitor.Id,
-                        desc: testContext.TestName + "_" + NumIterations.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-                    if (!string.IsNullOrEmpty(baseDumpFileName))
-                    {
-                        var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                        var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
-                                        currentDumpFile,
-                                        NumIterations,
-                                        NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                        var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
-                        logger.LogMessage("DumpDiff Analysis" + fname);
-                    }
-                    else
-                    {
-                        logger.LogMessage($"No baseline dump: not enough iterations");
-                    }
-                    throw new LeakException($"Leaks found\r\n", lstRegResults);
                 }
             }
             catch (Exception ex)

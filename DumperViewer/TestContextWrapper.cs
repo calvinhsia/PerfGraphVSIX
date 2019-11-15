@@ -61,15 +61,12 @@ namespace DumperViewer
         }
         public void WriteLine(string str)
         {
-            var meths = _testContext.GetType().GetMethods().Where(m => m.Name == nameof(WriteLine)).ToList();
-            var meth = meths[0];
-            meth.Invoke(_testContext, new object[] { str });
+            this.WriteLine(str, new object[] { null });
         }
 
         public void WriteLine(string str, object[] args)
         {
-            var meths = _testContext.GetType().GetMethods().Where(m => m.Name == nameof(WriteLine)).ToList();
-            var meth = meths[1];
+            var meth = _testContext.GetType().GetMethods().Where(m => m.Name == nameof(WriteLine) && m.GetParameters().Length == 2).First();
             meth.Invoke(_testContext, new object[] { str, args });
         }
 
