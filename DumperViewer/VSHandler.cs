@@ -17,7 +17,7 @@ namespace LeakTestDatacollector
         public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
         private readonly ILogger logger;
         private readonly int _DelayMultiplier;
-        public EnvDTE.DTE _vsDTE;
+        private EnvDTE.DTE _vsDTE;
         /// <summary>
         /// The process we're monitoring may be different from vs: e.g. servicehub
         /// We need the vsProc to get DTE so we can force GC between iterations, automate via DTE, etc.

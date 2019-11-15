@@ -26,7 +26,6 @@ namespace MyCodeToExecute
         public override async Task DoInitializeAsync()
         {
             await Task.Yield();
-            SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
         }
 
         public override async Task DoIterationBodyAsync()

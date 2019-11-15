@@ -26,7 +26,6 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-            SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost";
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenFolder += SolutionEvents_OnAfterOpenFolder;
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
         }

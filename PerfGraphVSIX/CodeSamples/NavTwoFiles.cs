@@ -29,7 +29,6 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-            SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             await OpenASolutionAsync();
             g_dte.ExecuteCommand("File.OpenFile", file1);
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up

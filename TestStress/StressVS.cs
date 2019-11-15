@@ -1,16 +1,58 @@
 ﻿using DumperViewer;
-using EnvDTE;
 using LeakTestDatacollector;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TestStress
 {
+    [TestClass]
+    public class StressVS
+    {
+        public const string vsPath = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
+        public const string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
+
+        public TestContext TestContext { get; set; }
+        ILogger logger;
+        VSHandler _VSHandler;
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            logger = new Logger(new TestContextWrapper(TestContext));
+            var procVS = Process.Start(StressVS.vsPath);
+            logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
+            _VSHandler = new VSHandler(logger);
+        }
+
+        [TestMethod]
+        public async Task StressOpenCloseSln()
+        {
+            try
+            {
+                // the only change to existing test required: call to static method
+                await StressUtil.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
+
+                await _VSHandler.OpenSolution(SolutionToLoad);
+
+                await _VSHandler.CloseSolution();
+            }
+            catch (Exception ex)
+            {
+                logger.LogMessage($"Exception {ex}");
+            }
+        }
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            _VSHandler.ShutDownVSAsync().Wait();
+        }
+    }
+
     [TestClass]
     public class StressExistingVS
     {
@@ -21,7 +63,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            var procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath);
+            var procVS = Process.Start(StressVS.vsPath);
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
         }
@@ -38,8 +80,7 @@ namespace TestStress
             // the only change to existing test required: call to static method
             await StressUtil.DoIterationsAsync(this, NumIterations: 3);
 
-            string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-            await _VSHandler.OpenSolution(SolutionToLoad);
+            await _VSHandler.OpenSolution(StressVS.SolutionToLoad);
 
             await _VSHandler.CloseSolution();
         }
@@ -55,7 +96,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            procVS = System.Diagnostics.Process.Start(BaseStressTestClass.vsPath); // simulate Apex starting VS
+            procVS = Process.Start(StressVS.vsPath); // simulate Apex starting VS
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
         }
 
@@ -75,12 +116,11 @@ namespace TestStress
                 await StressUtil.DoIterationsAsync(this, NumIterations: 3);
 
 
-                string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
                 if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
                 {
                     throw new InvalidOperationException("null vshandler");
                 }
-                await vSHandler.OpenSolution(SolutionToLoad);
+                await vSHandler.OpenSolution(StressVS.SolutionToLoad);
 
                 await vSHandler.CloseSolution();
 
@@ -110,7 +150,7 @@ namespace TestStress
                     }
                     await Task.Delay(TimeSpan.FromSeconds(nDelay));
                     logger.LogMessage($"TestInit : starting VS after {nDelay} secs delay");
-                    System.Diagnostics.Process.Start(BaseStressTestClass.vsPath); // simulate Apex starting VS
+                    System.Diagnostics.Process.Start(StressVS.vsPath); // simulate Apex starting VS
                 });
 
             }
@@ -136,8 +176,7 @@ namespace TestStress
                         throw new InvalidOperationException("null vshandler");
                     }
 
-                    string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
-                    await vSHandler.OpenSolution(SolutionToLoad);
+                    await vSHandler.OpenSolution(StressVS.SolutionToLoad);
 
                     await vSHandler.CloseSolution();
 

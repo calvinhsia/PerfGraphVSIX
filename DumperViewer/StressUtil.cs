@@ -1,6 +1,5 @@
 ﻿using DumperViewer;
 using LeakTestDatacollector;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,6 +16,7 @@ namespace PerfGraphVSIX
     public class StressUtil
     {
         public const string PropNameVSHandler = "VSHandler";
+        public const string PropNameiteration = "IterationNumber";
         /// <summary>
         /// Do it all: tests need only add a single call to turn the test into a stress test
         /// The call can be made from the TestInitialize or the beginning of the TestMethod
@@ -41,13 +41,12 @@ namespace PerfGraphVSIX
             string ProcNamesToMonitor = "devenv",
             int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4)
         {
-            const string PropNameiteration = "IterationNumber";
             const string PropNameRecursionPrevention = "RecursionPrevention";
             ILogger logger = test as ILogger;
             try
             {
-                var typ = test.GetType();
-                var methGetContext = typ.GetMethod($"get_{nameof(TestContext)}");
+                var testType = test.GetType();
+                var methGetContext = testType.GetMethod($"get_TestContext");
                 if (methGetContext == null)
                 {
                     throw new InvalidOperationException("can't get TestContext from test. Test must have 'public TestContext TestContext { get; set; }' (perhaps inherited)");
@@ -61,10 +60,10 @@ namespace PerfGraphVSIX
                 }
                 testContext.Properties[PropNameRecursionPrevention] = 1;
 
-                var _theTestMethod = typ.GetMethod(testContext.TestName);
+                var _theTestMethod = testType.GetMethod(testContext.TestName);
                 if (logger == null)
                 {
-                    var loggerFld = typ.GetField("logger");
+                    var loggerFld = testType.GetField("logger");
                     if (loggerFld != null)
                     {
                         logger = loggerFld.GetValue(test) as ILogger;
@@ -96,8 +95,9 @@ namespace PerfGraphVSIX
                 }
                 else
                 {
-                    // we don't want to add DTE refs to this project
-                    var vsHandlerFld = typ.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(m => m.FieldType.Name == "VSHandler").FirstOrDefault();
+                    var vsHandlerFld = testType.GetFields(
+                            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                        .Where(m => m.FieldType.Name == "VSHandler").FirstOrDefault();
                     if (vsHandlerFld != null)
                     {
                         vSHandler = vsHandlerFld.GetValue(test) as VSHandler;
@@ -111,7 +111,7 @@ namespace PerfGraphVSIX
                             testContext.Properties[PropNameVSHandler] = vSHandler;
                         }
                     }
-                    await vSHandler?.EnsureGotDTE(); // ensure we get the DTE 
+                    await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 }
 
                 var measurementHolder = new MeasurementHolder(
@@ -142,8 +142,8 @@ namespace PerfGraphVSIX
                         // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
                         await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                         vSHandler?.DteExecuteCommand("Tools.ForceGC");
+                        await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
                     }
-                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
 
                     var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
                     logger.LogMessage(res);

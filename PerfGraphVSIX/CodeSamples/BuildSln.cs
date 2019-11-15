@@ -26,7 +26,6 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-            SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
             await OpenASolutionAsync();
         }
 
