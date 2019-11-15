@@ -185,10 +185,10 @@ namespace PerfGraphVSIX
                 {
                     try
                     {
-                        var disposeToken = (objTracked as Microsoft.VisualStudio.Workspace.IWorkspace2).DisposeToken;
-                        var ctsrc = disposeToken.GetType().GetField("m_source", bFlags).GetValue(disposeToken) as CancellationTokenSource;
+                        //var disposeToken = (objTracked as Microsoft.VisualStudio.Workspace.IWorkspace2).DisposeToken;
+                        //var ctsrc = disposeToken.GetType().GetField("m_source", bFlags).GetValue(disposeToken) as CancellationTokenSource;
 
-                        AddObjectToTrack(ctsrc, ObjSource.FromProject, $"TokenSource");
+                        //AddObjectToTrack(ctsrc, ObjSource.FromProject, $"TokenSource");
                     }
                     catch (ObjectDisposedException)
                     {
