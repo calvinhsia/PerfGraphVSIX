@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -122,6 +123,7 @@ namespace PerfGraphVSIX
 
                 var baseDumpFileName = string.Empty;
                 testContext.Properties[PropNameiteration] = 0;
+
                 for (int iteration = 0; iteration < NumIterations; iteration++)
                 {
                     var result = _theTestMethod.Invoke(test, parameters: null);
@@ -136,9 +138,12 @@ namespace PerfGraphVSIX
                     }
                     else
                     {
-                        vSHandler?.DoGarbageCollect();
+                        // we just finished executing the user code. The IDE might be busy executing the last request.
+                        // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                        await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                        vSHandler?.DoGarbageCollectAsync();
                     }
-                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
+                    await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
 
                     var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
                     logger.LogMessage(res);
@@ -146,7 +151,7 @@ namespace PerfGraphVSIX
                     if (NumIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot &&
                         iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
+                        await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier)).ConfigureAwait(false);
                         logger.LogMessage($"Taking base snapshot dump");
                         baseDumpFileName = await measurementHolder.CreateDumpAsync(
                             PerfCounterData.ProcToMonitor.Id,
@@ -221,21 +226,21 @@ namespace PerfGraphVSIX
 
         public void LogMessage(string str, params object[] args)
         {
-            var dt = string.Format("[{0}],",
-                DateTime.Now.ToString("hh:mm:ss:fff")
-                );
-            str = string.Format(dt + str, args);
-            var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
-
-            testContext.WriteLine(msgstr);
-            if (Debugger.IsAttached)
-            {
-                Debug.WriteLine(msgstr);
-            }
-            _lstLoggedStrings.Add(msgstr);
-
             try
             {
+                var dt = string.Format("[{0}],",
+                DateTime.Now.ToString("hh:mm:ss:fff")
+                );
+                str = string.Format(dt + str, args);
+                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
+
+                testContext.WriteLine(msgstr);
+                if (Debugger.IsAttached)
+                {
+                    Debug.WriteLine(msgstr);
+                }
+                _lstLoggedStrings.Add(msgstr);
+
                 if (string.IsNullOrEmpty(logFilePath))
                 {
                     //   logFilePath = @"c:\Test\StressDataCollector.log";

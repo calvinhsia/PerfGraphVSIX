@@ -46,7 +46,7 @@ namespace LeakTestDatacollector
                 {
                     if (timeSpan == default)
                     {
-                        timeSpan = TimeSpan.FromSeconds(10);
+                        timeSpan = TimeSpan.FromSeconds(50);
                     }
                     logger.LogMessage($"{nameof(EnsureGotDTE)}");
                     await Task.Yield();
@@ -80,7 +80,7 @@ namespace LeakTestDatacollector
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
-                    logger.LogMessage($"{nameof(EnsureGotDTE)} done");
+                    logger.LogMessage($"{nameof(EnsureGotDTE)} done {procDevenv.Id}");
                 });
             }
             return true;
@@ -171,9 +171,28 @@ namespace LeakTestDatacollector
             }
         }
 
-        public void DoGarbageCollect()
+        public async Task DoGarbageCollectAsync()
         {
-            _vsDTE.ExecuteCommand("Tools.ForceGC");
+            var timeoutDoGCsecs = 60;
+            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutDoGCsecs));
+            var didGC = false;
+            while (!timeoutTask.IsCompleted && !didGC)
+            {
+                try
+                {
+                    _vsDTE.ExecuteCommand("Tools.ForceGC");
+                    didGC = true;
+                }
+                catch (COMException) // System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                {
+                    logger.LogMessage($"Couldn't do GC: retry");
+                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                }
+            }
+            if (!didGC)
+            {
+                logger.LogMessage($"Couldn't do GC in {timeoutDoGCsecs} secs");
+            }
         }
 
         public async Task<EnvDTE.DTE> GetDTEAsync(int processId, TimeSpan timeout)
@@ -250,7 +269,7 @@ namespace LeakTestDatacollector
                     Marshal.ReleaseComObject(bindCtx);
                 }
             }
-
+            // can't register message filter because need to set STA apartment, which means the test needs to be run on STA
             //            MessageFilter.RegisterMessageFilter();
             return runningObject as EnvDTE.DTE;
         }
