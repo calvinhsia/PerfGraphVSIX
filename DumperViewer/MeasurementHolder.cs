@@ -510,7 +510,7 @@ namespace Microsoft.VisualStudio.StressTest
                 }
                 var filename = Path.Combine(ResultsFolder, "StressTestLog.log");
                 File.WriteAllText(filename, sb.ToString());
-                this.testContext.AddResultsFile(filename);
+                this.testContext.AddResultFile(filename);
             }
         }
     }
