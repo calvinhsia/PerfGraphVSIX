@@ -109,7 +109,7 @@ namespace TestStress
 
         public override void AddResultFile(string fileName)
         {
-            throw new NotImplementedException();
+            this.testContext.AddResultFile(fileName);
         }
 
         public override void BeginTimer(string timerName)

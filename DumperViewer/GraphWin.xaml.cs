@@ -62,6 +62,7 @@ namespace Microsoft.VisualStudio.StressTest
             chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
             _chart.ChartAreas.Add(chartArea);
             chartArea.AxisY.IsStartedFromZero = false;
+            chartArea.AxisX.Title = "Iteration";
 
             var lstCtrsToInclude = new List<string>();
             if (this.lbCounters.SelectedItems.Count == 0)
