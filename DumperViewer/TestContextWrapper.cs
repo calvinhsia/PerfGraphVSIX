@@ -90,7 +90,7 @@ namespace Microsoft.VisualStudio.StressTest
         }
         public void AddResultFile(string filename)
         {
-            var meth = _testContext.GetType().GetMethod($"get_{nameof(AddResultFile)}");
+            var meth = _testContext.GetType().GetMethod(nameof(AddResultFile));
             meth.Invoke(_testContext, new object[] { filename});
         }
 
