@@ -126,6 +126,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Key.snk" />
+    <None Include="Microsoft.VisualStudio.StressTest.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Microsoft.Diagnostics.Runtime.xml">

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Microsoft.VisualStudio.StressTest</id>
+    <version>1.001</version>
+    <title>Microsoft.VisualStudio.StressTest</title>
+    <authors>Calvin Hsia</authors>
+    <owners>Calvin Hsia</owners>
+    <licenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</licenseUrl>
+    <projectUrl>http://PROJECT_URL_HERE_OR_DELETE_THIS_LINE</projectUrl>
+    <iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Memory analsysis and leak detection</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2019</copyright>
+    <tags>Memory Leak</tags>
+  </metadata>
+</package>
