@@ -1,4 +1,4 @@
-﻿using DumperViewer;
+﻿using Microsoft.VisualStudio.StressTest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -26,7 +26,7 @@ namespace Tests
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\""
             };
-            var odumper = new DumperViewer.DumperViewerMain(args)
+            var odumper = new DumperViewerMain(args)
             {
                 _logger = this
             };

@@ -7,7 +7,7 @@ using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DumperViewer
+namespace Microsoft.VisualStudio.StressTest
 {
     /// <summary>
     /// Provides the ability to collect a memory dump of a process.

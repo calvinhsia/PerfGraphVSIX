@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PerfGraphVSIX;
 using System.Windows.Forms;
 using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.StressTest;
 using HANDLE = System.IntPtr;
 
 namespace Tests

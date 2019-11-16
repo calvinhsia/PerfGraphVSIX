@@ -1,6 +1,5 @@
 ﻿//using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime;
-using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DumperViewer
+namespace Microsoft.VisualStudio.StressTest
 {
     public class DumpAnalyzer
     {

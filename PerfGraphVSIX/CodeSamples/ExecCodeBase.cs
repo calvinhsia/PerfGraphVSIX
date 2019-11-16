@@ -39,7 +39,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-
+using Microsoft.VisualStudio.StressTest;
 using Microsoft.VisualStudio.Shell;
 using EnvDTE;
 
@@ -188,7 +188,7 @@ namespace MyCodeToExecute
 
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
-                            var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                            var oDumpAnalyzer = new DumpAnalyzer(logger);
                             var sb = oDumpAnalyzer.GetDiff(
                                 baseDumpFileName,
                                 currentDumpFile,

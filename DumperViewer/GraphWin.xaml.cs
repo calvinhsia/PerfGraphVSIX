@@ -15,9 +15,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using PerfGraphVSIX;
 
-namespace DumperViewer
+namespace Microsoft.VisualStudio.StressTest
 {
     /// <summary>
     /// Interaction logic for GraphWin.xaml

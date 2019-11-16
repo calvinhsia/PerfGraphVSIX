@@ -1,5 +1,4 @@
-﻿using DumperViewer;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +10,7 @@ using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
 
-namespace PerfGraphVSIX
+namespace Microsoft.VisualStudio.StressTest
 {
     public enum SampleType
     {
@@ -101,7 +100,7 @@ namespace PerfGraphVSIX
         }
     }
 
-    public class MeasurementHolder: IDisposable
+    public class MeasurementHolder : IDisposable
     {
         public string TestName;
 
@@ -150,8 +149,24 @@ namespace PerfGraphVSIX
             this.sensitivity = sensitivity;
 
             if (this.testContext == null)
-            {
-                ResultsFolder = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), this.TestName);
+            { // running from ui: get a clean empty folder
+
+                var dirMyTemp = DumperViewerMain.EnsureResultsFolderExists();
+                int nIter = 0;
+                string pathResultsFolder;
+                while (true) // we want to let the user have multiple dumps open for comparison
+                {
+                    var appendstr = nIter++ == 0 ? string.Empty : nIter.ToString();
+                    pathResultsFolder = Path.Combine(
+                        dirMyTemp,
+                        $"{this.TestName}{appendstr}");
+                    if (!Directory.Exists(pathResultsFolder))
+                    {
+                        Directory.CreateDirectory(pathResultsFolder);
+                        break;
+                    }
+                }
+                ResultsFolder = pathResultsFolder;
             }
             else
             {
@@ -370,7 +385,7 @@ namespace PerfGraphVSIX
 
         public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
-            var pathDumpFile = Path.ChangeExtension( Path.Combine(ResultsFolder, desc),".dmp");
+            var pathDumpFile = Path.ChangeExtension(Path.Combine(ResultsFolder, desc), ".dmp");
             try
             {
                 var arglist = new List<string>()

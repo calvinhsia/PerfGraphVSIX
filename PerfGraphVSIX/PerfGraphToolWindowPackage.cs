@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.StressTest;
 using Microsoft.VisualStudio.Threading;
 using Microsoft.Win32;
 using Task = System.Threading.Tasks.Task;
@@ -79,7 +80,7 @@ namespace PerfGraphVSIX
 
             ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
             await TaskScheduler.Default;
-            _ = DumperViewer.DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+            _ = DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
 
 

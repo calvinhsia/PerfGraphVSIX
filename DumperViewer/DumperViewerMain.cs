@@ -1,5 +1,4 @@
-﻿using PerfGraphVSIX;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.SqlClient;
@@ -16,7 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 
 
-namespace DumperViewer
+namespace Microsoft.VisualStudio.StressTest
 {
     public class DumperViewerMain : ILogger
     {
@@ -186,7 +185,7 @@ namespace DumperViewer
 
         public static string EnsureResultsFolderExists()
         {
-            var dirMyTemp = Path.Combine(Path.GetTempPath(), nameof(PerfGraphVSIX));
+            var dirMyTemp = Path.Combine(Path.GetTempPath(), "PerfGraphVSIX");
             if (!Directory.Exists(dirMyTemp))
             {
                 Directory.CreateDirectory(dirMyTemp);

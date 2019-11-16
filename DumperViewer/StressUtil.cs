@@ -1,5 +1,4 @@
-﻿using DumperViewer;
-using LeakTestDatacollector;
+﻿using LeakTestDatacollector;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PerfGraphVSIX
+namespace Microsoft.VisualStudio.StressTest
 {
     public class StressUtil
     {
@@ -192,7 +191,7 @@ namespace PerfGraphVSIX
                                 memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
                             if (!string.IsNullOrEmpty(baseDumpFileName))
                             {
-                                var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
+                                var oDumpAnalyzer = new DumpAnalyzer(logger);
                                 var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
                                                 currentDumpFile,
                                                 NumIterations,

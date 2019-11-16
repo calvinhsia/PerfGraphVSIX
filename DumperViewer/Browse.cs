@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PerfGraphVSIX
+namespace Microsoft.VisualStudio.StressTest
 {
     using System;
     using System.Collections;

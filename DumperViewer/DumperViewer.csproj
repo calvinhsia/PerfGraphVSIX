@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{006276CD-726B-4A0D-A6EA-57D99480CE1B}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>DumperViewer</RootNamespace>
+    <RootNamespace>Microsoft.VisualStudio.StressTest</RootNamespace>
     <AssemblyName>DumperViewer</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

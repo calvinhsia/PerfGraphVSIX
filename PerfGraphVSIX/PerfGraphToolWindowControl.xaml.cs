@@ -1,6 +1,5 @@
 ﻿namespace PerfGraphVSIX
 {
-    using DumperViewer;
     using EnvDTE;
     using Microsoft;
     using Microsoft.Build.Utilities;
@@ -9,6 +8,7 @@
     using Microsoft.VisualStudio.Shell;
     using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Shell.Interop;
+    using Microsoft.VisualStudio.StressTest;
     using Microsoft.VisualStudio.Threading;
     using System;
     using System.Collections.Generic;

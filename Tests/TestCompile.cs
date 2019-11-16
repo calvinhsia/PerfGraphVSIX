@@ -1,4 +1,4 @@
-﻿using DumperViewer;
+﻿using Microsoft.VisualStudio.StressTest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 using System;
@@ -168,6 +168,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.VisualStudio.StressTest;
 
 //using Microsoft.VisualStudio.Threading;
 
@@ -248,6 +249,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.VisualStudio.StressTest;
 using Task = System.Threading.Tasks.Task;
 
 namespace MyCustomCode
@@ -268,7 +270,7 @@ namespace MyCustomCode
 
         void foo()
         {
-            var odumper = new DumperViewer.DumperViewerMain(null)
+            var odumper = new DumperViewerMain(null)
                 {
                     _logger = logger
                 };
@@ -362,6 +364,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.VisualStudio.StressTest;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;

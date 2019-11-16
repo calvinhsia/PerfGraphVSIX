@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DumperViewer
+namespace Microsoft.VisualStudio.StressTest
 {
     public enum LeakStatusCondition
     {
@@ -13,12 +13,6 @@ namespace DumperViewer
         Unknown,
         NoLeaks,
         SomeLeaks
-    }
-    public enum LogVerbosity
-    {
-        LogVerbosityCSV,
-        LogVerbosityDetailed,
-        LogVerbosityDiagnostic
     }
 
     [AttributeUsage(System.AttributeTargets.Method, AllowMultiple =false, Inherited =false)]
@@ -31,7 +25,7 @@ namespace DumperViewer
             TrackClrObjects = 1;
             Sensitivity = 1;
             WriteSnapshot = LeakStatusCondition.Never;
-            DesiredVerbosity = LogVerbosity.LogVerbosityDetailed;
+            DesiredVerbosity = LogVerbosity.Diagnostic;
             ShutDownTargetProcess = LeakStatusCondition.NoLeaks;
         }
         /// <summary>

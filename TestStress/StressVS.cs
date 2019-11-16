@@ -1,7 +1,6 @@
-﻿using DumperViewer;
-using LeakTestDatacollector;
+﻿using LeakTestDatacollector;
+using Microsoft.VisualStudio.StressTest;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
