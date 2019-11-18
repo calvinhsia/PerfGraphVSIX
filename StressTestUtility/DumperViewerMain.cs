@@ -24,7 +24,7 @@ namespace StressTestUtility
         internal string _DumpFileName;
         public ILogger _logger;
         internal Process _procTarget;
-        private bool _StartClrObjectExplorer;
+        private bool _StartClrObjExplorer;
 
         [STAThread]
         public static void Main(string[] args)
@@ -56,7 +56,7 @@ namespace StressTestUtility
             if (args.Length == 0)
             {
                 _procTarget = ChooseProcess("Choose a process to dump/analyze", fShow32BitOnly: true);
-                _StartClrObjectExplorer = true;
+                _StartClrObjExplorer = true;
                 if (_procTarget == null)
                 {
                     DoShowHelp();
@@ -99,8 +99,8 @@ namespace StressTestUtility
                                         this.regexes.Add(split);
                                     }
                                     break;
-                                case "c": // start
-                                    this._StartClrObjectExplorer = true;
+                                case "c": // start ClrObjExplorer 
+                                    this._StartClrObjExplorer = true;
                                     break;
                                 case "f":
                                     if (iArg == args.Length)
@@ -164,7 +164,7 @@ namespace StressTestUtility
                 });
                 _logger.LogMessage($"Done creating dump {_procTarget.Id} {_procTarget.ProcessName} {new FileInfo(_DumpFileName).Length:n0}   Secs={sw.Elapsed.TotalSeconds:f3}");
 
-                if (_StartClrObjectExplorer)
+                if (_StartClrObjExplorer)
                 {
                     sw.Restart();
                     await Task.Run(() =>
@@ -172,7 +172,7 @@ namespace StressTestUtility
                         LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
                         var x = new DumpAnalyzer(this);
                         //                    x.AnalyzeDump();
-                        x.StartClrObjectExplorer(_DumpFileName);
+                        x.StartClrObjExplorer(_DumpFileName);
                     });
                     _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
                 }
@@ -330,7 +330,7 @@ namespace StressTestUtility
 This Program can
  - Create a dump of a specified process
  - analyze a dump for the counts of the specified types
- - show UI of the counts in ClrObjectExporer, allowing interactive exploration of objects, counts, references.
+ - show UI of the counts in ClrObjExplorer, allowing interactive exploration of objects, counts, references.
  
 Command line:
 DumpViewer -p 1234 -t .*TextBuffer.*
@@ -345,9 +345,9 @@ DumpViewer -p 1234 -t .*TextBuffer.*
 -b <FileDumpname1> Filename of baseline dump taken N interations before the dump in -f. Will output   
 -n # iterations baseline snap was taken before current dump
 
--c Start ClrObjectExlorer after creating dump
+-c Start ClrObjExplorer after creating dump
 
--u  UI: Show the WPF UI. If a dumpfile is specified,  open a treeview for the dump (ClrObjectExplorer). Else just show generic UI that will allow the user to choose a target process for which to view memory
+-u  UI: Show the WPF UI. If a dumpfile is specified,  open a treeview for the dump (ClrObjExplorer). Else just show generic UI that will allow the user to choose a target process for which to view memory
 
 
 "

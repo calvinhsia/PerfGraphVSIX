@@ -156,10 +156,11 @@ namespace StressTestUtility
             }
         }
 
-        public void StartClrObjectExplorer(string _DumpFileName)
+        public void StartClrObjExplorer(string _DumpFileName)
         {
             var exeNameClrObj = Path.Combine(
                Path.GetDirectoryName(this.GetType().Assembly.Location),
+               "ClrObjExplorer",
                "ClrObjExplorer.exe");
             if (!File.Exists(exeNameClrObj))
             {

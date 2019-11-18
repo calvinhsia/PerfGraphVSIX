@@ -534,13 +534,13 @@
 
             await measurementHolderInteractiveUser.CreateDumpAsync(
                 System.Diagnostics.Process.GetCurrentProcess().Id, 
-                MemoryAnalysisType.StartClrObjectExplorer, 
+                MemoryAnalysisType.StartClrObjExplorer, 
                 desc: string.Empty);
 
             btnClrObjExplorer.IsEnabled = true;
 
             //var x = new DumpAnalyzer(this);
-            //x.StartClrObjectExplorer(pathDumpFile);
+            //x.StartClrObjExplorer(pathDumpFile);
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods

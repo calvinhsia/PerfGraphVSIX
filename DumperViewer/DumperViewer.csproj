@@ -88,9 +88,9 @@
     <Resource Include="ExcelMacro.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.VisualStudio.StressTest\Microsoft.VisualStudio.StressTest.csproj">
+    <ProjectReference Include="..\StressTestUtility\StressTestUtility.csproj">
       <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
-      <Name>Microsoft.VisualStudio.StressTest</Name>
+      <Name>StressTestUtility</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

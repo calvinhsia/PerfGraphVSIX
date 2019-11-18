@@ -27,7 +27,7 @@ namespace StressTestUtility
         /// <param name="DelayMultiplier">Defaults to 1. All delays (e.g. between iterations, after GC, are multiplied by this factor.
         /// Running the test with instrumented binaries (such as under http://Toolbox/MemSpect  will slow down the target process</param>
         /// <param name="ProcNamesToMonitor">'|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. </param>
-        /// <param name="ShowUI">Show results automatically, like the Graph of Measurements, the Dump in ClrObjectExplorer, the Diff Analysis</param>
+        /// <param name="ShowUI">Show results automatically, like the Graph of Measurements, the Dump in ClrObjExplorer, the Diff Analysis</param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"> Specifies the iteration # at which to take a baseline. 
         ///    <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
         /// e.g. 100 iterations, with <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/>=4 means take a baseline at iteartion 100-4==96;
@@ -84,7 +84,7 @@ namespace StressTestUtility
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
                 /*
-                 * probs: the curdir is not empty, so results will be overwritten (might have ClrObjectExplorer open with a result dump)
+                 * probs: the curdir is not empty, so results will be overwritten (might have ClrObjExplorer open with a result dump)
                  *       The Test*dirs are all deleted after the run.
                  *       Can use a Runsettings   
                  *               <DeleteDeploymentDirectoryAfterTestRunIsComplete>False</DeleteDeploymentDirectoryAfterTestRunIsComplete>
@@ -170,6 +170,7 @@ namespace StressTestUtility
                                 PerfCounterData.ProcToMonitor.Id,
                                 desc: testContext.TestName + "_" + iteration.ToString(),
                                 memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
+                            testContext?.AddResultFile(baseDumpFileName);
                         }
                         testContext.Properties[PropNameIteration] = (int)(testContext.Properties[PropNameIteration]) + 1;
                     }
@@ -188,7 +189,8 @@ namespace StressTestUtility
                             var currentDumpFile = await measurementHolder.CreateDumpAsync(
                                 PerfCounterData.ProcToMonitor.Id,
                                 desc: testContext.TestName + "_" + NumIterations.ToString(),
-                                memoryAnalysisType: ShowUI? MemoryAnalysisType.StartClrObjectExplorer: MemoryAnalysisType.JustCreateDump);
+                                memoryAnalysisType: ShowUI? MemoryAnalysisType.StartClrObjExplorer: MemoryAnalysisType.JustCreateDump);
+                            testContext?.AddResultFile(currentDumpFile);
                             if (!string.IsNullOrEmpty(baseDumpFileName))
                             {
                                 var oDumpAnalyzer = new DumpAnalyzer(logger);
@@ -203,8 +205,6 @@ namespace StressTestUtility
                                     Process.Start(fname);
                                 }
                                 testContext?.AddResultFile(fname);
-                                testContext?.AddResultFile(baseDumpFileName);
-                                testContext?.AddResultFile(currentDumpFile);
                                 logger.LogMessage("DumpDiff Analysis" + fname);
                             }
                             else

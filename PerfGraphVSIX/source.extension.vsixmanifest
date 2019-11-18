@@ -5,7 +5,7 @@
         <DisplayName>PerfGraphVSIX</DisplayName>
         <Description xml:space="preserve">Show memory use in a graph and track individual Class Instances. 
 Execute custom code repeatedly to find leaks
-Create and Explore process dumps with ClrObjectExplorer</Description>
+Create and Explore process dumps with ClrObjExplorer</Description>
         <MoreInfo>https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3829/Show-VS-memory-use-in-a-graph-PerfGraphVSIX</MoreInfo>
     </Metadata>
     <Installation>

@@ -184,7 +184,7 @@ namespace MyCodeToExecute
                         var currentDumpFile = await measurementHolder.CreateDumpAsync(
                             System.Diagnostics.Process.GetCurrentProcess().Id,
                             desc: TestName + "_" + numIterations.ToString(),
-                            memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+                            memoryAnalysisType: MemoryAnalysisType.StartClrObjExplorer);
 
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {

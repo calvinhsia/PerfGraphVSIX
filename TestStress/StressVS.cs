@@ -43,6 +43,7 @@ namespace TestStress
             catch (Exception ex)
             {
                 logger.LogMessage($"Exception {ex}");
+                throw;
             }
         }
         [TestCleanup]

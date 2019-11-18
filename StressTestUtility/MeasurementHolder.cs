@@ -37,9 +37,9 @@ namespace StressTestUtility
         /// </summary>
         JustCreateDump = 0x1,
         /// <summary>
-        /// after creating a dump, the ClrObjectExplorer WPF app is started with the dump loaded for manual analysis
+        /// after creating a dump, the ClrObjExplorer WPF app is started with the dump loaded for manual analysis
         /// </summary>
-        StartClrObjectExplorer = 0x2,
+        StartClrObjExplorer = 0x2,
         /// <summary>
         /// the dump is analyzed and type counts are stored in a file
         /// </summary>
@@ -383,7 +383,7 @@ namespace StressTestUtility
                         "-p", pid.ToString(),
                         "-f",  "\"" + pathDumpFile + "\""
                     };
-                if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjectExplorer))
+                if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjExplorer))
                 {
                     logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
                     arglist.Add("-c");
