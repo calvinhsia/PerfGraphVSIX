@@ -16,11 +16,17 @@ xcopy /dy C:\Users\calvinh\Source\repos\VSDbg\out\release\VsDbg\bin\x86\ClrObjEx
 xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\release\PerfGraphVSIX.vsix \\calvinh6\public
 
 
+
+
 https://docs.microsoft.com/en-us/nuget/quickstart/create-and-publish-a-package-using-visual-studio-net-framework
 
-C:\Users\calvinh\Source\repos\PerfGraphVSIX\StressTestUtility>nuget pack StressTestUtility.nuspec -OutputDirectory bin\release
+use a valid dev cmd prompt:
+
+C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\Tools\VsDevCmd.bat
 
 
+
+C:\Users\calvinh\Source\repos\PerfGraphVSIX\StressTestUtility>nuget pack StressTestUtility.csproj -prop Configuration=Release -OutputDirectory bin\release
 
 nuget push StressTestUtility.1.1.0.nupkg oy2kaerby7bconfmf5qazrjif7b7tyuenmlppplvt2qefy -src https://api.nuget.org/v3/index.json
 

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>StressTestUtility</id>
+    <version>1.0.0.12</version>
+    <title>StressTestUtility</title>
+    <authors>Calvin Hsia</authors>
+    <owners>Calvin Hsia</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2019</copyright>
+    <tags>StresTest Memory Leak</tags>
+  </metadata>
+</package>

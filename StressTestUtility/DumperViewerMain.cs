@@ -17,7 +17,7 @@ using System.Windows.Markup;
 
 namespace StressTestUtility
 {
-    public class DumperViewerMain : ILogger
+    public class DumperViewerMain
     {
         private readonly string[] args;
         internal readonly List<string> regexes = new List<string>();
@@ -44,7 +44,7 @@ namespace StressTestUtility
 
         public DumperViewerMain(string[] args)
         {
-            this._logger = this;
+            this._logger = new Logger(testContext: null);
             this.args = args;
         }
 
@@ -170,7 +170,7 @@ namespace StressTestUtility
                     await Task.Run(() =>
                     {
                         LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
-                        var x = new DumpAnalyzer(this);
+                        var x = new DumpAnalyzer(this._logger);
                         //                    x.AnalyzeDump();
                         x.StartClrObjExplorer(_DumpFileName);
                     });
@@ -361,7 +361,7 @@ DumpViewer -p 1234 -t .*TextBuffer.*
             }
         }
 
-        readonly List<string> _lstLoggedStrings = new List<string>();
+        public readonly List<string> _lstLoggedStrings = new List<string>();
 
         public void LogMessage(string str, params object[] args)
         {

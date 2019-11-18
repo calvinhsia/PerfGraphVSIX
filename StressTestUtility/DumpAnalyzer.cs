@@ -126,7 +126,7 @@ namespace StressTestUtility
             var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
             var resCurrent = AnalyzeDump(pathDumpCurrent);
             var sb = new StringBuilder();
-            sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations-NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
+            sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
             sb.AppendLine($"Below are the counts of Types and Strings in each dump. The 1st column is the number in the 1st dump, the 2nd is the number found in the 2nd dump and the last is the Type or String");
             sb.AppendLine($"TypesAndStrings {pathDumpBase} {pathDumpCurrent}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             AnalyzeDiff(sb, dictTypes, resCurrent.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
@@ -158,11 +158,21 @@ namespace StressTestUtility
 
         public void StartClrObjExplorer(string _DumpFileName)
         {
-            var exeNameClrObj = Path.Combine(
-               Path.GetDirectoryName(this.GetType().Assembly.Location),
-               "ClrObjExplorer",
-               "ClrObjExplorer.exe");
-            if (!File.Exists(exeNameClrObj))
+            string exeNameClrObj = null;
+
+            var searchpaths = new[] { string.Empty, @"..\..\" };
+            foreach (var tryPath in searchpaths)
+            {
+                var exeNameClrObjTry = Path.Combine(
+                   Path.GetDirectoryName(this.GetType().Assembly.Location),
+                   tryPath + "ClrObjExplorer",
+                   "ClrObjExplorer.exe");
+                if (File.Exists(exeNameClrObjTry))
+                {
+                    exeNameClrObj = exeNameClrObjTry;
+                }
+            }
+            if (string.IsNullOrEmpty(exeNameClrObj))
             {
                 throw new FileNotFoundException($"{exeNameClrObj}");
             }

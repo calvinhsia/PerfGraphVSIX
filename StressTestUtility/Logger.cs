@@ -15,6 +15,10 @@ namespace StressTestUtility
         private readonly TestContextWrapper testContext;
         private string logFilePath;
 
+        /// <summary>
+        /// Pass in a TestContext. Or null
+        /// </summary>
+        /// <param name="testContext"></param>
         public Logger(TestContextWrapper testContext)
         {
             this.testContext = testContext;
@@ -30,7 +34,7 @@ namespace StressTestUtility
                 str = string.Format(dt + str, args);
                 var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
 
-                testContext.WriteLine(msgstr);
+                testContext?.WriteLine(msgstr);
                 if (Debugger.IsAttached)
                 {
                     Debug.WriteLine(msgstr);
