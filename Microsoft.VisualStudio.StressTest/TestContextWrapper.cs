@@ -34,7 +34,7 @@ namespace Microsoft.VisualStudio.StressTest
         {
             get
             {
-                return methodInfoTestName.Invoke(_testContext, null) as string;
+                return methodInfoTestName?.Invoke(_testContext, null) as string;
             }
         }
         public IDictionary Properties
@@ -42,7 +42,7 @@ namespace Microsoft.VisualStudio.StressTest
             get
             {
                 var meth = _testContext.GetType().GetMethod($"get_{nameof(Properties)}");
-                return meth.Invoke(_testContext, null) as IDictionary;
+                return meth?.Invoke(_testContext, null) as IDictionary;
             }
         }
         public string TestRunDirectory
@@ -50,7 +50,7 @@ namespace Microsoft.VisualStudio.StressTest
             get
             {
                 var meth = _testContext.GetType().GetMethod($"get_{nameof(TestRunDirectory)}");
-                return meth.Invoke(_testContext, null) as string;
+                return meth?.Invoke(_testContext, null) as string;
             }
         }
         public string TestResultsDirectory
@@ -58,7 +58,7 @@ namespace Microsoft.VisualStudio.StressTest
             get
             {
                 var meth = _testContext.GetType().GetMethod($"get_{nameof(TestResultsDirectory)}");
-                return meth.Invoke(_testContext, null) as string;
+                return meth?.Invoke(_testContext, null) as string;
             }
         }
         public string TestRunResultsDirectory
@@ -66,7 +66,7 @@ namespace Microsoft.VisualStudio.StressTest
             get
             {
                 var meth = _testContext.GetType().GetMethod($"get_{nameof(TestRunResultsDirectory)}");
-                return meth.Invoke(_testContext, null) as string;
+                return meth?.Invoke(_testContext, null) as string;
             }
         }
 
@@ -75,7 +75,7 @@ namespace Microsoft.VisualStudio.StressTest
             get
             {
                 var meth = _testContext.GetType().GetMethod($"get_{nameof(TestDeploymentDir)}");
-                return meth.Invoke(_testContext, null) as string;
+                return meth?.Invoke(_testContext, null) as string;
             }
         }
 
@@ -86,12 +86,12 @@ namespace Microsoft.VisualStudio.StressTest
 
         public void WriteLine(string str, object[] args)
         {
-            methodInfoWriteLine.Invoke(_testContext, new object[] { str, args });
+            methodInfoWriteLine?.Invoke(_testContext, new object[] { str, args });
         }
         public void AddResultFile(string filename)
         {
             var meth = _testContext.GetType().GetMethod(nameof(AddResultFile));
-            meth.Invoke(_testContext, new object[] { filename});
+            meth?.Invoke(_testContext, new object[] { filename});
         }
 
     }

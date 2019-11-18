@@ -35,7 +35,7 @@ namespace Microsoft.VisualStudio.StressTest
         public string TxtInfo { get { return _txtInfo; } set { _txtInfo = value; RaisePropChanged(); } }
 
         readonly Chart _chart = new Chart();
-        List<RegressionAnalysis> lstRegressionAnalysis;
+        List<LeakAnalysisResult> lstRegressionAnalysis;
         readonly MeasurementHolder measurementHolder;
         public GraphWin(MeasurementHolder measurementHolder)
         {
@@ -52,7 +52,7 @@ namespace Microsoft.VisualStudio.StressTest
             this.wfhost.Child = _chart;
         }
 
-        internal void AddGraph(List<RegressionAnalysis> lstRegressionAnalysis)
+        internal void AddGraph(List<LeakAnalysisResult> lstRegressionAnalysis)
         {
             this.lstRegressionAnalysis = lstRegressionAnalysis;
             _chart.Series.Clear();
@@ -100,7 +100,7 @@ namespace Microsoft.VisualStudio.StressTest
                 _chart.Series.Add(series);
                 for (int i = 0; i < item.lstData.Count; i++)
                 {
-                    var dp = new DataPoint(i, item.lstData[i].Y);
+                    var dp = new DataPoint(i + 1, item.lstData[i].Y);
                     series.Points.Add(dp);
                 }
                 if (ShowTrendLines)
@@ -109,12 +109,12 @@ namespace Microsoft.VisualStudio.StressTest
                     {
                         ChartType = SeriesChartType.Line,
                         Name = item.perfCounterData.PerfCounterName + "Trend",
-                        ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.lstData.Count} RmsErr={item.rmsError}  m={item.slope:n1} b= {item.yintercept:n1} IsRegression={item.IsRegression}"
+                        ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.lstData.Count} RmsErr={item.rmsError}  m={item.slope:n1} b= {item.yintercept:n1} IsRegression={item.IsLeak}"
                     };
                     _chart.Series.Add(seriesTrendLine);
-                    var dp0 = new DataPoint(0, item.yintercept);
+                    var dp0 = new DataPoint(1, item.yintercept);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count - 1, (item.lstData.Count - 1) * item.slope + item.yintercept);
+                    var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
                 }
             }
@@ -140,7 +140,7 @@ namespace Microsoft.VisualStudio.StressTest
                     foreach (var itm in lstdata)
                     {
                         var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                        sp.Children.Add(new TextBlock() { Text = $"{itm.X,4:n0} {itm.Y:n0}", FontFamily = ffamilty }) ;
+                        sp.Children.Add(new TextBlock() { Text = $"{itm.X,4:n0} {itm.Y:n0}", FontFamily = ffamilty });
                         itmsUI.Add(sp);
                     }
                     this.lstValues.ItemsSource = itmsUI;

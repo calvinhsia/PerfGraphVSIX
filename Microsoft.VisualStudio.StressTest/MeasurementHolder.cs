@@ -56,7 +56,7 @@ namespace Microsoft.VisualStudio.StressTest
     /// <summary>
     /// Todo: discard outliers
     /// </summary>
-    public class RegressionAnalysis
+    public class LeakAnalysisResult
     {
         public PerfCounterData perfCounterData;
         public List<PointF> lstData = new List<PointF>();
@@ -67,7 +67,7 @@ namespace Microsoft.VisualStudio.StressTest
         /// </summary>
         public double slope;
         public double yintercept;
-        public bool IsRegression;
+        public bool IsLeak;
         /// <summary>
         /// When RSquared (range 0-1) is close to 1, indicates how well the trend is linear and matches the line.
         /// The smaller the value, the less likely the trend is linear
@@ -96,7 +96,7 @@ namespace Microsoft.VisualStudio.StressTest
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n3} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n2} isRegression={IsRegression}";
+            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n3} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n2} IsLeak={IsLeak}";
         }
     }
 
@@ -234,46 +234,28 @@ namespace Microsoft.VisualStudio.StressTest
             return res;
         }
 
-        public async Task<List<RegressionAnalysis>> CalculateRegressionAsync(bool showGraph, bool fUseAlgP1 = false)
+        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph)
         {
-            var lstResults = new List<RegressionAnalysis>();
+            var lstResults = new List<LeakAnalysisResult>();
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
-                var r = new RegressionAnalysis()
+                var leakAnalysis = new LeakAnalysisResult()
                 {
                     perfCounterData = ctr,
                     sensitivity = this.sensitivity
                 };
                 int ndx = 0;
-                if (fUseAlgP1)
+                foreach (var itm in measurements[ctr.perfCounterType])
                 {
-                    var lstx = new List<double>();
-                    var lsty = new List<double>();
-                    foreach (var itm in measurements[ctr.perfCounterType])
-                    {
-                        lstx.Add(ndx);
-                        lsty.Add(itm);
-                        r.lstData.Add(new PointF() { X = ndx++, Y = itm });
-                    }
-                    LinearRegression(lstx.ToArray(), lsty.ToArray(), 0, lsty.Count - 1, out var rsquared, out var yintercept, out var slope);
-                    r.slope = slope;
-                    r.yintercept = yintercept;
-                    r.rmsError = rsquared;
+                    leakAnalysis.lstData.Add(new PointF() { X = ndx++, Y = itm });
                 }
-                else
+                leakAnalysis.rmsError = FindLinearLeastSquaresFit(leakAnalysis.lstData, out leakAnalysis.slope, out leakAnalysis.yintercept);
+                if (leakAnalysis.slope >= ctr.thresholdRegression * this.sensitivity && leakAnalysis.RSquared > 0.5)
                 {
-                    foreach (var itm in measurements[ctr.perfCounterType])
-                    {
-                        r.lstData.Add(new PointF() { X = ndx++, Y = itm });
-                    }
-                    r.rmsError = MeasurementHolder.FindLinearLeastSquaresFit(r.lstData, out r.slope, out r.yintercept);
-                    if (r.slope >= ctr.thresholdRegression * this.sensitivity && r.RSquared > 0.5)
-                    {
-                        r.IsRegression = true;
-                    }
+                    leakAnalysis.IsLeak = true;
                 }
-                logger.LogMessage($"{r}");
-                lstResults.Add(r);
+                logger.LogMessage($"{leakAnalysis}");
+                lstResults.Add(leakAnalysis);
             }
             if (showGraph)
             {
@@ -331,7 +313,7 @@ namespace Microsoft.VisualStudio.StressTest
                     chart.Series.Add(series);
                     for (int i = 0; i < item.lstData.Count; i++)
                     {
-                        var dp = new DataPoint(i, item.lstData[i].Y);
+                        var dp = new DataPoint(i + 1, item.lstData[i].Y); // measurements taken at end of iteration
                         series.Points.Add(dp);
                     }
                     // now show trend line
@@ -340,12 +322,13 @@ namespace Microsoft.VisualStudio.StressTest
                         ChartType = SeriesChartType.Line
                     };
                     chart.Series.Add(seriesTrendLine);
-                    var dp0 = new DataPoint(0, item.yintercept);
+                    var dp0 = new DataPoint(1, item.yintercept);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count - 1, (item.lstData.Count - 1) * item.slope + item.yintercept);
+                    var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
                     var fname = Path.Combine(ResultsFolder, $"Graph {item.perfCounterData.PerfCounterName}.png");
                     chart.SaveImage(fname, ChartImageFormat.Png);
+                    this.testContext?.AddResultFile(fname);
                 }
             }
 
@@ -380,6 +363,7 @@ namespace Microsoft.VisualStudio.StressTest
             }
             var filename = Path.Combine(ResultsFolder, $"Measurements.csv");
             File.WriteAllText(filename, sb.ToString());
+            this.testContext?.AddResultFile(filename);
             return filename;
         }
 
@@ -416,53 +400,6 @@ namespace Microsoft.VisualStudio.StressTest
             return $"{TestName} #Samples={nSamplesTaken}";
         }
 
-
-        /// <summary>
-        /// Fits a line to a collection of (x,y) points.
-        /// </summary>
-        /// <param name="xVals">The x-axis values.</param>
-        /// <param name="yVals">The y-axis values.</param>
-        /// <param name="inclusiveStart">The inclusive inclusiveStart index.</param>
-        /// <param name="exclusiveEnd">The exclusive exclusiveEnd index.</param>
-        /// <param name="rsquared">The r^2 value of the line.</param>
-        /// <param name="yintercept">The y-intercept value of the line (i.e. y = ax + b, yintercept is b).</param>
-        /// <param name="slope">The slop of the line (i.e. y = ax + b, slope is a).</param>
-        public static void LinearRegression(double[] xVals, double[] yVals,
-                                            int inclusiveStart, int exclusiveEnd,
-                                            out double rsquared, out double yintercept,
-                                            out double slope)
-        {
-            double sumOfX = 0;
-            double sumOfY = 0;
-            double sumOfXSq = 0;
-            double sumOfYSq = 0;
-            double sumCodeviates = 0;
-            double count = exclusiveEnd - inclusiveStart;
-
-            for (int ctr = inclusiveStart; ctr < exclusiveEnd; ctr++)
-            {
-                double x = xVals[ctr];
-                double y = yVals[ctr];
-                sumCodeviates += x * y;
-                sumOfX += x;
-                sumOfY += y;
-                sumOfXSq += x * x;
-                sumOfYSq += y * y;
-            }
-            double ssX = sumOfXSq - sumOfX * sumOfX / count;
-            //            double ssY = sumOfYSq - sumOfY * sumOfY / count;
-            double RNumerator = (count * sumCodeviates) - (sumOfX * sumOfY);
-            double RDenom = (count * sumOfXSq - (sumOfX * sumOfX))
-             * (count * sumOfYSq - (sumOfY * sumOfY));
-            double sCo = sumCodeviates - sumOfX * sumOfY / count;
-
-            double meanX = sumOfX / count;
-            double meanY = sumOfY / count;
-            double dblR = RNumerator / Math.Sqrt(RDenom);
-            rsquared = dblR * dblR;
-            yintercept = meanY - ((sCo / ssX) * meanX);
-            slope = sCo / ssX;
-        }
 
         // http://csharphelper.com/blog/2014/10/find-a-linear-least-squares-fit-for-a-set-of-points-in-c/
         // Find the least squares linear fit.

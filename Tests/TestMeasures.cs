@@ -65,7 +65,7 @@ namespace Tests
                         x.measurements[ctr.perfCounterType].Add(val);
                     }
                 }
-                var res = await x.CalculateRegressionAsync(showGraph: true);
+                var res = await x.CalculateLeaksAsync(showGraph: true);
             }
         }
 
@@ -174,7 +174,7 @@ namespace Tests
             {
                 ctr.IsEnabledForMeasurement = true;
             }
-            List<RegressionAnalysis> lstRegResults;
+            List<LeakAnalysisResult> lstRegResults;
             using (var measurementHolder = new MeasurementHolder(TestContext, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity))
             {
                 var lstBigStuff = new List<byte[]>();
@@ -195,7 +195,7 @@ namespace Tests
                 }
                 var filename = measurementHolder.DumpOutMeasurementsToCsv();
                 LogMessage($"Results file name = {filename}");
-                lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+                lstRegResults = (await measurementHolder.CalculateLeaksAsync(showGraph: true)).Where(r => r.IsLeak).ToList();
             }
             return lstRegResults.Count > 0;
         }

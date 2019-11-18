@@ -27,6 +27,7 @@ namespace Microsoft.VisualStudio.StressTest
         /// <param name="DelayMultiplier">Defaults to 1. All delays (e.g. between iterations, after GC, are multiplied by this factor.
         /// Running the test with instrumented binaries (such as under http://Toolbox/MemSpect  will slow down the target process</param>
         /// <param name="ProcNamesToMonitor">'|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. </param>
+        /// <param name="ShowUI">Show results automatically, like the Graph of Measurements, the Dump in ClrObjectExplorer, the Diff Analysis</param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"> Specifies the iteration # at which to take a baseline. 
         ///    <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
         /// e.g. 100 iterations, with <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/>=4 means take a baseline at iteartion 100-4==96;
@@ -37,6 +38,7 @@ namespace Microsoft.VisualStudio.StressTest
             double Sensitivity = 1.0f,
             int DelayMultiplier = 1,
             string ProcNamesToMonitor = "devenv",
+            bool ShowUI = false,
             int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4)
         {
             const string PropNameRecursionPrevention = "RecursionPrevention";
@@ -157,11 +159,10 @@ namespace Microsoft.VisualStudio.StressTest
                             await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
                         }
 
-                        var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1}/{NumIterations}");
+                        var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1,3}/{NumIterations}");
                         logger.LogMessage(res);
-
-                        if (NumIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot &&
-                            iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                        // if we have enough iterations, lets take a snapshot before they're all done so we can compare
+                        if (iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
                         {
                             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier)).ConfigureAwait(false);
                             logger.LogMessage($"Taking base snapshot dump");
@@ -176,18 +177,18 @@ namespace Microsoft.VisualStudio.StressTest
                     {
                         var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToCsv();
                         logger.LogMessage($"Measurement Results {filenameResultsCSV}");
-                        var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true))
-                            .Where(r => r.IsRegression).ToList();
-                        if (lstRegResults.Count > 0)
+                        var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: ShowUI))
+                            .Where(r => r.IsLeak).ToList();
+                        if (lstLeakResults.Count > 0)
                         {
-                            foreach (var regres in lstRegResults)
+                            foreach (var leak in lstLeakResults)
                             {
-                                logger.LogMessage($"Regression!!!!! {regres}");
+                                logger.LogMessage($"Leak Detected!!!!! {leak}");
                             }
                             var currentDumpFile = await measurementHolder.CreateDumpAsync(
                                 PerfCounterData.ProcToMonitor.Id,
                                 desc: testContext.TestName + "_" + NumIterations.ToString(),
-                                memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
+                                memoryAnalysisType: ShowUI? MemoryAnalysisType.StartClrObjectExplorer: MemoryAnalysisType.JustCreateDump);
                             if (!string.IsNullOrEmpty(baseDumpFileName))
                             {
                                 var oDumpAnalyzer = new DumpAnalyzer(logger);
@@ -197,14 +198,20 @@ namespace Microsoft.VisualStudio.StressTest
                                                 NumIterationsBeforeTotalToTakeBaselineSnapshot);
                                 var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
                                 File.WriteAllText(fname, sb.ToString());
-                                Process.Start(fname);
+                                if (ShowUI)
+                                {
+                                    Process.Start(fname);
+                                }
+                                testContext?.AddResultFile(fname);
+                                testContext?.AddResultFile(baseDumpFileName);
+                                testContext?.AddResultFile(currentDumpFile);
                                 logger.LogMessage("DumpDiff Analysis" + fname);
                             }
                             else
                             {
                                 logger.LogMessage($"No baseline dump: not enough iterations");
                             }
-                            throw new LeakException($"Leaks found\r\n", lstRegResults);
+                            throw new LeakException($"Leaks found\r\n", lstLeakResults);
                         }
                     }
                 }
@@ -220,11 +227,11 @@ namespace Microsoft.VisualStudio.StressTest
 
     public class LeakException : Exception
     {
-        public List<RegressionAnalysis> lstRegResults;
+        public List<LeakAnalysisResult> lstLeakResults;
 
-        public LeakException(string message, List<RegressionAnalysis> lstRegResults) : base(message)
+        public LeakException(string message, List<LeakAnalysisResult> lstRegResults) : base(message)
         {
-            this.lstRegResults = lstRegResults;
+            this.lstLeakResults = lstRegResults;
         }
     }
 
