@@ -10,7 +10,7 @@ using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
 
-namespace Microsoft.VisualStudio.StressTest
+namespace StressTestUtility
 {
     public enum SampleType
     {
@@ -67,7 +67,17 @@ namespace Microsoft.VisualStudio.StressTest
         /// </summary>
         public double slope;
         public double yintercept;
-        public bool IsLeak;
+        public bool IsLeak {
+            get
+            {
+                var isLeak = false;
+                if (slope >= perfCounterData.thresholdRegression * sensitivity && RSquared > 0.5)
+                {
+                    isLeak = true;
+                }
+                return isLeak;
+            }
+        }
         /// <summary>
         /// When RSquared (range 0-1) is close to 1, indicates how well the trend is linear and matches the line.
         /// The smaller the value, the less likely the trend is linear
@@ -250,10 +260,6 @@ namespace Microsoft.VisualStudio.StressTest
                     leakAnalysis.lstData.Add(new PointF() { X = ndx++, Y = itm });
                 }
                 leakAnalysis.rmsError = FindLinearLeastSquaresFit(leakAnalysis.lstData, out leakAnalysis.slope, out leakAnalysis.yintercept);
-                if (leakAnalysis.slope >= ctr.thresholdRegression * this.sensitivity && leakAnalysis.RSquared > 0.5)
-                {
-                    leakAnalysis.IsLeak = true;
-                }
                 logger.LogMessage($"{leakAnalysis}");
                 lstResults.Add(leakAnalysis);
             }

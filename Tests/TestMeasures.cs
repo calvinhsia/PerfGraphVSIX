@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
-using Microsoft.VisualStudio.StressTest;
+using StressTestUtility;
 using HANDLE = System.IntPtr;
 
 namespace Tests

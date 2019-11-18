@@ -12,7 +12,7 @@ using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.StressTest;
+using StressTestUtility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 

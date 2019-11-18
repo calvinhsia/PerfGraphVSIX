@@ -12,7 +12,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.StressTest;
+using StressTestUtility;
 using Microsoft.VisualStudio.Threading;
 using Microsoft.Win32;
 using Task = System.Threading.Tasks.Task;

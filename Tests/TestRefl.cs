@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Microsoft.VisualStudio.StressTest;
+using StressTestUtility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 

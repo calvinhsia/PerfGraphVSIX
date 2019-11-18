@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.VisualStudio.StressTest
+namespace StressTestUtility
 {
     /// <summary>Provides a pump that supports running asynchronous methods on the current thread.</summary>
     public static class AsyncPump

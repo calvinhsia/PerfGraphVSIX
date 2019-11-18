@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.StressTest;
+﻿using StressTestUtility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;

@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.StressTest;
+﻿using StressTestUtility;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -182,7 +182,7 @@ namespace PerfGraphVSIX
                                   {
                                       asm = this.GetType().Assembly;
                                   }
-                                  else if (requestName == nameof(Microsoft.VisualStudio.StressTest))
+                                  else if (requestName == nameof(StressTestUtility))
                                   {
                                       asm = typeof(ILogger).Assembly;
                                   }

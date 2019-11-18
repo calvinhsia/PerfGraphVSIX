@@ -39,7 +39,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using Microsoft.VisualStudio.StressTest;
+using StressTestUtility;
 using Microsoft.VisualStudio.Shell;
 using EnvDTE;
 
@@ -173,13 +173,13 @@ namespace MyCodeToExecute
                     // cleanup code here: compare measurements, take a dump, examine for types, etc.
                     var filenameResults = measurementHolder.DumpOutMeasurementsToCsv();
                     logger.LogMessage("Measurement Results " + filenameResults);
-                    var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: true)).Where(r => r.IsLeak).ToList();
 
-                    if (lstRegResults.Count > 0)
+                    if (lstLeakResults.Count > 0)
                     {
-                        foreach (var regres in lstRegResults)
+                        foreach (var leak in lstLeakResults)
                         {
-                            logger.LogMessage("Regression!!!!!" + regres.ToString());
+                            logger.LogMessage("Leak Detected!!!!!" + leak.ToString());
                         }
                         var currentDumpFile = await measurementHolder.CreateDumpAsync(
                             System.Diagnostics.Process.GetCurrentProcess().Id,

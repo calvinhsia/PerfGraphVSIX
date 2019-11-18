@@ -24,6 +24,6 @@ Create and Explore process dumps with ClrObjectExplorer</Description>
         <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
         <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
         <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="ClrListener" Path="|ClrListener|" AssemblyName="|ClrListener;AssemblyName|" />
-        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="Microsoft.VisualStudio.StressTest" Path="|Microsoft.VisualStudio.StressTest|" AssemblyName="|Microsoft.VisualStudio.StressTest;AssemblyName|" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="StressTestUtility" Path="|StressTestUtility|" AssemblyName="|StressTestUtility;AssemblyName|" />
     </Assets>
 </PackageManifest>

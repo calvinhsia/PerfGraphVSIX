@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.VisualStudio.StressTest;
+using StressTestUtility;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
