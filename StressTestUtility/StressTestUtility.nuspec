@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>StressTestUtility</id>
-    <version>1.0.0.12</version>
+    <version>$version$</version>
     <title>StressTestUtility</title>
     <authors>Calvin Hsia</authors>
     <owners>Calvin Hsia</owners>
@@ -10,6 +10,6 @@
     <description>$description$</description>
     <releaseNotes></releaseNotes>
     <copyright>Copyright 2019</copyright>
-    <tags>StresTest Memory Leak</tags>
+    <tags>Stress Test Memory Leak</tags>
   </metadata>
 </package>

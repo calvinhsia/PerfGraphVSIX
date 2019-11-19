@@ -171,6 +171,10 @@ namespace StressTestUtility
                 {
                     exeNameClrObj = exeNameClrObjTry;
                 }
+                else
+                {
+                    logger.LogMessage($"did not find {exeNameClrObjTry}");
+                }
             }
             if (string.IsNullOrEmpty(exeNameClrObj))
             {

@@ -25,9 +25,9 @@ use a valid dev cmd prompt:
 C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\Tools\VsDevCmd.bat
 
 
+C:\Users\calvinh\Source\repos\PerfGraphVSIX\StressTestUtility>
 
-C:\Users\calvinh\Source\repos\PerfGraphVSIX\StressTestUtility>nuget pack StressTestUtility.csproj -prop Configuration=Release -OutputDirectory bin\release
-
-nuget push StressTestUtility.1.1.0.nupkg oy2kaerby7bconfmf5qazrjif7b7tyuenmlppplvt2qefy -src https://api.nuget.org/v3/index.json
-
-dotnet nuget push DictionaryLib_Calvin_Hsia.1.0.0.nupkg -k oy2kaerby7bconfmf5qazrjif7b7tyuenmlppplvt2qefy -s https://api.nuget.org/v3/index.json
+***!!!Bump version # in project properties->Assembly Information
+nuget pack StressTestUtility.csproj -prop Configuration=Release -OutputDirectory bin\release
+***!!! replace versionnumber:
+rem nuget push bin\release\StressTestUtility.1.0.0.121.nupkg oy2kaerby7bconfmf5qazrjif7b7tyuenmlppplvt2qefy -src https://api.nuget.org/v3/index.json
