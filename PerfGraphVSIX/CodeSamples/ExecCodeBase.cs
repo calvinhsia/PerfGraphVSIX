@@ -57,7 +57,7 @@ namespace MyCodeToExecute
         public EnvDTE.DTE g_dte;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
-        public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 3;
+        public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
         public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
 
         public BuildEvents BuildEvents;

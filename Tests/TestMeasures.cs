@@ -44,15 +44,17 @@ namespace Tests
 
 
         [TestMethod]
-//        [Ignore]
+        //        [Ignore]
         public async Task TestMeasureRegressionVerifyGraph()
         {
             await Task.Yield();
+            var resultsFolder = string.Empty;
             using (var x = new MeasurementHolder(
-                TestContext,
+                new TestContextWrapper(TestContext),
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
                 SampleType.SampleTypeIteration, this))
             {
+                resultsFolder = x.ResultsFolder;
                 for (int iter = 0; iter < 10; iter++)
                 {
                     foreach (var ctr in x.lstPerfCounterData)
@@ -67,6 +69,13 @@ namespace Tests
                 }
                 var res = await x.CalculateLeaksAsync(showGraph: true);
             }
+            var strHtml = @"
+<a href=""file://C:/Users/calvinh/Source/repos/PerfGraphVSIX/TestResults/Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
+            ";
+            var fileHtml = Path.Combine(resultsFolder, "Index.html");
+            File.WriteAllText(fileHtml, strHtml);
+            TestContext.AddResultFile(fileHtml);
+            Assert.Fail("failing test so results aren't deleted");
         }
 
         [TestMethod]

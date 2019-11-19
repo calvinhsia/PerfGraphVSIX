@@ -108,7 +108,7 @@ namespace StressTestUtility
                     var seriesTrendLine = new Series()
                     {
                         ChartType = SeriesChartType.Line,
-                        Name = item.perfCounterData.PerfCounterName + "Trend",
+                        Name = item.perfCounterData.PerfCounterName + " Trend",
                         ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.lstData.Count} RmsErr={item.rmsError}  m={item.slope:n1} b= {item.yintercept:n1} IsRegression={item.IsLeak}"
                     };
                     _chart.Series.Add(seriesTrendLine);
@@ -117,6 +117,7 @@ namespace StressTestUtility
                     var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
                 }
+                _chart.Legends.Add(new Legend());
             }
             _chart.DataBind();
             TxtInfo = sbInfo.ToString();

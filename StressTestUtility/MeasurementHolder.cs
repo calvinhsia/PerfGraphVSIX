@@ -67,13 +67,19 @@ namespace StressTestUtility
         /// </summary>
         public double slope;
         public double yintercept;
-        public bool IsLeak {
+        public bool IsLeak
+        {
             get
             {
                 var isLeak = false;
                 if (slope >= perfCounterData.thresholdRegression * sensitivity && RSquared > 0.5)
                 {
-                    isLeak = true;
+                    // if there are N iterations, the diff between last and first value must be >= N
+                    // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
+                    if (lstData[lstData.Count - 1].Y - lstData[0].Y >= lstData.Count - 1)
+                    {
+                        isLeak = true;
+                    }
                 }
                 return isLeak;
             }
@@ -106,7 +112,7 @@ namespace StressTestUtility
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} RmsErr={rmsError,16:n1} R²={RSquared,8:n2} slope={slope,15:n3} YIntercept={yintercept,15:n1} Thrs={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n2} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n2} IsLeak={IsLeak}";
         }
     }
 
@@ -300,7 +306,7 @@ namespace StressTestUtility
             {
                 using (var chart = new Chart())
                 {
-                    chart.Titles.Add(item.ToString());
+                    chart.Titles.Add($"{TestName} {item}");
                     chart.Size = new System.Drawing.Size(1200, 800);
                     chart.Series.Clear();
                     chart.ChartAreas.Clear();
@@ -325,13 +331,26 @@ namespace StressTestUtility
                     // now show trend line
                     var seriesTrendLine = new Series()
                     {
-                        ChartType = SeriesChartType.Line
+                        ChartType = SeriesChartType.Line,
+                        Name="Trend Line"
                     };
                     chart.Series.Add(seriesTrendLine);
                     var dp0 = new DataPoint(1, item.yintercept);
                     seriesTrendLine.Points.Add(dp0);
                     var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
+
+                    chart.Legends.Add(new Legend());
+                    //var legend = new Legend();
+                    //legend.Title = item.perfCounterData.PerfCounterName;
+                    //var it = new LegendItem() { na}
+                    //legend.it
+                    //chart.Legends.Add(legend);
+                    //var legend2 = new Legend();
+                    //legend2.Title = "Trend Line";
+                    //chart.Legends.Add(legend2);
+
+
                     var fname = Path.Combine(ResultsFolder, $"Graph {item.perfCounterData.PerfCounterName}.png");
                     chart.SaveImage(fname, ChartImageFormat.Png);
                     this.testContext?.AddResultFile(fname);

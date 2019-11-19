@@ -79,7 +79,7 @@ namespace StressTestUtility
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
-                    logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id}");
+                    logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
                 });
             }
             return true;
