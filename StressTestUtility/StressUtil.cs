@@ -14,7 +14,8 @@ namespace StressTestUtility
     public class StressUtil
     {
         public const string PropNameVSHandler = "VSHandler";
-        public const string PropNameIteration = "IterationNumber";
+        public const string PropNameIteration = "IterationNumber"; // range from 0 - #Iter -  1
+        public const string PropNameListFileResults = "DictListFileResults";
         /// <summary>
         /// Do it all: tests need only add a single call to turn the test into a stress test
         /// The call can be made from the TestInitialize or the beginning of the TestMethod
@@ -84,7 +85,7 @@ namespace StressTestUtility
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
                 /*
-                 * probs: the curdir is not empty, so results will be overwritten (might have ClrObjExplorer open with a result dump)
+                 * probs: the curdir is not empty, so results will be overwritten (might have ClrObjExplorer or WinDbg open with a result dump)
                  *       The Test*dirs are all deleted after the run.
                  *       Can use a Runsettings   
                  *               <DeleteDeploymentDirectoryAfterTestRunIsComplete>False</DeleteDeploymentDirectoryAfterTestRunIsComplete>

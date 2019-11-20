@@ -117,13 +117,14 @@ namespace StressTestUtility
         }
     }
 
-    class FileResultsData
+    public class FileResultsData
     {
         public string filename;
         public string description;
     }
     public class MeasurementHolder : IDisposable
     {
+        public const string DiffFileName = "String and Type Count differences";
         public string TestName;
 
         /// <summary>
@@ -169,6 +170,7 @@ namespace StressTestUtility
             {
                 this.testContext = TestNameOrTestContext as TestContextWrapper;
                 this.TestName = testContext.TestName;
+                this.testContext.Properties[StressUtil.PropNameListFileResults] = lstFileResults;
             }
             else
             {
@@ -226,7 +228,7 @@ namespace StressTestUtility
             {
                 GC.Collect(); // ok to collect twice
             }
-            var sBuilder = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
+            var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
             {
                 if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))
@@ -246,17 +248,17 @@ namespace StressTestUtility
                 }
                 uint pcValue = (uint)pcValueAsFloat;
                 int delta = (int)pcValue - (int)priorValue;
-                sBuilder.Append($"{ctr.PerfCounterName}={pcValue,13:n0}  Δ = {delta,13:n0} ");
+                sBuilderMeasurementResult.Append($"{ctr.PerfCounterName}={pcValue,13:n0}  Δ = {delta,13:n0} ");
                 lst.Add(pcValue);
             }
             if (this.sampleType == SampleType.SampleTypeIteration)
             {
                 nSamplesTaken++;
             }
-            if (NumTotalIterations > 0)
+            if (NumTotalIterations >= NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
-                if (nSamplesTaken == NumTotalIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                if (nSamplesTaken == NumTotalIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(2));
                     logger.LogMessage("Taking base snapshot dump");
@@ -290,24 +292,27 @@ namespace StressTestUtility
                                             currentDumpFile,
                                             NumTotalIterations,
                                             NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                            var fname = Path.Combine(ResultsFolder, "DumpDiff Analysis.txt");
+                            var fname = Path.Combine(ResultsFolder, $"{TestName} {DiffFileName}.txt");
                             File.WriteAllText(fname, sb.ToString());
                             if (ShowUI)
                             {
                                 Process.Start(fname);
                             }
-                            lstFileResults.Add(new FileResultsData() { filename = fname, description = "DumpDiff Analysis" });
+                            lstFileResults.Add(new FileResultsData() { filename = fname, description = "Differences for Type and String counts" });
                             logger.LogMessage("DumpDiff Analysis " + fname);
                         }
                         else
                         {
                             logger.LogMessage($"No baseline dump: not enough iterations");
                         }
-                        throw new LeakException($"Leaks found\r\n", lstLeakResults);
+                        if (this.testContext != null)
+                        {
+                            throw new LeakException($"Leaks found", lstLeakResults);
+                        }
                     }
                 }
             }
-            return sBuilder.ToString();
+            return sBuilderMeasurementResult.ToString();
         }
 
         /// <summary>
@@ -335,7 +340,7 @@ namespace StressTestUtility
                     perfCounterData = ctr,
                     sensitivity = this.sensitivity
                 };
-                int ndx = 0;
+                int ndx = 1;
                 foreach (var itm in measurements[ctr.perfCounterType])
                 {
                     leakAnalysis.lstData.Add(new PointF() { X = ndx++, Y = itm });
@@ -412,9 +417,9 @@ namespace StressTestUtility
                         Name = "Trend Line"
                     };
                     chart.Series.Add(seriesTrendLine);
-                    var dp0 = new DataPoint(1, item.yintercept);
+                    var dp0 = new DataPoint(1, item.yintercept + item.slope);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
+                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
 
                     chart.Legends.Add(new Legend());
@@ -428,7 +433,7 @@ namespace StressTestUtility
                     //chart.Legends.Add(legend2);
 
 
-                    var fname = Path.Combine(ResultsFolder, $"Graph {item.perfCounterData.PerfCounterName}.png");
+                    var fname = Path.Combine(ResultsFolder, $"{TestName} Graph {item.perfCounterData.PerfCounterName}.png");
                     chart.SaveImage(fname, ChartImageFormat.Png);
                     lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Graph {item.perfCounterData}" });
                 }
@@ -463,7 +468,7 @@ namespace StressTestUtility
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
             }
-            var filename = Path.Combine(ResultsFolder, $"Measurements.csv");
+            var filename = Path.Combine(ResultsFolder, $" {TestName} Measurements.csv");
             File.WriteAllText(filename, sb.ToString());
             lstFileResults.Add(new FileResultsData() { filename = filename, description = "Raw Measuremensts as CSV File to open in Excel" });
             return filename;
@@ -559,7 +564,7 @@ namespace StressTestUtility
                     foreach (var fileresult in lstFileResults)
                     {
                         this.testContext.AddResultFile(fileresult.filename);
-                        switch(Path.GetExtension(fileresult.filename))
+                        switch (Path.GetExtension(fileresult.filename))
                         {
                             case ".dmp":
                                 //            var strHtml = @"

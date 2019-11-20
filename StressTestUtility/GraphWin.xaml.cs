@@ -114,12 +114,12 @@ namespace StressTestUtility
                         ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.lstData.Count} RmsErr={item.rmsError}  m={item.slope:n1} b= {item.yintercept:n1} IsRegression={item.IsLeak}"
                     };
                     _chart.Series.Add(seriesTrendLine);
-                    var dp0 = new DataPoint(1, item.yintercept);
+                    var dp0 = new DataPoint(1, item.yintercept + item.slope);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
+                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
                 }
-//                _chart.Legends.Add(new Legend());
+                //                _chart.Legends.Add(new Legend());
             }
             _chart.DataBind();
             TxtInfo = sbInfo.ToString();

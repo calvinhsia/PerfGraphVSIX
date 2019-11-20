@@ -34,7 +34,7 @@ namespace TestStress
             try
             {
                 // the only change to existing test required: call to static method
-                await StressUtil.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
+                await StressUtil.DoIterationsAsync(this, NumIterations: 7, Sensitivity: 1);
 
                 await _VSHandler.OpenSolution(SolutionToLoad);
 
