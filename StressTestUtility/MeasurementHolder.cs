@@ -134,7 +134,7 @@ namespace StressTestUtility
         readonly ILogger logger;
         readonly SampleType sampleType;
         readonly double sensitivity;
-        private readonly int NumTotalIterations;
+        public readonly int NumTotalIterations;
         private readonly int NumIterationsBeforeTotalToTakeBaselineSnapshot;
         private readonly bool ShowUI;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
