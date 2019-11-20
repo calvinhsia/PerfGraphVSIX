@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     public class VSHandler
     {

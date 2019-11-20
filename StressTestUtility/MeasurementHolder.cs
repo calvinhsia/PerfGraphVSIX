@@ -10,7 +10,7 @@ using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     public enum SampleType
     {

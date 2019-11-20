@@ -7,7 +7,7 @@ using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     /// <summary>
     /// Provides the ability to collect a memory dump of a process.

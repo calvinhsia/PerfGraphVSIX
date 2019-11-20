@@ -15,7 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     public class DumperViewerMain
     {

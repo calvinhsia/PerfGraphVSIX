@@ -16,7 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     /// <summary>
     /// Interaction logic for GraphWin.xaml

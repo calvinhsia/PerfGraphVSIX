@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     public class DumpAnalyzer
     {

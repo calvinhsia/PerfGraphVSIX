@@ -1,4 +1,4 @@
-﻿using StressTestUtility;
+﻿using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 using System;
@@ -168,7 +168,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using StressTestUtility;
+using Microsoft.Test.Stress;
 
 //using Microsoft.VisualStudio.Threading;
 
@@ -249,7 +249,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using StressTestUtility;
+using Microsoft.Test.Stress;
 using Task = System.Threading.Tasks.Task;
 
 namespace MyCustomCode
@@ -365,7 +365,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using StressTestUtility;
+using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;

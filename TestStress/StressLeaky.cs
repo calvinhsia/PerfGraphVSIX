@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
-using StressTestUtility;
+using Microsoft.Test.Stress;
 using System.IO;
 
 namespace TestStress

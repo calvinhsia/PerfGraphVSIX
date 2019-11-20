@@ -39,7 +39,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-using StressTestUtility;
+using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using EnvDTE;
 

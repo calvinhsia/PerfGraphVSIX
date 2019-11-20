@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     [Flags] // user can select multiple items. (beware scaling: pct => 0-100, Bytes => 0-4G)
     public enum PerfCounterType

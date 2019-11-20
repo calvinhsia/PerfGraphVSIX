@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace StressTestUtility
+namespace Microsoft.Test.Stress
 {
     public class StressUtil
     {

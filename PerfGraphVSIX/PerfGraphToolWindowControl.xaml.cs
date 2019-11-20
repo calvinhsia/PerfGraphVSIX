@@ -8,7 +8,7 @@
     using Microsoft.VisualStudio.Shell;
     using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Shell.Interop;
-    using StressTestUtility;
+    using Microsoft.Test.Stress;
     using Microsoft.VisualStudio.Threading;
     using System;
     using System.Collections.Generic;
