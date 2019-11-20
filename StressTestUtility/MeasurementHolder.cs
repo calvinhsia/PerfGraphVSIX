@@ -468,7 +468,7 @@ namespace StressTestUtility
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
             }
-            var filename = Path.Combine(ResultsFolder, $" {TestName} Measurements.csv");
+            var filename = Path.Combine(ResultsFolder, $"{TestName} Measurements.csv");
             File.WriteAllText(filename, sb.ToString());
             lstFileResults.Add(new FileResultsData() { filename = filename, description = "Raw Measuremensts as CSV File to open in Excel" });
             return filename;

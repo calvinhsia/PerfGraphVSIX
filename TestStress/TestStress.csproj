@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StressLeakyNative.cs" />
     <Compile Include="StressVS.cs" />
     <Compile Include="StressLeaky.cs" />
   </ItemGroup>

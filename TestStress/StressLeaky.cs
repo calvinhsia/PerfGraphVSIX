@@ -35,6 +35,19 @@ namespace TestStress
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
         }
 
+        readonly List<string> myList = new List<string>();
+
+        [TestMethod]
+        //[ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressLeakySmall()
+        {
+            // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
+            await StressUtil.DoIterationsAsync(this, NumIterations: 511, ProcNamesToMonitor: "", Sensitivity: 1e-6, ShowUI: true, DelayMultiplier:0);
+
+            myList.Add(($"leaking string" + DateTime.Now.ToString()).Substring(0, 14));
+        }
+
+
 
 
         [TestMethod]
