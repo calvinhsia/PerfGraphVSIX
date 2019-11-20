@@ -268,8 +268,9 @@
             {
                 measurementHolderInteractiveUser = new MeasurementHolder(
                     TestNameOrTestContext: string.Empty,
-                    lstPCData: PerfCounterData._lstPerfCounterDefinitionsForVSIX, 
+                    lstPCData: PerfCounterData._lstPerfCounterDefinitionsForVSIX,
                     sampleType: SampleType.SampleTypeNormal,
+                    NumTotalIterations: -1,
                     logger: this);
                 _dataPoints.Clear();
                 _bufferIndex = 0;
@@ -319,12 +320,11 @@
             try
             {
                 var res = string.Empty;
-
-                lock (measurementHolder.lstPerfCounterData)
-                {
-                    res = measurementHolder.TakeMeasurement(descriptionOverride);
-                    lstPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
-                }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                DoGC();
+                await TaskScheduler.Default;
+                res = await measurementHolder.TakeMeasurementAsync(descriptionOverride);
+                lstPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
                 try
                 {
                     await AddDataPointsAsync(lstPerfCtrCurrentMeasurements);
@@ -533,8 +533,8 @@
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             await measurementHolderInteractiveUser.CreateDumpAsync(
-                System.Diagnostics.Process.GetCurrentProcess().Id, 
-                MemoryAnalysisType.StartClrObjExplorer, 
+                System.Diagnostics.Process.GetCurrentProcess().Id,
+                MemoryAnalysisType.StartClrObjExplorer,
                 desc: string.Empty);
 
             btnClrObjExplorer.IsEnabled = true;

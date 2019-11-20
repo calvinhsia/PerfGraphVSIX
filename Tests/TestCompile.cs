@@ -287,6 +287,7 @@ namespace MyCustomCode
                 ""testTODOTODO"",
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                 SampleType.SampleTypeIteration,
+                NumTotalIterations: NumberOfIterations,
                 logger: logger);
 
 
@@ -469,6 +470,7 @@ namespace MyCustomCode
                     ""testTODOTODO"",
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
+                    NumTotalIterations: 4,
                     logger: logger);
 
 

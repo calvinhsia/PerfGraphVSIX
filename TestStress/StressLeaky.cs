@@ -28,7 +28,7 @@ namespace TestStress
         public async Task StressLeaky()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
-            await StressUtil.DoIterationsAsync(this, NumIterations: 11, ProcNamesToMonitor: "");
+            await StressUtil.DoIterationsAsync(this, NumIterations: 11, ProcNamesToMonitor: "", ShowUI:true);
 
             // to test if your code leaks, put it here. Repeat a lot to magnify the effect
             for (int i = 0; i < 1; i++)

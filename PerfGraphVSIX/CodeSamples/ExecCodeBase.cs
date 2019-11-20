@@ -136,8 +136,10 @@ namespace MyCodeToExecute
                     TestName,
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
-                    logger,
-                    Sensitivity))
+                    NumTotalIterations: numIterations,
+                    logger:logger,
+                    ShowUI: true,
+                    sensitivity:Sensitivity))
                 {
                     var baseDumpFileName = string.Empty;
                     for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
@@ -147,15 +149,6 @@ namespace MyCodeToExecute
                         var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
                         // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
                         await itakeSample.DoSampleAsync(measurementHolder, desc);
-                        if (numIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == numIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
-                            logger.LogMessage("Taking base snapshot dump");
-                            baseDumpFileName = await measurementHolder.CreateDumpAsync(
-                                System.Diagnostics.Process.GetCurrentProcess().Id,
-                                desc: TestName + "_" + iteration.ToString(),
-                                memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                        }
 
                         if (_CancellationTokenExecuteCode.IsCancellationRequested)
                         {
@@ -170,37 +163,11 @@ namespace MyCodeToExecute
                     {
                         logger.LogMessage("Cancelled Code Execution");
                     }
-                    // cleanup code here: compare measurements, take a dump, examine for types, etc.
-                    var filenameResults = measurementHolder.DumpOutMeasurementsToCsv();
-                    logger.LogMessage("Measurement Results " + filenameResults);
-                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: true)).Where(r => r.IsLeak).ToList();
-
-                    if (lstLeakResults.Count > 0)
-                    {
-                        foreach (var leak in lstLeakResults)
-                        {
-                            logger.LogMessage("Leak Detected!!!!!" + leak.ToString());
-                        }
-                        var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                            System.Diagnostics.Process.GetCurrentProcess().Id,
-                            desc: TestName + "_" + numIterations.ToString(),
-                            memoryAnalysisType: MemoryAnalysisType.StartClrObjExplorer);
-
-                        if (!string.IsNullOrEmpty(baseDumpFileName))
-                        {
-                            var oDumpAnalyzer = new DumpAnalyzer(logger);
-                            var sb = oDumpAnalyzer.GetDiff(
-                                baseDumpFileName,
-                                currentDumpFile,
-                                numIterations,
-                                NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                            var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
-                            File.WriteAllText(fname, sb.ToString());
-                            System.Diagnostics.Process.Start(fname);
-                            logger.LogMessage("DumpDiff Analysis" + fname);
-                        }
-                    }
                 }
+            }
+            catch (LeakException)
+            {
+
             }
             catch (OperationCanceledException)
             {

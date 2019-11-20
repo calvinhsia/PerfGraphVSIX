@@ -52,7 +52,9 @@ namespace Tests
             using (var x = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
                 PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
-                SampleType.SampleTypeIteration, this))
+                SampleType.SampleTypeIteration,
+                NumTotalIterations: -1,
+                logger: this))
             {
                 resultsFolder = x.ResultsFolder;
                 for (int iter = 0; iter < 10; iter++)
@@ -70,9 +72,9 @@ namespace Tests
                 var res = await x.CalculateLeaksAsync(showGraph: true);
             }
             var strHtml = @"
-<a href=""file://C:/Users/calvinh/Source/repos/PerfGraphVSIX/TestResults/Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
+<a href=""file:\\C:\Users\calvinh\Source\repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
             ";
-            var fileHtml = Path.Combine(resultsFolder, "Index.html");
+            var fileHtml = Path.Combine(resultsFolder, "IndexTest1.html");
             File.WriteAllText(fileHtml, strHtml);
             TestContext.AddResultFile(fileHtml);
             Assert.Fail("failing test so results aren't deleted");
@@ -184,7 +186,13 @@ namespace Tests
                 ctr.IsEnabledForMeasurement = true;
             }
             List<LeakAnalysisResult> lstRegResults;
-            using (var measurementHolder = new MeasurementHolder(TestContext, lstPCs, SampleType.SampleTypeIteration, this, sensitivity: RatioThresholdSensitivity))
+            using (var measurementHolder = new MeasurementHolder(
+                new TestContextWrapper(TestContext),
+                lstPCs,
+                SampleType.SampleTypeIteration,
+                this,
+                NumTotalIterations: -1,
+                sensitivity: RatioThresholdSensitivity))
             {
                 var lstBigStuff = new List<byte[]>();
                 LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");
@@ -199,7 +207,7 @@ namespace Tests
                         lstBigStuff.Add(new byte[nArraySize]);
                     }
                     //                lstBigStuff.Add(new int[10000000]);
-                    var res = measurementHolder.TakeMeasurement($"iter {i}/{nIter}");
+                    var res = await measurementHolder.TakeMeasurementAsync($"iter {i}/{nIter}");
                     LogMessage(res);
                 }
                 var filename = measurementHolder.DumpOutMeasurementsToCsv();

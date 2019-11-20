@@ -117,7 +117,7 @@ namespace StressTestUtility
                     var dp1 = new DataPoint(item.lstData.Count, (item.lstData.Count - 1) * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
                 }
-                _chart.Legends.Add(new Legend());
+//                _chart.Legends.Add(new Legend());
             }
             _chart.DataBind();
             TxtInfo = sbInfo.ToString();

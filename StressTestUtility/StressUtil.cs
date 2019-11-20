@@ -133,6 +133,9 @@ namespace StressTestUtility
                     PerfCounterData._lstPerfCounterDefinitionsForStressTest,
                     SampleType.SampleTypeIteration,
                     logger: logger,
+                    NumTotalIterations: NumIterations,
+                    NumIterationsBeforeTotalToTakeBaselineSnapshot: NumIterationsBeforeTotalToTakeBaselineSnapshot,
+                    ShowUI: ShowUI,
                     sensitivity: Sensitivity))
                 {
                     var baseDumpFileName = string.Empty;
@@ -159,60 +162,9 @@ namespace StressTestUtility
                             await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier)).ConfigureAwait(false);
                         }
 
-                        var res = measurementHolder.TakeMeasurement($"Iter {iteration + 1,3}/{NumIterations}");
+                        var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{NumIterations}");
                         logger.LogMessage(res);
-                        // if we have enough iterations, lets take a snapshot before they're all done so we can compare
-                        if (iteration == NumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier)).ConfigureAwait(false);
-                            logger.LogMessage($"Taking base snapshot dump");
-                            baseDumpFileName = await measurementHolder.CreateDumpAsync(
-                                PerfCounterData.ProcToMonitor.Id,
-                                desc: testContext.TestName + "_" + iteration.ToString(),
-                                memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                            testContext?.AddResultFile(baseDumpFileName);
-                        }
                         testContext.Properties[PropNameIteration] = (int)(testContext.Properties[PropNameIteration]) + 1;
-                    }
-                    if (NumIterations > 2) // don't want to do leak analysis unless enough iterations
-                    {
-                        var filenameResultsCSV = measurementHolder.DumpOutMeasurementsToCsv();
-                        logger.LogMessage($"Measurement Results {filenameResultsCSV}");
-                        var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: ShowUI))
-                            .Where(r => r.IsLeak).ToList();
-                        if (lstLeakResults.Count > 0)
-                        {
-                            foreach (var leak in lstLeakResults)
-                            {
-                                logger.LogMessage($"Leak Detected!!!!! {leak}");
-                            }
-                            var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                                PerfCounterData.ProcToMonitor.Id,
-                                desc: testContext.TestName + "_" + NumIterations.ToString(),
-                                memoryAnalysisType: ShowUI? MemoryAnalysisType.StartClrObjExplorer: MemoryAnalysisType.JustCreateDump);
-                            testContext?.AddResultFile(currentDumpFile);
-                            if (!string.IsNullOrEmpty(baseDumpFileName))
-                            {
-                                var oDumpAnalyzer = new DumpAnalyzer(logger);
-                                var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
-                                                currentDumpFile,
-                                                NumIterations,
-                                                NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                                var fname = Path.Combine(measurementHolder.ResultsFolder, "DumpDiff Analysis.txt");
-                                File.WriteAllText(fname, sb.ToString());
-                                if (ShowUI)
-                                {
-                                    Process.Start(fname);
-                                }
-                                testContext?.AddResultFile(fname);
-                                logger.LogMessage("DumpDiff Analysis" + fname);
-                            }
-                            else
-                            {
-                                logger.LogMessage($"No baseline dump: not enough iterations");
-                            }
-                            throw new LeakException($"Leaks found\r\n", lstLeakResults);
-                        }
                     }
                 }
             }

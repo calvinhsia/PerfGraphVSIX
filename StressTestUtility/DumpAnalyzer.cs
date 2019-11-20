@@ -156,32 +156,32 @@ namespace StressTestUtility
             }
         }
 
-        public void StartClrObjExplorer(string _DumpFileName)
+        public static string GetClrObjExplorerPath()
         {
             string exeNameClrObj = null;
-
-            var searchpaths = new[] { string.Empty, @"..\..\" };
+            var searchpaths = new[] { string.Empty, @"..\..\" }; // works with nuget deployment too
             foreach (var tryPath in searchpaths)
             {
                 var exeNameClrObjTry = Path.Combine(
-                   Path.GetDirectoryName(this.GetType().Assembly.Location),
+                   Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location),
                    tryPath + "ClrObjExplorer",
                    "ClrObjExplorer.exe");
                 if (File.Exists(exeNameClrObjTry))
                 {
                     exeNameClrObj = exeNameClrObjTry;
                 }
-                else
-                {
-                    logger.LogMessage($"did not find {exeNameClrObjTry}");
-                }
             }
             if (string.IsNullOrEmpty(exeNameClrObj))
             {
                 throw new FileNotFoundException($"{exeNameClrObj}");
             }
+            return exeNameClrObj;
+        }
+
+        public void StartClrObjExplorer(string _DumpFileName)
+        {
             var args = $"/m \"{_DumpFileName}\"";
-            Process.Start(exeNameClrObj, args);
+            Process.Start(GetClrObjExplorerPath(), args);
         }
     }
 }
