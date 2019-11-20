@@ -398,6 +398,11 @@
                     ChartType = SeriesChartType.Line
                 };
                 _chart.Series.Add(series);
+                if (UpdateInterval == 0) // if we're not doing auto update on timer, we're iterating or doing manual measurement
+                {
+                    series.MarkerSize = 10;
+                    series.MarkerStyle = MarkerStyle.Circle;
+                }
                 for (int i = 0; i < _dataPoints.Count; i++)
                 {
                     var ndx = _bufferIndex + i;

@@ -76,7 +76,8 @@ namespace StressTestUtility
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
-                    if (lstData[lstData.Count - 1].Y - lstData[0].Y >= lstData.Count - 1)
+                    if (slope >= 1)
+                    //if (lstData[lstData.Count - 1].Y - lstData[0].Y >= lstData.Count - 1)
                     {
                         isLeak = true;
                     }
@@ -248,7 +249,10 @@ namespace StressTestUtility
                 sBuilder.Append($"{ctr.PerfCounterName}={pcValue,13:n0}  Δ = {delta,13:n0} ");
                 lst.Add(pcValue);
             }
-            nSamplesTaken++;
+            if (this.sampleType == SampleType.SampleTypeIteration)
+            {
+                nSamplesTaken++;
+            }
             if (NumTotalIterations > 0)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
@@ -393,6 +397,8 @@ namespace StressTestUtility
                         ChartType = SeriesChartType.Line,
                         Name = item.perfCounterData.PerfCounterName
                     };
+                    series.MarkerSize = 10;
+                    series.MarkerStyle = MarkerStyle.Circle;
                     chart.Series.Add(series);
                     for (int i = 0; i < item.lstData.Count; i++)
                     {

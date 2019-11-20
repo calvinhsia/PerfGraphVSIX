@@ -97,6 +97,8 @@ namespace StressTestUtility
                     Name = item.perfCounterData.PerfCounterName,
                     ToolTip = item.perfCounterData.PerfCounterName
                 };
+                series.MarkerStyle = MarkerStyle.Circle;
+                series.MarkerSize = 10;
                 _chart.Series.Add(series);
                 for (int i = 0; i < item.lstData.Count; i++)
                 {
