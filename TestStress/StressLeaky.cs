@@ -18,7 +18,11 @@ namespace TestStress
 
         class BigStuffWithLongNameSoICanSeeItBetter
         {
-            readonly byte[] arr = new byte[1024 * 1024 + 1000]; // just a little over our 1M threshold
+            readonly byte[] arr;
+            public BigStuffWithLongNameSoICanSeeItBetter(int initSize = 1024 * 1024 + 1000) // just a little over our 1M threshold
+            {
+                arr = new byte[initSize];
+            }
             public byte[] GetArray => arr;
             public string MyString = ($"leaking string" + DateTime.Now.ToString()).Substring(0, 14); // make a calculated non-unique string so it looks like a leak
         }
@@ -35,6 +39,47 @@ namespace TestStress
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
         }
 
+
+        [TestMethod]
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressLeakyCustomThreshold()
+        {
+            // example to set custom threshold: here we override one counter's threshold. We can also change sensitivity
+            var thresh = 1e7f;
+            var lstperfCounterDataSettings = new List<PerfCounterDataSetting>
+            {
+                new PerfCounterDataSetting { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
+                new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
+                new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorVirtualBytes, regressionThreshold = 9 * thresh } ,
+                new PerfCounterDataSetting { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
+            };
+            try
+            {
+                await StressUtil.DoIterationsAsync(this, NumIterations: 11, ProcNamesToMonitor: "", ShowUI: false, lstperfCounterDataSettings: lstperfCounterDataSettings);
+
+            }
+            catch (LeakException ex)
+            {
+                // validate only one counter leaked: GCBytesInAllHeaps
+                var lkGCB = ex.lstLeakResults.Where(lk => lk.IsLeak && lk.perfCounterData.perfCounterType == PerfCounterType.GCBytesInAllHeaps).FirstOrDefault();
+                if ( lkGCB != null &&
+                //if (ex.lstLeakResults.Where(lk => lk.IsLeak && lk.perfCounterData.perfCounterType == PerfCounterType.GCBytesInAllHeaps).FirstOrDefault() != null &&
+                    ex.lstLeakResults.Where(lk => lk.IsLeak).Count() == 1
+                    )
+                {
+                    if (lkGCB.perfCounterData.thresholdRegression == thresh) // verify we're using the provided thresh
+                    {
+                        throw; // it's a valid leak.. throw because test expects a LeakException, and test passes
+                    }
+                }
+                Assert.Fail("Didn't get expected leak type");
+            }
+
+            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(initSize: (int)(thresh + 1000)));
+        }
+
+
+
         readonly List<string> myList = new List<string>();
 
         [TestMethod]
@@ -42,7 +87,7 @@ namespace TestStress
         public async Task StressLeakySmall()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
-            await StressUtil.DoIterationsAsync(this, NumIterations: 511, ProcNamesToMonitor: "", Sensitivity: 1e-6, ShowUI: true, DelayMultiplier:0);
+            await StressUtil.DoIterationsAsync(this, NumIterations: 511, ProcNamesToMonitor: "", Sensitivity: 1e-6, ShowUI: true, DelayMultiplier: 0);
 
             myList.Add(($"leaking string" + DateTime.Now.ToString()).Substring(0, 14));
         }

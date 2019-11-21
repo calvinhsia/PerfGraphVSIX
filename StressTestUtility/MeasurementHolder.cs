@@ -113,7 +113,7 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n2} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n6} IsLeak={IsLeak}";
         }
     }
 
@@ -560,30 +560,30 @@ namespace Microsoft.Test.Stress
                 }
                 if (this.testContext != null)
                 {
-                    var sbHtml = new StringBuilder("");
+                    //var sbHtml = new StringBuilder("");
                     foreach (var fileresult in lstFileResults)
                     {
                         this.testContext.AddResultFile(fileresult.filename);
-                        switch (Path.GetExtension(fileresult.filename))
-                        {
-                            case ".dmp":
-                                //            var strHtml = @"
-                                //<a href=""file://C:/Users/calvinh/Source/repos/PerfGraphVSIX/TestResults/Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
-                                //            ";
-                                //            var fileHtml = Path.Combine(resultsFolder, "Index.html");
-                                //            File.WriteAllText(fileHtml, strHtml);
-                                //            TestContext.AddResultFile(fileHtml);
-                                sbHtml.AppendLine($@"<p><a href=""file://{DumpAnalyzer.GetClrObjExplorerPath()} -m {fileresult.filename}"">Start ClrObjExplorer with dump {Path.GetFileName(fileresult.filename)} </a>");
-                                break;
-                            default:
-                                sbHtml.AppendLine($@"<p><a href=""file://{fileresult.filename}"">{Path.GetFileName(fileresult.filename)}</a>");
-                                break;
-                        }
+                        //switch (Path.GetExtension(fileresult.filename))
+                        //{
+                        //    case ".dmp":
+                        //        //            var strHtml = @"
+                        //        //<a href=""file://C:/Users/calvinh/Source/repos/PerfGraphVSIX/TestResults/Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
+                        //        //            ";
+                        //        //            var fileHtml = Path.Combine(resultsFolder, "Index.html");
+                        //        //            File.WriteAllText(fileHtml, strHtml);
+                        //        //            TestContext.AddResultFile(fileHtml);
+                        //        sbHtml.AppendLine($@"<p><a href=""file://{DumpAnalyzer.GetClrObjExplorerPath()} -m {fileresult.filename}"">Start ClrObjExplorer with dump {Path.GetFileName(fileresult.filename)} </a>");
+                        //        break;
+                        //    default:
+                        //        sbHtml.AppendLine($@"<p><a href=""file://{fileresult.filename}"">{Path.GetFileName(fileresult.filename)}</a>");
+                        //        break;
+                        //}
 
                     }
-                    var filenameHtml = Path.Combine(ResultsFolder, "Index.html");
-                    File.WriteAllText(filenameHtml, sbHtml.ToString());
-                    this.testContext.AddResultFile(filenameHtml);
+                    //var filenameHtml = Path.Combine(ResultsFolder, "Index.html");
+                    //File.WriteAllText(filenameHtml, sbHtml.ToString());
+                    //this.testContext.AddResultFile(filenameHtml);
                 }
             }
         }

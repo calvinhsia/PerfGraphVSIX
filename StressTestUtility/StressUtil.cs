@@ -40,6 +40,7 @@ namespace Microsoft.Test.Stress
             int DelayMultiplier = 1,
             string ProcNamesToMonitor = "devenv",
             bool ShowUI = false,
+            List<PerfCounterDataSetting> lstperfCounterDataSettings = null,
             int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4)
         {
             const string PropNameRecursionPrevention = "RecursionPrevention";
@@ -128,10 +129,22 @@ namespace Microsoft.Test.Stress
                     }
                     await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 }
+                var lstPerfCountersToUse = new List<PerfCounterData>(PerfCounterData._lstPerfCounterDefinitionsForStressTest); // very small list: linear search
+                if (lstperfCounterDataSettings != null)
+                {
+                    foreach (var userSettingItem in lstperfCounterDataSettings) // for each user settings
+                    {
+                        var pCounterToModify = lstPerfCountersToUse.Where(p => p.perfCounterType == userSettingItem.perfCounterType).FirstOrDefault();
+                        if (pCounterToModify != null)
+                        {
+                            pCounterToModify.thresholdRegression = userSettingItem.regressionThreshold;
+                        }
+                    }
+                }
 
                 using (var measurementHolder = new MeasurementHolder(
                     testContext,
-                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                    lstPerfCountersToUse,
                     SampleType.SampleTypeIteration,
                     logger: logger,
                     NumTotalIterations: NumIterations,
