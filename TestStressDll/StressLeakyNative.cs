@@ -7,11 +7,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TestStress
+namespace TestStressDll
 {
 
     [TestClass]
-    public class MyClass
+    public class NativeLeaks
     {
         public TestContext TestContext { get; set; }
         class BigStuffWithLongNameSoICanSeeItBetter : IDisposable

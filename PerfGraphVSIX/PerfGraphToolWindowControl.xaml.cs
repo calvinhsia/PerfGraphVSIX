@@ -99,7 +99,7 @@
         public bool TrackProjectObjects { get; set; } = true;
         public bool TrackContainedObjects { get; set; } = true;
 
-        public List<PerfCounterData> LstPerfCounterData => throw new NotImplementedException();
+        public List<PerfCounterData> LstPerfCounterData;
 
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
@@ -121,6 +121,7 @@
             {
                 LogMessage($"Starting {TipString}");
 
+                LstPerfCounterData = PerfCounterData.GetPerfCountersForVSIX();
                 async Task RefreshCodeToRunAsync()
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -165,9 +166,9 @@
                   };
 
 
-                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = LstPerfCounterData.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 0;
-                PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
+                PerfCounterData.GetPerfCountersForVSIX().Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -191,9 +192,9 @@
                         await Task.Run(async () =>
                         {
                             // run on threadpool thread
-                            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                            lock (LstPerfCounterData)
                             {
-                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                                foreach (var itm in LstPerfCounterData)
                                 {
                                     itm.IsEnabledForGraph = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
@@ -264,11 +265,11 @@
             {
                 await _tcsPcounter.Task;
             }
-            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+            lock (LstPerfCounterData)
             {
                 measurementHolderInteractiveUser = new MeasurementHolder(
                     TestNameOrTestContext: string.Empty,
-                    lstPCData: PerfCounterData._lstPerfCounterDefinitionsForVSIX,
+                    lstPCData: LstPerfCounterData,
                     sampleType: SampleType.SampleTypeNormal,
                     NumTotalIterations: -1,
                     logger: this);

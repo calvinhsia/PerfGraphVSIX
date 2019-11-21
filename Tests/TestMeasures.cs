@@ -25,7 +25,7 @@ namespace Tests
             var resultsFolder = string.Empty;
             using (var x = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
-                PerfCounterData._lstPerfCounterDefinitionsForStressTest.Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
+                PerfCounterData.GetPerfCountersForStress().Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
                 SampleType.SampleTypeIteration,
                 NumTotalIterations: -1,
                 logger: this))
@@ -131,7 +131,7 @@ namespace Tests
         /// </summary>
         private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity, Action action = null)
         {
-            var lstPCs = new List<PerfCounterData>(PerfCounterData._lstPerfCounterDefinitionsForStressTest);
+            var lstPCs = PerfCounterData.GetPerfCountersForStress();
             foreach (var ctr in lstPCs)
             {
                 ctr.IsEnabledForMeasurement = true;

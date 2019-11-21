@@ -130,7 +130,7 @@ namespace Microsoft.Test.Stress
                     }
                     await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 }
-                var lstPerfCountersToUse = new List<PerfCounterData>(PerfCounterData._lstPerfCounterDefinitionsForStressTest); // very small list: linear search
+                var lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress(); // very small list: linear search
                 if (lstperfCounterDataSettings != null)
                 {
                     foreach (var userSettingItem in lstperfCounterDataSettings) // for each user settings

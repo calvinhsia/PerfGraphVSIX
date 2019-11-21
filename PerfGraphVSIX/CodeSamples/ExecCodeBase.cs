@@ -134,7 +134,7 @@ namespace MyCodeToExecute
             {
                 using (var measurementHolder = new MeasurementHolder(
                     TestName,
-                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
+                    PerfCounterData.GetPerfCountersForStress(),
                     SampleType.SampleTypeIteration,
                     NumTotalIterations: numIterations,
                     logger:logger,

@@ -9,7 +9,7 @@ using System.Collections;
 using Microsoft.Test.Stress;
 using System.IO;
 
-namespace TestStress
+namespace TestStressDll
 {
     [TestClass]
     public class StressLeakyClass
@@ -19,7 +19,7 @@ namespace TestStress
         class BigStuffWithLongNameSoICanSeeItBetter
         {
             readonly byte[] arr;
-            public BigStuffWithLongNameSoICanSeeItBetter(int initSize = 1024 * 1024 + 1000) // just a little over our 1M threshold
+            public BigStuffWithLongNameSoICanSeeItBetter(int initSize = 1024 * 1024 * 2) // over our 1M threshold
             {
                 arr = new byte[initSize];
             }
@@ -28,6 +28,7 @@ namespace TestStress
         }
 
         readonly List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
@@ -75,7 +76,7 @@ namespace TestStress
                 Assert.Fail("Didn't get expected leak type");
             }
 
-            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(initSize: (int)(thresh + 1000)));
+            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(initSize: (int)(thresh + 10000)));
         }
 
 
@@ -87,9 +88,9 @@ namespace TestStress
         [Description("Sensitivity Leak a very small string of 14 chars")]
         public async Task StressLeakyDetectVerySmallLeak()
         {
-            await StressUtil.DoIterationsAsync(this, NumIterations: 1011, ProcNamesToMonitor: "", Sensitivity: 1e6, ShowUI: false, DelayMultiplier: 0);
+            await StressUtil.DoIterationsAsync(this, NumIterations: 711, ProcNamesToMonitor: "", Sensitivity: 1e6, ShowUI: false, DelayMultiplier: 0);
 
-            myList.Add(($"leaking string" + DateTime.Now.ToString()).Substring(0, 14));
+            myList.Add($"leaking string" + "asdfafsdfasdfasd".Substring(0, 14));// needs to be done at runtime to create a diff string each iter. Time dominated by GC
         }
 
 
@@ -110,7 +111,7 @@ namespace TestStress
                 var diffFile = lstFileResults.Where(r => Path.GetFileName(r.filename).Contains(MeasurementHolder.DiffFileName)).First();
                 var diffs = File.ReadAllText(diffFile.filename);
                 TestContext.WriteLine("Verifying diff file");
-                Assert.IsTrue(diffs.Contains("7    11 TestStress.StressLeakyClass+BigStuffWithLongNameSoICanSeeItBetter"), "doesn't have leaking type");
+                Assert.IsTrue(diffs.Contains("7    11 TestStressDll.StressLeakyClass+BigStuffWithLongNameSoICanSeeItBetter"), "doesn't have leaking type");
 
                 Assert.IsTrue(diffs.Contains("    8    12 leaking string"), "doesn't have leaking string"); // there's one more "leaking string" because it's a class static internally (in System.Object[] array of Pinned handle statics)
 
@@ -122,7 +123,7 @@ namespace TestStress
 
 
         [TestMethod]
-        [MemSpectAttribute(NumIterations = 7)]
+        [MemSpectAttribute(NumIterations = 17)]
         [ExpectedException(typeof(LeakException))]
         public async Task StressTestWithAttribute()
         {
@@ -130,7 +131,7 @@ namespace TestStress
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
         }
         [TestMethod]
-        [MemSpectAttribute(NumIterations = 7, Sensitivity = 1)]
+        [MemSpectAttribute(NumIterations = 17, Sensitivity = 1)]
         [ExpectedException(typeof(LeakException))]
         public void StressTestWithAttributeNotAsync()
         {

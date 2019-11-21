@@ -109,42 +109,27 @@ namespace Microsoft.Test.Stress
     public class PerfCounterData
     {
         /// <summary>
-        /// These are the counters used for stress test measurements
-        /// </summary>
-        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForStressTest = new List<PerfCounterData>()
-        {
-            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForGraph=true,thresholdRegression=1e6f} },
-            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") { thresholdRegression=1e6f} },
-            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") { thresholdRegression=1e6f}},
-            //{new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process") { thresholdRegression=1e6f}},
-            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process") { thresholdRegression=1}},
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process") { thresholdRegression=.5f}},
-            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty) { thresholdRegression=.5f } },
-            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty) { thresholdRegression=.5f}},
-        };
-        /// <summary>
         /// these are used to provider interactive user counters from which to choose in VSIX to drive graph
         /// typically, user will select only 1 or 2 else the graph is too busy (and different scales)
         /// </summary>
-        public static readonly List<PerfCounterData> _lstPerfCounterDefinitionsForVSIX = new List<PerfCounterData>()
+        private static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
         {
-            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process" ) { IsEnabledForMeasurement=false} } ,
-            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCGen0HeapSize, ".NET CLR Memory","Gen 0 heap size","Process ID")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCGen1HeapSize, ".NET CLR Memory","Gen 1 heap size","Process ID")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCGen2HeapSize, ".NET CLR Memory","Gen 2 heap size","Process ID")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GCLargeObjectHeap, ".NET CLR Memory","Large Object Heap size","Process ID")  { IsEnabledForMeasurement=false} },
-
-            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process")  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty)  { IsEnabledForMeasurement=false} },
-            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty)  { IsEnabledForMeasurement=false} },
+            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForMeasurement=true, thresholdRegression=1024*1024}},
+            {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") { IsEnabledForMeasurement=true, thresholdRegression=1024*1024}},
+            {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") { IsEnabledForMeasurement=true, thresholdRegression=1024*1024}},
+            {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process")},
+            {new PerfCounterData(PerfCounterType.ProcessorWorkingSet, "Process","Working Set","ID Process")},
+            {new PerfCounterData(PerfCounterType.GCPctTime, ".NET CLR Memory","% Time in GC","Process ID")},
+            {new PerfCounterData(PerfCounterType.GCAllocatedBytesPerSec, ".NET CLR Memory","Allocated Bytes/sec","Process ID")},
+            {new PerfCounterData(PerfCounterType.GCGen0HeapSize, ".NET CLR Memory","Gen 0 heap size","Process ID")},
+            {new PerfCounterData(PerfCounterType.GCGen1HeapSize, ".NET CLR Memory","Gen 1 heap size","Process ID")},
+            {new PerfCounterData(PerfCounterType.GCGen2HeapSize, ".NET CLR Memory","Gen 2 heap size","Process ID")},
+            {new PerfCounterData(PerfCounterType.GCLargeObjectHeap, ".NET CLR Memory","Large Object Heap size","Process ID")},
+            {new PerfCounterData(PerfCounterType.PageFaultsPerSec, "Process","Page Faults/sec","ID Process")  },
+            {new PerfCounterData(PerfCounterType.ThreadCount, "Process","Thread Count","ID Process")  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
+            {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process")  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
+            {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty)  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
+            {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty)  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
         };
 
         public PerfCounterType perfCounterType;
@@ -152,13 +137,13 @@ namespace Microsoft.Test.Stress
         public string PerfCounterName;
         public string PerfCounterInstanceName;
         /// <summary>
-        /// counter can be enabled for graphing but not for measurements (graph can look too busy and scaling can hide trends)
+        /// true means collect (for stress iterations)
+        /// </summary>
+        public bool IsEnabledForMeasurement = false;
+        /// <summary>
+        /// true means collect (for stress iterations)
         /// </summary>
         public bool IsEnabledForGraph = false;
-        /// <summary>
-        /// true means collect (for iterations) but not necessarily for graph
-        /// </summary>
-        public bool IsEnabledForMeasurement = true;
         public Lazy<PerformanceCounter> lazyPerformanceCounter;
         public static Process ProcToMonitor;
 
@@ -196,6 +181,27 @@ namespace Microsoft.Test.Stress
             LastValue = retVal;
             return retVal;
         }
+        public static List<PerfCounterData> GetPerfCountersForStress()
+        {
+            var lst = new List<PerfCounterData>();
+            foreach (var pc in _lstPerfCounterDefinitions.Where(p => p.IsEnabledForMeasurement))
+            {
+                lst.Add((PerfCounterData)pc.MemberwiseClone());
+            }
+            return lst;
+        }
+
+        public static List<PerfCounterData> GetPerfCountersForVSIX()
+        {
+            var lst = new List<PerfCounterData>();
+            foreach (var pc in _lstPerfCounterDefinitions)
+            {
+                lst.Add((PerfCounterData)pc.MemberwiseClone());
+            }
+            return lst;
+        }
+
+
         public PerfCounterData(PerfCounterType perfCounterType, string perfCounterCategory, string perfCounterName, string perfCounterInstanceName)
         {
             this.perfCounterType = perfCounterType;
@@ -237,7 +243,7 @@ namespace Microsoft.Test.Stress
 
         public override string ToString()
         {
-            return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} {thresholdRegression:n1} EnabledForMeasure = {IsEnabledForMeasurement} IsEnabledForGraph={IsEnabledForGraph}";
+            return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} {thresholdRegression:n1} EnabledForMeasure = {IsEnabledForMeasurement}";
         }
         /// uiFlags: 0 - Count of GDI objects
         /// uiFlags: 1 - Count of USER objects

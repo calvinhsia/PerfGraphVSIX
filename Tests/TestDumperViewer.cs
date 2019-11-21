@@ -56,22 +56,5 @@ namespace Tests
             await x.DoitAsync();
 
         }
-
-        [TestMethod]
-        public void TestDumperAnalyzeDump()
-        {
-            var pathDumpFileBaseline = @"C:\StressNoInheritance_7_0.dmp";
-            var pathDumpFileCurrent = @"C:\StressNoInheritance_11_0.dmp";
-            int TotNumIterations = 11;
-            int NumIterationsBeforeTotalToTakeBaselineSnapshot = 3;
-            var oAnalyzer = new DumpAnalyzer(this);
-
-            oAnalyzer.GetDiff(pathDumpFileBaseline, pathDumpFileCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
-
-        }
-
-
-
-
     }
 }

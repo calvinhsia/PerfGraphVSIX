@@ -229,7 +229,7 @@ namespace Microsoft.Test.Stress
                 GC.Collect(); // ok to collect twice
             }
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
+            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
                 if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))
                 {
@@ -333,7 +333,7 @@ namespace Microsoft.Test.Stress
         public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph)
         {
             var lstResults = new List<LeakAnalysisResult>();
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
+            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
                 var leakAnalysis = new LeakAnalysisResult()
                 {
@@ -446,7 +446,7 @@ namespace Microsoft.Test.Stress
         {
             var sb = new StringBuilder();
             var lst = new List<string>();
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
+            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
                 lst.Add(ctr.PerfCounterName);
             }
@@ -455,7 +455,7 @@ namespace Microsoft.Test.Stress
             for (int i = 0; i < nSamplesTaken; i++)
             {
                 lst.Clear();
-                foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement || pctr.IsEnabledForGraph))
+                foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
                 {
                     if (i < measurements[ctr.perfCounterType].Count)
                     {
