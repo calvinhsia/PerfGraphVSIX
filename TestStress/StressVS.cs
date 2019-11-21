@@ -29,6 +29,7 @@ namespace TestStress
         }
 
         [TestMethod]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressOpenCloseSln()
         {
             try
