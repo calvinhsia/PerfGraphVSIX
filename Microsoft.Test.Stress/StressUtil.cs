@@ -23,8 +23,9 @@ namespace Microsoft.Test.Stress
         /// <param name="test">pass the test itself</param>
         /// <param name="NumIterations">Specify the number of iterations to do. Some scenarios are large (open/close solution)
         /// Others are small (scroll up/down a file)</param>
-        /// <param name="Sensitivity">Defaults to 1 (multiplier). Some perf counter thresholds are large (e.g. 1 megabyte for Private bytes). To find
-        /// smaller leaks, set this to .1. If too sensitive, set this to 10 (for 10 Meg threshold) </param>
+        /// <param name="Sensitivity">Defaults to 1.0 Some perf counter thresholds are large (e.g. 1 megabyte for Private bytes). 
+        /// The actual threshold used is the Thresh divided by Sensitivity.
+        /// Thus, to find smaller leaks, magnify them by setting this to 1,000,000. Or make the test less sensitive by setting this to .1 (for 10 Meg threshold) </param>
         /// <param name="DelayMultiplier">Defaults to 1. All delays (e.g. between iterations, after GC, are multiplied by this factor.
         /// Running the test with instrumented binaries (such as under http://Toolbox/MemSpect  will slow down the target process</param>
         /// <param name="ProcNamesToMonitor">'|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. </param>

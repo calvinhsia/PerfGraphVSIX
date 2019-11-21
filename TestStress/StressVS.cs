@@ -112,7 +112,6 @@ namespace TestStress
         {
             try
             {
-                // the only change to existing test required: call to static method
                 await StressUtil.DoIterationsAsync(this, NumIterations: 3);
 
 
@@ -128,6 +127,7 @@ namespace TestStress
             catch (Exception ex)
             {
                 logger.LogMessage($"Exception {ex}");
+                throw;
             }
         }
 
@@ -168,7 +168,7 @@ namespace TestStress
                 try
                 {
                     // the only change to existing test required: call to static method
-                    await StressUtil.DoIterationsAsync(this, NumIterations: 3);
+                    await StressUtil.DoIterationsAsync(this, NumIterations: 2);
 
 
                     if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
@@ -184,6 +184,7 @@ namespace TestStress
                 catch (Exception ex)
                 {
                     logger.LogMessage($"Exception {ex}");
+                    throw;
                 }
             }
         }

@@ -26,7 +26,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 9, Sensitivity: .4, delayBetweenIterationsMsec: 800);
+                await oMyClass.DoTheTest(numIterations: 9, Sensitivity: 2.5, delayBetweenIterationsMsec: 800);
             }
         }
         string somestring = "somestring1";

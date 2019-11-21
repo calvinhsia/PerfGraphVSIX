@@ -72,7 +72,7 @@ namespace Microsoft.Test.Stress
             get
             {
                 var isLeak = false;
-                if (slope >= perfCounterData.thresholdRegression * sensitivity && RSquared > 0.5)
+                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared > 0.5)
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
@@ -113,7 +113,7 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n6} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n3} IsLeak={IsLeak}";
         }
     }
 

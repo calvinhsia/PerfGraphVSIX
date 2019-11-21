@@ -16,35 +16,9 @@ namespace Tests
     [TestClass]
     public class TestMeasures : BaseTestClass
     {
+
         [TestMethod]
         [Ignore]
-        public void TestMeasureStartExcel()
-        {
-
-            var filenamecsv = @"C:\t.csv";
-            var text = File.ReadAllText(filenamecsv);
-            try
-            {
-                DataObject dataObject = new DataObject();
-                dataObject.SetText(text);
-                Clipboard.SetDataObject(dataObject, false);
-            }
-            catch (Exception) { }
-
-
-            var typeExcel = Type.GetTypeFromProgID("Excel.Application");
-            dynamic oExcel = Activator.CreateInstance(typeExcel); // need to add ref to Microsoft.CSharp
-            oExcel.Visible = true;
-            dynamic workbook = oExcel.Workbooks.Add();
-            workbook.ActiveSheet.Paste();
-            // xlSrcRange=1
-            //            workbook.ActiveSheet.ListObjects.Add(1,Range)
-
-        }
-
-
-        [TestMethod]
-        //        [Ignore]
         public async Task TestMeasureRegressionVerifyGraph()
         {
             await Task.Yield();
@@ -81,29 +55,6 @@ namespace Tests
         }
 
         [TestMethod]
-        public void TestPCMeasures()
-        {
-            int nIter = 100;
-            var lstData = new List<PointF>();
-            for (int i = 0; i < nIter; i++)
-            {
-                if (i == 5)
-                //                    if (i / 2 * 2 != i)
-                {
-                    lstData.Add(new PointF() { X = i, Y = 2.01 * i });
-                }
-                else
-                {
-                    lstData.Add(new PointF() { X = i, Y = 2 * i });
-                }
-            }
-            var rmsError = MeasurementHolder.FindLinearLeastSquaresFit(lstData, out var m, out var b);
-            var pctRms = (int)(100 * rmsError / m);
-            LogMessage($"RmsErr={rmsError,16:n3} RmsPctErr={pctRms,4} m={m,18:n3} b={b,18:n3}");
-            //Assert.Fail($"RmsErr={rmsError} m={m} b={b}");
-        }
-
-        [TestMethod]
         public async Task TestPCMeasurementHolder1k()
         {
             // too small to trigger threshold
@@ -125,7 +76,7 @@ namespace Tests
             var eatmem = new byte[1024 * 1024 * 8];
 
             // too small to trigger threshold, but close to boundary, so making more sensitive triggers regression
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: .4f);
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 2.5f);
             Assert.IsTrue(res, $"Expected Regression because more sensitive");
         }
 
@@ -212,7 +163,7 @@ namespace Tests
                 }
                 var filename = measurementHolder.DumpOutMeasurementsToCsv();
                 LogMessage($"Results file name = {filename}");
-                lstRegResults = (await measurementHolder.CalculateLeaksAsync(showGraph: true)).Where(r => r.IsLeak).ToList();
+                lstRegResults = (await measurementHolder.CalculateLeaksAsync(showGraph: false)).Where(r => r.IsLeak).ToList();
             }
             return lstRegResults.Count > 0;
         }
