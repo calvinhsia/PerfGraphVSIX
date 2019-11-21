@@ -114,7 +114,7 @@ namespace Microsoft.Test.Stress
         /// </summary>
         private static readonly List<PerfCounterData> _lstPerfCounterDefinitions = new List<PerfCounterData>()
         {
-            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForMeasurement=true, thresholdRegression=1024*1024}},
+            {new PerfCounterData(PerfCounterType.GCBytesInAllHeaps, ".NET CLR Memory","# Bytes in all Heaps","Process ID" ) { IsEnabledForGraph=true, IsEnabledForMeasurement =true, thresholdRegression=1024*1024}},
             {new PerfCounterData(PerfCounterType.ProcessorPrivateBytes, "Process","Private Bytes","ID Process") { IsEnabledForMeasurement=true, thresholdRegression=1024*1024}},
             {new PerfCounterData(PerfCounterType.ProcessorVirtualBytes, "Process","Virtual Bytes","ID Process") { IsEnabledForMeasurement=true, thresholdRegression=1024*1024}},
             {new PerfCounterData(PerfCounterType.ProcessorPctTime, "Process","% Processor Time","ID Process")},

@@ -4,15 +4,46 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
 using Microsoft.Test.Stress;
 using HANDLE = System.IntPtr;
+using System.Diagnostics;
 
 namespace Tests
 {
+    public class BaseTestClass : ILogger
+    {
+        public TestContext TestContext { get; set; }
+
+        public List<string> _lstLoggedStrings;
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            _lstLoggedStrings = new List<string>();
+            LogMessage($"Starting test {TestContext.TestName}");
+
+        }
+        public void LogMessage(string str, params object[] args)
+        {
+            var dt = string.Format("[{0}],",
+                DateTime.Now.ToString("hh:mm:ss:fff")
+                ) + $"{Thread.CurrentThread.ManagedThreadId,2} ";
+            str = string.Format(dt + str, args);
+            var msgstr = $" {str}";
+
+            this.TestContext.WriteLine(msgstr);
+            if (Debugger.IsAttached)
+            {
+                Debug.WriteLine(msgstr);
+            }
+            _lstLoggedStrings.Add(msgstr);
+        }
+    }
+
+
     [TestClass]
     public class TestMeasures : BaseTestClass
     {
@@ -23,27 +54,27 @@ namespace Tests
         {
             await Task.Yield();
             var resultsFolder = string.Empty;
-            using (var x = new MeasurementHolder(
+            using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
                 PerfCounterData.GetPerfCountersForStress().Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
                 SampleType.SampleTypeIteration,
                 NumTotalIterations: -1,
                 logger: this))
             {
-                resultsFolder = x.ResultsFolder;
+                resultsFolder = measurementHolder.ResultsFolder;
                 for (int iter = 0; iter < 10; iter++)
                 {
-                    foreach (var ctr in x.lstPerfCounterData)
+                    foreach (var ctr in measurementHolder.lstPerfCounterData)
                     {
                         var val = 10000 + (uint)iter;
                         if (iter == 5 && ctr.perfCounterType == PerfCounterType.KernelHandleCount)
                         {
                             val += 1;
                         }
-                        x.measurements[ctr.perfCounterType].Add(val);
+                        measurementHolder.measurements[ctr.perfCounterType].Add(val);
                     }
                 }
-                var res = await x.CalculateLeaksAsync(showGraph: true);
+                var res = await measurementHolder.CalculateLeaksAsync(showGraph: true);
             }
             var strHtml = @"
 <a href=""file:\\C:\Users\calvinh\Source\repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>

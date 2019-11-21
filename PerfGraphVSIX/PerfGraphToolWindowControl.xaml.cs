@@ -131,7 +131,14 @@
                         LstCodeSamples.Add(Path.GetFileName(file));
                     }
                     //_ctsExecuteCode?.Cancel();
-                    lvCodeSamples.SelectedItem = LstCodeSamples[0];
+                    if (LstCodeSamples[0].Contains("ExecCodeBase.cs")) // The base class doesn't have a Static Main
+                    {
+                        lvCodeSamples.SelectedItem = LstCodeSamples[1];
+                    }
+                    else
+                    {
+                        lvCodeSamples.SelectedItem = LstCodeSamples[0];
+                    }
                 }
                 _ = RefreshCodeToRunAsync();
 
@@ -168,7 +175,7 @@
 
                 lbPCounters.ItemsSource = LstPerfCounterData.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 0;
-                PerfCounterData.GetPerfCountersForVSIX().Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
+                LstPerfCounterData.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -268,7 +275,7 @@
             lock (LstPerfCounterData)
             {
                 measurementHolderInteractiveUser = new MeasurementHolder(
-                    TestNameOrTestContext: string.Empty,
+                    TestNameOrTestContext: MeasurementHolder.InteractiveUser,
                     lstPCData: LstPerfCounterData,
                     sampleType: SampleType.SampleTypeNormal,
                     NumTotalIterations: -1,
@@ -317,18 +324,16 @@
             {
                 measurementHolder = measurementHolderInteractiveUser;
             }
-            List<uint> lstPerfCtrCurrentMeasurements;
             try
             {
                 var res = string.Empty;
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 DoGC();
                 await TaskScheduler.Default;
-                res = await measurementHolder.TakeMeasurementAsync(descriptionOverride);
-                lstPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
                 try
                 {
-                    await AddDataPointsAsync(lstPerfCtrCurrentMeasurements);
+                    res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, IsForInteractiveGraph: UpdateInterval != 0 ? true : false);
+                    await AddDataPointsAsync(measurementHolder);
                 }
                 catch (Exception ex)
                 {
@@ -360,18 +365,19 @@
             }
         }
 
-        async Task AddDataPointsAsync(List<uint> lstPerfCtrCurrentMeasurements)
+        async Task AddDataPointsAsync(MeasurementHolder measurementHolder)
         {
+            var dictPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
             if (_dataPoints.Count == 0) // nothing yet
             {
                 for (int i = 0; i < NumDataPoints; i++)
                 {
-                    _dataPoints[i] = new List<uint>(lstPerfCtrCurrentMeasurements); // let all init points be equal, so y axis scales IsStartedFromZero
+                    _dataPoints[i] = new List<uint>(dictPerfCtrCurrentMeasurements.Values); // let all init points be equal, so y axis scales IsStartedFromZero
                 }
             }
             else
             {
-                _dataPoints[_bufferIndex++] = new List<uint>(lstPerfCtrCurrentMeasurements);
+                _dataPoints[_bufferIndex++] = new List<uint>(dictPerfCtrCurrentMeasurements.Values);
                 if (_bufferIndex == _dataPoints.Count) // wraparound?
                 {
                     _bufferIndex = 0;
@@ -392,11 +398,12 @@
             {
                 _chart.ChartAreas[0].AxisY.Maximum = 100;
             }
-            foreach (var entry in lstPerfCtrCurrentMeasurements)
+            foreach (var entry in dictPerfCtrCurrentMeasurements)
             {
                 var series = new Series
                 {
-                    ChartType = SeriesChartType.Line
+                    ChartType = SeriesChartType.Line,
+                    Name = entry.Key.ToString()
                 };
                 _chart.Series.Add(series);
                 if (UpdateInterval == 0) // if we're not doing auto update on timer, we're iterating or doing manual measurement
@@ -416,6 +423,8 @@
                 }
                 ndxSeries++;
             }
+            _chart.Legends.Clear();
+            _chart.Legends.Add(new Legend());
             _chart.DataBind();
 
             if (_editorTracker != null)
@@ -541,12 +550,9 @@
             await measurementHolderInteractiveUser.CreateDumpAsync(
                 System.Diagnostics.Process.GetCurrentProcess().Id,
                 MemoryAnalysisType.StartClrObjExplorer,
-                desc: string.Empty);
+                desc: "InteractiveDump");
 
             btnClrObjExplorer.IsEnabled = true;
-
-            //var x = new DumpAnalyzer(this);
-            //x.StartClrObjExplorer(pathDumpFile);
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods

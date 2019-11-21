@@ -14,6 +14,7 @@ namespace Tests
     public class TestDumperViewer : BaseTestClass
     {
         [TestMethod]
+        [Ignore]
         public void TestDumperInProc()
         {
             var pid = Process.GetProcessesByName("devenv")[0].Id;
@@ -38,6 +39,7 @@ namespace Tests
         }
 
         [TestMethod]
+        [Ignore]
         public async Task TestDumperMain()
         {
             var pid = Process.GetCurrentProcess().Id;

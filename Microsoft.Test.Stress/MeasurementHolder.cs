@@ -76,7 +76,7 @@ namespace Microsoft.Test.Stress
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
-                    if (slope >= 1)
+                    if (slope >= .8) // 80% means in 10 iterations, grew by at least 8
                     //if (lstData[lstData.Count - 1].Y - lstData[0].Y >= lstData.Count - 1)
                     {
                         isLeak = true;
@@ -113,7 +113,7 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n0} Sens={sensitivity:n3} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
         }
     }
 
@@ -124,6 +124,7 @@ namespace Microsoft.Test.Stress
     }
     public class MeasurementHolder : IDisposable
     {
+        public const string InteractiveUser = "InteractiveUser";
         public const string DiffFileName = "String and Type Count differences";
         public string TestName;
 
@@ -139,10 +140,48 @@ namespace Microsoft.Test.Stress
         private readonly bool ShowUI;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
+
+        private string _ResultsFolder;
         /// <summary>
         /// unique folder per test.
         /// </summary>
-        public string ResultsFolder;
+        public string ResultsFolder
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_ResultsFolder))
+                {
+                    if (this.testContext == null)
+                    { // running from ui: get a clean empty folder
+                        var dirMyTemp = DumperViewerMain.EnsureResultsFolderExists();
+                        int nIter = 0;
+                        string pathResultsFolder;
+                        while (true) // we want to let the user have multiple dumps open for comparison
+                        {
+                            var appendstr = nIter++ == 0 ? string.Empty : nIter.ToString();
+                            pathResultsFolder = Path.Combine(
+                                dirMyTemp,
+                                $"{this.TestName}{appendstr}");
+                            if (!Directory.Exists(pathResultsFolder))
+                            {
+                                Directory.CreateDirectory(pathResultsFolder);
+                                break;
+                            }
+                        }
+                        _ResultsFolder = pathResultsFolder;
+                    }
+                    else
+                    {
+                        _ResultsFolder = Path.Combine(this.testContext.TestDeploymentDir, this.TestName);
+                    }
+                    if (!Directory.Exists(ResultsFolder))
+                    {
+                        Directory.CreateDirectory(ResultsFolder);
+                    }
+                }
+                return _ResultsFolder;
+            }
+        }
         private string baseDumpFileName;
         readonly TestContextWrapper testContext;
         readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
@@ -184,41 +223,13 @@ namespace Microsoft.Test.Stress
             this.NumIterationsBeforeTotalToTakeBaselineSnapshot = NumIterationsBeforeTotalToTakeBaselineSnapshot;
             this.ShowUI = ShowUI;
 
-            if (this.testContext == null)
-            { // running from ui: get a clean empty folder
-
-                var dirMyTemp = DumperViewerMain.EnsureResultsFolderExists();
-                int nIter = 0;
-                string pathResultsFolder;
-                while (true) // we want to let the user have multiple dumps open for comparison
-                {
-                    var appendstr = nIter++ == 0 ? string.Empty : nIter.ToString();
-                    pathResultsFolder = Path.Combine(
-                        dirMyTemp,
-                        $"{this.TestName}{appendstr}");
-                    if (!Directory.Exists(pathResultsFolder))
-                    {
-                        Directory.CreateDirectory(pathResultsFolder);
-                        break;
-                    }
-                }
-                ResultsFolder = pathResultsFolder;
-            }
-            else
-            {
-                ResultsFolder = Path.Combine(this.testContext.TestDeploymentDir, this.TestName);
-            }
-            if (!Directory.Exists(ResultsFolder))
-            {
-                Directory.CreateDirectory(ResultsFolder);
-            }
             foreach (var entry in lstPCData)
             {
                 measurements[entry.perfCounterType] = new List<uint>();
             }
         }
 
-        public async Task<string> TakeMeasurementAsync(string desc)
+        public async Task<string> TakeMeasurementAsync(string desc, bool IsForInteractiveGraph = false)
         {
             if (string.IsNullOrEmpty(desc))
             {
@@ -229,7 +240,7 @@ namespace Microsoft.Test.Stress
                 GC.Collect(); // ok to collect twice
             }
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
+            foreach (var ctr in lstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
             {
                 if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))
                 {
@@ -319,13 +330,13 @@ namespace Microsoft.Test.Stress
         /// get the counter for graphing
         /// </summary>
         /// <returns></returns>
-        public List<uint> GetLastMeasurements()
+        public Dictionary<PerfCounterType, uint> GetLastMeasurements()
         {
-            var res = new List<uint>();
+            var res = new Dictionary<PerfCounterType, uint>();
             foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForGraph))
             {
                 var entry = measurements[ctr.perfCounterType];
-                res.Add(entry[entry.Count - 1]);
+                res[ctr.perfCounterType] = entry[entry.Count - 1];
             }
             return res;
         }
@@ -423,15 +434,6 @@ namespace Microsoft.Test.Stress
                     seriesTrendLine.Points.Add(dp1);
 
                     chart.Legends.Add(new Legend());
-                    //var legend = new Legend();
-                    //legend.Title = item.perfCounterData.PerfCounterName;
-                    //var it = new LegendItem() { na}
-                    //legend.it
-                    //chart.Legends.Add(legend);
-                    //var legend2 = new Legend();
-                    //legend2.Title = "Trend Line";
-                    //chart.Legends.Add(legend2);
-
 
                     var fname = Path.Combine(ResultsFolder, $"{TestName} Graph {item.perfCounterData.PerfCounterName}.png");
                     chart.SaveImage(fname, ChartImageFormat.Png);
@@ -476,7 +478,7 @@ namespace Microsoft.Test.Stress
 
         public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
-            var pathDumpFile = Path.ChangeExtension(Path.Combine(ResultsFolder, desc), ".dmp");
+            var pathDumpFile = DumperViewerMain.CreateNewFileName(ResultsFolder, desc);
             try
             {
                 var arglist = new List<string>()

@@ -62,7 +62,6 @@
     <Compile Include="TestCancellationToken.cs" />
     <Compile Include="TestCompile.cs" />
     <Compile Include="TestDumperViewer.cs" />
-    <Compile Include="TestMeasures.cs" />
     <Compile Include="TestRefl.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

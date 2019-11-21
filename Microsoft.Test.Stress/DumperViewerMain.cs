@@ -212,13 +212,13 @@ namespace Microsoft.Test.Stress
             return pathResultsFolder;
         }
         /// <summary>
-        /// 
+        /// create a filename for a new file that doesn't already exist
         /// </summary>
         /// <param name="baseFolderName"></param>
         /// <param name="baseDumpFileName"></param>
         /// <param name="ext">without the '.', defaults to 'dmp'</param>
         /// <returns></returns>
-        public static string GetNewFileName(string baseFolderName, string baseDumpFileName, string ext = "dmp")
+        public static string CreateNewFileName(string baseFolderName, string baseDumpFileName, string ext = "dmp")
         {
             string pathDumpFile;
             int nIter = 0;
