@@ -7,7 +7,7 @@
     <ProjectGuid>{A9794FF3-C487-4801-B634-8DE8C2B7C7EC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>StressTestUtility</RootNamespace>
+    <RootNamespace>Microsoft.Test.Stress</RootNamespace>
     <AssemblyName>Microsoft.Test.Stress</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -69,7 +69,6 @@
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
     <Compile Include="ILogger.cs" />
-    <Compile Include="ITakeSample.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />

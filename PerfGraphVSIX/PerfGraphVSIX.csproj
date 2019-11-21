@@ -107,6 +107,7 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Compile Include="EditorTracker.cs" />
+    <Compile Include="ITakeSample.cs" />
     <Compile Include="ObjTracker.cs" />
     <Compile Include="ObjWeakRefData.cs" />
     <Compile Include="OpenFolderTracker.cs" />
@@ -182,9 +183,9 @@
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\StressTestUtility\Microsoft.Test.Stress.csproj">
+    <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
       <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
-      <Name>StressTestUtility</Name>
+      <Name>Microsoft.Test.Stress</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

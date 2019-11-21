@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Microsoft.Test.Stress;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.Test.Stress
+namespace PerfGraphVSIX
 {
     public interface ITakeSample
     {

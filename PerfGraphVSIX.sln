@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DumperViewer", "DumperViewe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestStress", "TestStress\TestStress.csproj", "{A35D7246-53EF-41FA-9BEF-FF8B30CBF75B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Test.Stress", "StressTestUtility\Microsoft.Test.Stress.csproj", "{A9794FF3-C487-4801-B634-8DE8C2B7C7EC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Test.Stress", "Microsoft.Test.Stress\Microsoft.Test.Stress.csproj", "{A9794FF3-C487-4801-B634-8DE8C2B7C7EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

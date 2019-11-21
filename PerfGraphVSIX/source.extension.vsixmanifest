@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="PerfGraphVSIX.3f94c319-d111-4f85-8296-23f3dcc45092" Version="1.0423" Language="en-US" Publisher="Calvin Hsia" />
+        <Identity Id="PerfGraphVSIX.3f94c319-d111-4f85-8296-23f3dcc45092" Version="1.0424" Language="en-US" Publisher="Calvin Hsia" />
         <DisplayName>PerfGraphVSIX</DisplayName>
         <Description xml:space="preserve">Show memory use in a graph and track individual Class Instances. 
 Execute custom code repeatedly to find leaks
@@ -24,6 +24,6 @@ Create and Explore process dumps with ClrObjExplorer</Description>
         <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
         <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
         <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="ClrListener" Path="|ClrListener|" AssemblyName="|ClrListener;AssemblyName|" />
-        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="StressTestUtility" Path="|StressTestUtility|" AssemblyName="|StressTestUtility;AssemblyName|" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="Microsoft.Test.Stress" Path="|Microsoft.Test.Stress|" AssemblyName="|Microsoft.Test.Stress;AssemblyName|" />
     </Assets>
 </PackageManifest>

@@ -72,13 +72,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
+      <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
+      <Name>Microsoft.Test.Stress</Name>
+    </ProjectReference>
     <ProjectReference Include="..\PerfGraphVSIX\PerfGraphVSIX.csproj">
       <Project>{1ce249e2-a3f2-43f6-a37f-9329fa947660}</Project>
       <Name>PerfGraphVSIX</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\StressTestUtility\Microsoft.Test.Stress.csproj">
-      <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
-      <Name>Microsoft.Test.Stress</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />

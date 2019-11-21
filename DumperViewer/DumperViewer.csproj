@@ -88,7 +88,7 @@
     <Resource Include="ExcelMacro.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\StressTestUtility\Microsoft.Test.Stress.csproj">
+    <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
       <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
       <Name>Microsoft.Test.Stress</Name>
     </ProjectReference>
