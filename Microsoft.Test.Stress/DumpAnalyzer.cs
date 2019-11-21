@@ -178,7 +178,7 @@ namespace Microsoft.Test.Stress
             }
             if (string.IsNullOrEmpty(exeNameClrObj))
             {
-                throw new FileNotFoundException($"{exeNameClrObj}");
+                throw new FileNotFoundException($"Looking for ClrObjExplorer.exe relative to {Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location)}");
             }
             return exeNameClrObj;
         }
