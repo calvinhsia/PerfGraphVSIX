@@ -200,7 +200,7 @@ namespace Microsoft.Test.Stress
             {
                 baseT = typ.BaseType.Name;
                 typ = typ.BaseType;
-                if (baseT == "Apex")
+                if (baseT == "ApexTest")
                 {
                     isApex = true;
                     break;

@@ -261,6 +261,7 @@ namespace Microsoft.Test.Stress
 
         public async Task<string> TakeMeasurementAsync(string desc, bool IsForInteractiveGraph = false)
         {
+            await IfApexTestDelayAsync();
             if (string.IsNullOrEmpty(desc))
             {
                 desc = TestName;
@@ -365,7 +366,7 @@ namespace Microsoft.Test.Stress
             }
             else
             {
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
             }
         }
 
@@ -520,7 +521,6 @@ namespace Microsoft.Test.Stress
 
         public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
-            await IfApexTestDelayAsync();
             var pathDumpFile = DumperViewerMain.CreateNewFileName(ResultsFolder, desc);
             try
             {
