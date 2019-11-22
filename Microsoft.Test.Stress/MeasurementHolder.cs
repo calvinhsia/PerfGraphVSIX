@@ -366,7 +366,11 @@ namespace Microsoft.Test.Stress
             }
             else
             {
-                await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
+                if (PerfCounterData.ProcToMonitor.Id != Process.GetCurrentProcess().Id)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
+                }
+
             }
         }
 
