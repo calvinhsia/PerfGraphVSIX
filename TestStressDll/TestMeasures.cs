@@ -11,7 +11,7 @@ using Microsoft.Test.Stress;
 using HANDLE = System.IntPtr;
 using System.Diagnostics;
 
-namespace Tests
+namespace TestStressDll
 {
     public class BaseTestClass : ILogger
     {
