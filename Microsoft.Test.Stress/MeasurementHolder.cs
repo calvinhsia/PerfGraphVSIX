@@ -138,6 +138,8 @@ namespace Microsoft.Test.Stress
         public readonly int NumTotalIterations;
         private readonly int NumIterationsBeforeTotalToTakeBaselineSnapshot;
         private readonly bool ShowUI;
+        private readonly bool IsApexTest;
+        private readonly int DelayMultiplier;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
 
@@ -196,6 +198,30 @@ namespace Microsoft.Test.Stress
         /// <param name="NumTotalIterations">-1 means don't take base or final dump. </param>
         /// <param name="logger"></param>
         /// <param name="sensitivity"></param>
+        /// <param name="IsApexTest">Apex tests use .Net remoting which has lease lifetime need to add timeout.
+        ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
+        /// Src: https://referencesource.microsoft.com/#mscorlib/system/runtime/remoting/lifetimeservices.cs,be0b61af7bd01e98
+        ///             //Gets or sets the initial lease time span for an AppDomain (default 5 min. Can only be set once per appdomain, subsequent attemps throw
+        ///             LifetimeServices.LeaseTime = TimeSpan.FromSeconds(10);
+        ///             LifetimeServices.
+        ///             
+        ///             Gets or sets the time interval between each activation of the lease manager to clean up expired leases. (default 10 seconds)
+        ///             LifetimeServices.LeaseManagerPollTime = TimeSpan.FromSeconds(10); 
+        ///             
+        /// Children of "--> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter GCRoots"
+        ///             --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter GCRoots
+        ///              --> 03916da8 System.Threading.TimerQueue StaticVar static var System.Threading.TimerQueue.s_queue PathLen= 9
+        ///               -- > 03916da8 System.Threading.TimerQueue.m_timers (#instances = 1)
+        ///               --> 0445a808 System.Threading.TimerQueueTimer.m_timerCallback (#instances = 130)
+        ///               --> 0445a7ac System.Threading.TimerCallback._target (#instances = 34)
+        ///               --> 0445a4bc System.Runtime.Remoting.Lifetime.LeaseManager.leaseToTimeTable (#instances = 1)
+        ///               --> 0445a4e4 System.Collections.Hashtable.buckets (#instances = 3225)
+        ///               --> 1de643d4 System.Collections.Hashtable+bucket[]  (#instances = 3228)
+        ///               --> 1e040eb0 System.Runtime.Remoting.Lifetime.Lease.managedObject (#instances = 135)
+        ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.<VsTextView>k__BackingField (#instances = 22)
+        ///               --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter  (#instances = 27)
+
+        /// </param>
         public MeasurementHolder(object TestNameOrTestContext,
                     List<PerfCounterData> lstPCData,
                     SampleType sampleType,
@@ -203,7 +229,9 @@ namespace Microsoft.Test.Stress
                     int NumTotalIterations,
                     int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4,
                     bool ShowUI = false,
-                    double sensitivity = 1.0f)
+                    double sensitivity = 1.0f,
+                    int DelayMultiplier = 1,
+                    bool IsApexTest = false)
         {
             if (TestNameOrTestContext is TestContextWrapper)
             {
@@ -222,6 +250,8 @@ namespace Microsoft.Test.Stress
             this.NumTotalIterations = NumTotalIterations;
             this.NumIterationsBeforeTotalToTakeBaselineSnapshot = NumIterationsBeforeTotalToTakeBaselineSnapshot;
             this.ShowUI = ShowUI;
+            this.IsApexTest = IsApexTest;
+            this.DelayMultiplier = DelayMultiplier;
 
             foreach (var entry in lstPCData)
             {
@@ -271,7 +301,6 @@ namespace Microsoft.Test.Stress
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
                 if (nSamplesTaken == NumTotalIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(2));
                     logger.LogMessage("Taking base snapshot dump");
                     baseDumpFileName = await CreateDumpAsync(
                         System.Diagnostics.Process.GetCurrentProcess().Id,
@@ -324,6 +353,20 @@ namespace Microsoft.Test.Stress
                 }
             }
             return sBuilderMeasurementResult.ToString();
+        }
+
+        private async Task IfApexTestDelayAsync()
+        {
+            if (IsApexTest)
+            {
+                var ApexLeaseDelay = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime + TimeSpan.FromSeconds(10 * DelayMultiplier); // a little more than the lease lifetime
+                logger.LogMessage($"Apex test: waiting {ApexLeaseDelay.TotalSeconds:n0} seconds for leaselifetime to expire");
+                await Task.Delay(ApexLeaseDelay);
+            }
+            else
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
         }
 
         /// <summary>
@@ -440,7 +483,6 @@ namespace Microsoft.Test.Stress
                     lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Graph {item.perfCounterData}" });
                 }
             }
-
             return lstResults;
         }
 
@@ -478,6 +520,7 @@ namespace Microsoft.Test.Stress
 
         public async Task<string> CreateDumpAsync(int pid, MemoryAnalysisType memoryAnalysisType, string desc)
         {
+            await IfApexTestDelayAsync();
             var pathDumpFile = DumperViewerMain.CreateNewFileName(ResultsFolder, desc);
             try
             {

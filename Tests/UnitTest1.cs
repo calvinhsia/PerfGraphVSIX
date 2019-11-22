@@ -494,6 +494,5 @@ namespace Tests
             Assert.AreEqual(nIter, coll.Count, $" should be equal");
 
         }
-
     }
 }

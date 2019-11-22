@@ -76,6 +76,7 @@ namespace Microsoft.Test.Stress
                         logger = new Logger(testContext);
                     }
                 }
+                var isApexTest = IsTestApexTest(test);
                 logger.LogMessage($@"{
                     nameof(DoIterationsAsync)} TestName = {testContext.TestName} 
                                         NumIterations = {NumIterations}
@@ -190,6 +191,24 @@ namespace Microsoft.Test.Stress
                 throw;
             }
         }
+        public static bool IsTestApexTest(object theTest)
+        {
+            var isApex = false;
+            var typ = theTest.GetType();
+            var baseT = string.Empty;
+            while (baseT != "Object")
+            {
+                baseT = typ.BaseType.Name;
+                typ = typ.BaseType;
+                if (baseT == "Apex")
+                {
+                    isApex = true;
+                    break;
+                }
+            }
+            return isApex;
+        }
+
     }
 
     public class LeakException : Exception
