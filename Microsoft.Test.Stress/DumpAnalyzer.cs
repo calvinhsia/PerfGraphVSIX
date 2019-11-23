@@ -18,13 +18,13 @@ namespace Microsoft.Test.Stress
             this.logger = logger;
         }
 
-        public (Dictionary<string, int> dictTypes, Dictionary<string, int> dictStrings) AnalyzeDump(string dumpFile)
+        public void AnalyzeDump(string dumpFile, out Dictionary<string,int> dictTypes, out Dictionary<string, int> dictStrings)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
             //  /s \\calvinhw8\c$\Users\calvinh\Documents;srv*C:\Users\calvinh\AppData\Local\Temp\Symbols*;\\ddelementary\public\CalvinH\VsDbgTestDumps\VSHeapAllocDetourDump;\\ddrps\symbols;http://symweb/ m "\\calvinhw8\c$\Users\calvinh\Documents\devenvNav2files700.dmp"
             //            var symPath = @"http://symweb";
-            var dictTypes = new Dictionary<string, int>();
-            var dictStrings = new Dictionary<string, int>();
+            dictTypes = new Dictionary<string, int>();
+            dictStrings = new Dictionary<string, int>();
 
             try
             {
@@ -118,13 +118,12 @@ namespace Microsoft.Test.Stress
             {
                 logger.LogMessage($"Exception analyzing dump {ex.ToString()}");
             }
-            return (dictTypes, dictStrings);
         }
 
         public StringBuilder GetDiff(string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
-            var (dictTypes, dictStrings) = AnalyzeDump(pathDumpBase);
-            var resCurrent = AnalyzeDump(pathDumpCurrent);
+            AnalyzeDump(pathDumpBase, out var dictTypesBaseline, out var dictStringsBaseline);
+            AnalyzeDump(pathDumpCurrent, out var dictTypesCurrent, out var dictStringsCurrent);
             var sb = new StringBuilder();
             sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
             sb.AppendLine($"Below are 2 lists: the counts of Types and Strings in each dump. The 1st column is the number in the 1st dump, the 2nd is the number found in the 2nd dump and the 3rd column is the Type or String");
@@ -132,10 +131,10 @@ namespace Microsoft.Test.Stress
             sb.AppendLine($"TypesAndStrings { Path.GetFileName(pathDumpBase)} {Path.GetFileName(pathDumpCurrent)}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             sb.AppendLine();
             sb.AppendLine("Types:");
-            AnalyzeDiff(sb, dictTypes, resCurrent.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+            AnalyzeDiff(sb, dictTypesBaseline, dictTypesCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             sb.AppendLine();
             sb.AppendLine("Strings");
-            AnalyzeDiff(sb, dictStrings, resCurrent.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+            AnalyzeDiff(sb, dictStringsBaseline, dictStringsCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             logger.LogMessage($"analyzed types and strings {pathDumpBase} {pathDumpCurrent}");
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
             return sb;

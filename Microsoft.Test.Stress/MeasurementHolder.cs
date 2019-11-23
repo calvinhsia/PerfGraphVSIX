@@ -261,7 +261,6 @@ namespace Microsoft.Test.Stress
 
         public async Task<string> TakeMeasurementAsync(string desc, bool IsForInteractiveGraph = false)
         {
-            await IfApexTestDelayAsync();
             if (string.IsNullOrEmpty(desc))
             {
                 desc = TestName;
@@ -269,6 +268,10 @@ namespace Microsoft.Test.Stress
             if (PerfCounterData.ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
             {
                 GC.Collect(); // ok to collect twice
+            }
+            else
+            {
+                await IfApexTestDelayAsync();
             }
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
             foreach (var ctr in lstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
@@ -370,7 +373,6 @@ namespace Microsoft.Test.Stress
                 {
                     await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
                 }
-
             }
         }
 
