@@ -56,14 +56,13 @@ namespace TestStressDll
             var resultsFolder = string.Empty;
             using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
-                PerfCounterData.GetPerfCountersForStress().Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
-                new StressUtilOptions() { NumIterations = -1, logger = this },
+                new StressUtilOptions() { NumIterations = -1, logger = this, lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress().Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList() },
                 SampleType.SampleTypeIteration))
             {
                 resultsFolder = measurementHolder.ResultsFolder;
                 for (int iter = 0; iter < 10; iter++)
                 {
-                    foreach (var ctr in measurementHolder.lstPerfCounterData)
+                    foreach (var ctr in measurementHolder.LstPerfCounterData)
                     {
                         var val = 10000 + (uint)iter;
                         if (iter == 5 && ctr.perfCounterType == PerfCounterType.KernelHandleCount)
@@ -169,8 +168,7 @@ namespace TestStressDll
             List<LeakAnalysisResult> lstRegResults;
             using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
-                lstPCs,
-                new StressUtilOptions() { NumIterations = -1, Sensitivity = RatioThresholdSensitivity, logger = this },
+                new StressUtilOptions() { NumIterations = -1, Sensitivity = RatioThresholdSensitivity, logger = this, lstPerfCountersToUse = lstPCs },
                 SampleType.SampleTypeIteration))
             {
                 var lstBigStuff = new List<byte[]>();

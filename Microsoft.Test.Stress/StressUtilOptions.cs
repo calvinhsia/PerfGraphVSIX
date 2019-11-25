@@ -48,11 +48,17 @@ namespace Microsoft.Test.Stress
         internal VSHandler VSHandler;
 
         private bool? _isApexTest;
-        internal ILogger logger;
+        public ILogger logger; // this has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
         internal TestContextWrapper testContext;
         internal MethodInfo _theTestMethod;
+        internal List<PerfCounterData> lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress();
 
-        internal  async Task<bool> SetTest(object test)
+        /// <summary>
+        /// if we're being called from a test, pass the test in. Else being called from a dynamic asm
+        /// </summary>
+        /// <param name="test"></param>
+        /// <returns></returns>
+        internal async Task<bool> SetTest(object test)
         {
             theTest = test;
             var testType = test.GetType();
@@ -137,7 +143,20 @@ namespace Microsoft.Test.Stress
                 await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 VSHandler = vSHandler;
             }
-
+            if (lstperfCounterDataSettings != null)
+            {
+                if (lstperfCounterDataSettings != null)
+                {
+                    foreach (var userSettingItem in lstperfCounterDataSettings) // for each user settings // very small list: linear search
+                    {
+                        var pCounterToModify = lstPerfCountersToUse.Where(p => p.perfCounterType == userSettingItem.perfCounterType).FirstOrDefault();
+                        if (pCounterToModify != null)
+                        {
+                            pCounterToModify.thresholdRegression = userSettingItem.regressionThreshold;
+                        }
+                    }
+                }
+            }
             return true;
         }
         internal bool IsTestApexTest()

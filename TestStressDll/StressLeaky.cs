@@ -35,7 +35,10 @@ namespace TestStressDll
         public async Task StressLeaky()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
-            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = false });
+            await StressUtil.DoIterationsAsync(
+                this, 
+                new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = false }
+                );
 
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
         }

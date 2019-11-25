@@ -285,10 +285,8 @@ namespace MyCustomCode
             logger.LogMessage(""Starting iterations "" + NumberOfIterations.ToString());
             var measurementHolder = new MeasurementHolder(
                 ""testTODOTODO"",
-                PerfCounterData.GetPerfCountersForStress(),
                 new StressUtilOptions() { NumIterations = -1},
-                SampleType.SampleTypeIteration,
-                logger: logger);
+                SampleType.SampleTypeIteration);
 
 
             for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
@@ -468,10 +466,8 @@ namespace MyCustomCode
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
                 var measurementHolder = new MeasurementHolder(
                     ""testTODOTODO"",
-                    PerfCounterData.GetPerfCountersForStress(),
                     new StressUtilOptions() { NumIterations = -1},
-                    SampleType.SampleTypeIteration,
-                    logger: logger);
+                    SampleType.SampleTypeIteration);
 
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)

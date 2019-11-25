@@ -132,13 +132,8 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// The list of perfcounters to use
         /// </summary>
-        public readonly List<PerfCounterData> lstPerfCounterData;
-        ILogger Logger {
-            get
-            {
-                return stressUtilOptions.logger;
-            }
-        }
+        public List<PerfCounterData> LstPerfCounterData => stressUtilOptions.lstPerfCountersToUse;
+        ILogger Logger => stressUtilOptions.logger;
         readonly SampleType sampleType;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
@@ -185,6 +180,9 @@ namespace Microsoft.Test.Stress
             }
         }
         private string baseDumpFileName;
+        /// <summary>
+        /// can be null when running user compiled code
+        /// </summary>
         readonly TestContextWrapper testContext;
         readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
 
@@ -223,7 +221,6 @@ namespace Microsoft.Test.Stress
 
         /// </param>
         public MeasurementHolder(object TestNameOrTestContext,
-                    List<PerfCounterData> lstPCData,
                     StressUtilOptions stressUtilOptions,
                     SampleType sampleType)
         {
@@ -237,11 +234,10 @@ namespace Microsoft.Test.Stress
             {
                 this.TestName = TestNameOrTestContext as string;
             }
-            this.lstPerfCounterData = lstPCData;
             this.stressUtilOptions = stressUtilOptions;
             this.sampleType = sampleType;
 
-            foreach (var entry in lstPCData)
+            foreach (var entry in stressUtilOptions.lstPerfCountersToUse)
             {
                 measurements[entry.perfCounterType] = new List<uint>();
             }
@@ -269,7 +265,7 @@ namespace Microsoft.Test.Stress
             }
 
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
-            foreach (var ctr in lstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
+            foreach (var ctr in LstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
             {
                 if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))
                 {
@@ -378,7 +374,7 @@ namespace Microsoft.Test.Stress
         public Dictionary<PerfCounterType, uint> GetLastMeasurements()
         {
             var res = new Dictionary<PerfCounterType, uint>();
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForGraph))
+            foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForGraph))
             {
                 var entry = measurements[ctr.perfCounterType];
                 res[ctr.perfCounterType] = entry[entry.Count - 1];
@@ -389,7 +385,7 @@ namespace Microsoft.Test.Stress
         public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph)
         {
             var lstResults = new List<LeakAnalysisResult>();
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
+            foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
                 var leakAnalysis = new LeakAnalysisResult()
                 {
@@ -492,7 +488,7 @@ namespace Microsoft.Test.Stress
         {
             var sb = new StringBuilder();
             var lst = new List<string>();
-            foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
+            foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
                 lst.Add(ctr.PerfCounterName);
             }
@@ -501,7 +497,7 @@ namespace Microsoft.Test.Stress
             for (int i = 0; i < nSamplesTaken; i++)
             {
                 lst.Clear();
-                foreach (var ctr in lstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
+                foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
                 {
                     if (i < measurements[ctr.perfCounterType].Count)
                     {

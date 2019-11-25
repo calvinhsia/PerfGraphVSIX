@@ -134,12 +134,8 @@ namespace MyCodeToExecute
             {
                 using (var measurementHolder = new MeasurementHolder(
                     TestName,
-                    PerfCounterData.GetPerfCountersForStress(),
-                    SampleType.SampleTypeIteration,
-                    NumTotalIterations: numIterations,
-                    logger:logger,
-                    ShowUI: true,
-                    sensitivity:Sensitivity))
+                    new StressUtilOptions() { NumIterations = numIterations, ProcNamesToMonitor = string.Empty, ShowUI = true, logger = logger, Sensitivity = Sensitivity },
+                    SampleType.SampleTypeIteration))
                 {
                     var baseDumpFileName = string.Empty;
                     for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)

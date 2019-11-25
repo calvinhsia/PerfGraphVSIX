@@ -278,8 +278,7 @@
             {
                 measurementHolderInteractiveUser = new MeasurementHolder(
                     TestNameOrTestContext: MeasurementHolder.InteractiveUser,
-                    lstPCData: LstPerfCounterData,
-                    new StressUtilOptions() { NumIterations = -1, logger = this },
+                    new StressUtilOptions() { NumIterations = -1, logger = this, lstPerfCountersToUse = LstPerfCounterData },
                     sampleType: SampleType.SampleTypeNormal);
                 _dataPoints.Clear();
                 _bufferIndex = 0;
@@ -347,9 +346,9 @@
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (measurementHolder.lstPerfCounterData)
+                    lock (measurementHolder.LstPerfCounterData)
                     {
-                        foreach (var ctr in measurementHolder.lstPerfCounterData)
+                        foreach (var ctr in measurementHolder.LstPerfCounterData)
                         {
                             ctr.ResetCounter();
                         }

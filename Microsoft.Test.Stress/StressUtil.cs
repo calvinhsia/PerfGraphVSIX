@@ -43,22 +43,8 @@ namespace Microsoft.Test.Stress
                     return;
                 }
 
-                var lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress(); // very small list: linear search
-                if (stressUtilOptions.lstperfCounterDataSettings != null)
-                {
-                    foreach (var userSettingItem in stressUtilOptions.lstperfCounterDataSettings) // for each user settings
-                    {
-                        var pCounterToModify = lstPerfCountersToUse.Where(p => p.perfCounterType == userSettingItem.perfCounterType).FirstOrDefault();
-                        if (pCounterToModify != null)
-                        {
-                            pCounterToModify.thresholdRegression = userSettingItem.regressionThreshold;
-                        }
-                    }
-                }
-
                 using (var measurementHolder = new MeasurementHolder(
                     stressUtilOptions.testContext,
-                    lstPerfCountersToUse,
                     stressUtilOptions,
                     SampleType.SampleTypeIteration))
                 {
