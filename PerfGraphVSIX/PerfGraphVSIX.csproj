@@ -183,7 +183,7 @@
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
+    <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
       <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
       <Name>Microsoft.Test.Stress</Name>
     </ProjectReference>
