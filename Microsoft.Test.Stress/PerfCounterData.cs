@@ -101,7 +101,7 @@ namespace Microsoft.Test.Stress
     /// <summary>
     /// Specify a user override to the current settings. Does not add new counters: just change threshold
     /// </summary>
-    public class PerfCounterDataSetting
+    public class PerfCounterOverrideThreshold
     {
         public PerfCounterType perfCounterType;
         public float regressionThreshold;

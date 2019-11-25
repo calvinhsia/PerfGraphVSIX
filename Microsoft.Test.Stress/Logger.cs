@@ -14,6 +14,7 @@ namespace Microsoft.Test.Stress
         public List<string> _lstLoggedStrings = new List<string>();
         private readonly TestContextWrapper testContext;
         private string logFilePath;
+        public bool LogOutputToDesktopFile = false;
 
         /// <summary>
         /// Pass in a TestContext. Or null
@@ -40,13 +41,14 @@ namespace Microsoft.Test.Stress
                     Debug.WriteLine(msgstr);
                 }
                 _lstLoggedStrings.Add(msgstr);
-
-                if (string.IsNullOrEmpty(logFilePath))
+                if (LogOutputToDesktopFile)
                 {
-                    //   logFilePath = @"c:\Test\StressDataCollector.log";
-                    logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TestStressDataCollector.log"); //can't use the Test deployment folder because it gets cleaned up
+                    if (string.IsNullOrEmpty(logFilePath))
+                    {
+                        logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TestStressDataCollector.log"); //can't use the Test deployment folder because it gets cleaned up
+                    }
+                    File.AppendAllText(logFilePath, msgstr + Environment.NewLine);
                 }
-                File.AppendAllText(logFilePath, msgstr + Environment.NewLine);
             }
             catch (Exception)
             {

@@ -50,23 +50,16 @@ namespace TestStressDll
         {
             // example to set custom threshold: here we override one counter's threshold. We can also change sensitivity
             var thresh = 1e7f;
-            var lstperfCounterDataSettings = new List<PerfCounterDataSetting>
-            {
-                new PerfCounterDataSetting { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
-                new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
-                new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorVirtualBytes, regressionThreshold = 9 * thresh } ,
-                new PerfCounterDataSetting { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
-            };
             try
             {
                 var opts = new StressUtilOptions()
                 {
-                    lstperfCounterDataSettings = new List<PerfCounterDataSetting>
+                    lstperfCounterOverrideSettings = new List<PerfCounterOverrideThreshold>
                     {
-                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
-                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
-                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorVirtualBytes, regressionThreshold = 9 * thresh } ,
-                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorVirtualBytes, regressionThreshold = 9 * thresh } ,
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
                     },
                     NumIterations = 11,
                     ProcNamesToMonitor = string.Empty,

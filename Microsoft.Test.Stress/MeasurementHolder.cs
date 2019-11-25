@@ -191,35 +191,9 @@ namespace Microsoft.Test.Stress
         /// </summary>
         /// <param name="TestNameOrTestContext">When running from MSTest, the TestContext can be used to get TestName as well as various other properties. When run from VSix, the compiled code test name
         ///         When run from command line there will be no TestContext</param>
-        /// <param name="lstPCData">The list of PerfCounters to use.</param>
+        ///<param name="stressUtilOptions">Set of options to use</param>
         /// <param name="sampleType"></param>
         /// <param name="NumTotalIterations">-1 means don't take base or final dump. </param>
-        /// <param name="logger"></param>
-        /// <param name="sensitivity"></param>
-        /// <param name="IsApexTest">Apex tests use .Net remoting which has lease lifetime need to add timeout.
-        ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
-        /// Src: https://referencesource.microsoft.com/#mscorlib/system/runtime/remoting/lifetimeservices.cs,be0b61af7bd01e98
-        ///             //Gets or sets the initial lease time span for an AppDomain (default 5 min. Can only be set once per appdomain, subsequent attemps throw System.Runtime.Remoting.RemotingException: 'LeaseTime' can only be set once within an AppDomain.
-        ///             LifetimeServices.LeaseTime = TimeSpan.FromSeconds(10);
-        ///             LifetimeServices.
-        ///             
-        ///             Gets or sets the time interval between each activation of the lease manager to clean up expired leases. (default 10 seconds)
-        ///             LifetimeServices.LeaseManagerPollTime = TimeSpan.FromSeconds(10); 
-        ///             
-        /// Children of "--> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter GCRoots"
-        ///             --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter GCRoots
-        ///              --> 03916da8 System.Threading.TimerQueue StaticVar static var System.Threading.TimerQueue.s_queue PathLen= 9
-        ///               -- > 03916da8 System.Threading.TimerQueue.m_timers (#instances = 1)
-        ///               --> 0445a808 System.Threading.TimerQueueTimer.m_timerCallback (#instances = 130)
-        ///               --> 0445a7ac System.Threading.TimerCallback._target (#instances = 34)
-        ///               --> 0445a4bc System.Runtime.Remoting.Lifetime.LeaseManager.leaseToTimeTable (#instances = 1)
-        ///               --> 0445a4e4 System.Collections.Hashtable.buckets (#instances = 3225)
-        ///               --> 1de643d4 System.Collections.Hashtable+bucket[]  (#instances = 3228)
-        ///               --> 1e040eb0 System.Runtime.Remoting.Lifetime.Lease.managedObject (#instances = 135)
-        ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.<VsTextView>k__BackingField (#instances = 22)
-        ///               --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter  (#instances = 27)
-
-        /// </param>
         public MeasurementHolder(object TestNameOrTestContext,
                     StressUtilOptions stressUtilOptions,
                     SampleType sampleType)

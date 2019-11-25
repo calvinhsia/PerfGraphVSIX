@@ -120,9 +120,24 @@
             try
             {
                 LogMessage($"Starting {TipString}");
-                var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds;
-                System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime = TimeSpan.FromSeconds(2);
-                LogMessage($"Success Chaange System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval} to {System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds}");
+                var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
+                var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime;
+                if (oldval == tspanDesiredLeaseLifetime)
+                {
+                    LogMessage($"System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds already set at {oldval.TotalSeconds} secs");
+                }
+                else
+                {
+                    try
+                    {
+                        System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime = tspanDesiredLeaseLifetime;
+                        LogMessage($"Success Change System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval.TotalSeconds} secs to {System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds}");
+                    }
+                    catch (System.Runtime.Remoting.RemotingException)
+                    {
+                        LogMessage($"Failed to Change System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval.TotalSeconds} secs to {tspanDesiredLeaseLifetime.TotalSeconds} secs");
+                    }
+                }
                 LstPerfCounterData = PerfCounterData.GetPerfCountersForVSIX();
                 async Task RefreshCodeToRunAsync()
                 {

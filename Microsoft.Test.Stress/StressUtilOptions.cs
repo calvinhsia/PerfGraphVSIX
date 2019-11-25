@@ -34,13 +34,42 @@ namespace Microsoft.Test.Stress
         /// Show results automatically, like the Graph of Measurements, the Dump in ClrObjExplorer, the Diff Analysis
         /// </summary>
         public bool ShowUI = false;
-        public List<PerfCounterDataSetting> lstperfCounterDataSettings = null;
+        public List<PerfCounterOverrideThreshold> lstperfCounterOverrideSettings = null;
         /// <summary>
         ///  Specifies the iteration # at which to take a baseline. 
         ///    <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
         /// e.g. 100 iterations, with <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/>=4 means take a baseline at iteartion 100-4==96;
         /// </summary>
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
+        /// <summary>
+        /// It's hard to tell if a test is working. Test output doesn't appear til after the test has completed.
+        /// To see interim results, set this true so output is appended to a file "TestStressDataCollector.log". Note: this file is never truncated so watch it's size.
+        /// </summary>
+        public bool LoggerLogOutputToDestkop = false;
+        /// <summary>
+        /// Apex tests use .Net remoting which has a default lease lifetime of 5 minutes: need to add delay.
+        ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
+        /// Src: https://referencesource.microsoft.com/#mscorlib/system/runtime/remoting/lifetimeservices.cs,be0b61af7bd01e98
+        ///             //Gets or sets the initial lease time span for an AppDomain (default 5 min. Can only be set once per appdomain, subsequent attemps throw System.Runtime.Remoting.RemotingException: 'LeaseTime' can only be set once within an AppDomain.
+        ///             LifetimeServices.LeaseTime = TimeSpan.FromSeconds(10);
+        ///             LifetimeServices.
+        ///             
+        ///             Gets or sets the time interval between each activation of the lease manager to clean up expired leases. (default 10 seconds)
+        ///             LifetimeServices.LeaseManagerPollTime = TimeSpan.FromSeconds(10); 
+        ///             
+        /// Children of "--> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter GCRoots"
+        ///             --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter GCRoots
+        ///              --> 03916da8 System.Threading.TimerQueue StaticVar static var System.Threading.TimerQueue.s_queue PathLen= 9
+        ///               -- > 03916da8 System.Threading.TimerQueue.m_timers (#instances = 1)
+        ///               --> 0445a808 System.Threading.TimerQueueTimer.m_timerCallback (#instances = 130)
+        ///               --> 0445a7ac System.Threading.TimerCallback._target (#instances = 34)
+        ///               --> 0445a4bc System.Runtime.Remoting.Lifetime.LeaseManager.leaseToTimeTable (#instances = 1)
+        ///               --> 0445a4e4 System.Collections.Hashtable.buckets (#instances = 3225)
+        ///               --> 1de643d4 System.Collections.Hashtable+bucket[]  (#instances = 3228)
+        ///               --> 1e040eb0 System.Runtime.Remoting.Lifetime.Lease.managedObject (#instances = 135)
+        ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.<VsTextView>k__BackingField (#instances = 22)
+        ///               --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter  (#instances = 27)
+        /// </summary>
         public TimeSpan timeBetweenIterations = TimeSpan.FromSeconds(0);
 
 
@@ -49,6 +78,8 @@ namespace Microsoft.Test.Stress
 
         private bool? _isApexTest;
         public ILogger logger; // this has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
+        
+
         internal TestContextWrapper testContext;
         internal MethodInfo _theTestMethod;
         internal List<PerfCounterData> lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress();
@@ -87,6 +118,10 @@ namespace Microsoft.Test.Stress
                 if (logger == null)
                 {
                     logger = new Logger(testContext);
+                    if (logger is Logger mylogger)
+                    {
+                        mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
+                    }
                 }
             }
             logger.LogMessage($@"TestName = {testContext.TestName} 
@@ -143,11 +178,11 @@ namespace Microsoft.Test.Stress
                 await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 VSHandler = vSHandler;
             }
-            if (lstperfCounterDataSettings != null)
+            if (lstperfCounterOverrideSettings != null)
             {
-                if (lstperfCounterDataSettings != null)
+                if (lstperfCounterOverrideSettings != null)
                 {
-                    foreach (var userSettingItem in lstperfCounterDataSettings) // for each user settings // very small list: linear search
+                    foreach (var userSettingItem in lstperfCounterOverrideSettings) // for each user settings // very small list: linear search
                     {
                         var pCounterToModify = lstPerfCountersToUse.Where(p => p.perfCounterType == userSettingItem.perfCounterType).FirstOrDefault();
                         if (pCounterToModify != null)
