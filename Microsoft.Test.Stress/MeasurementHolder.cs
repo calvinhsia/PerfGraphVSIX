@@ -201,7 +201,7 @@ namespace Microsoft.Test.Stress
         /// <param name="IsApexTest">Apex tests use .Net remoting which has lease lifetime need to add timeout.
         ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
         /// Src: https://referencesource.microsoft.com/#mscorlib/system/runtime/remoting/lifetimeservices.cs,be0b61af7bd01e98
-        ///             //Gets or sets the initial lease time span for an AppDomain (default 5 min. Can only be set once per appdomain, subsequent attemps throw
+        ///             //Gets or sets the initial lease time span for an AppDomain (default 5 min. Can only be set once per appdomain, subsequent attemps throw System.Runtime.Remoting.RemotingException: 'LeaseTime' can only be set once within an AppDomain.
         ///             LifetimeServices.LeaseTime = TimeSpan.FromSeconds(10);
         ///             LifetimeServices.
         ///             

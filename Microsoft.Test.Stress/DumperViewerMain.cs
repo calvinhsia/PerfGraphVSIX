@@ -170,9 +170,7 @@ namespace Microsoft.Test.Stress
                     await Task.Run(() =>
                     {
                         LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
-                        var x = new DumpAnalyzer(this._logger);
-                        //                    x.AnalyzeDump();
-                        x.StartClrObjExplorer(_DumpFileName);
+                        DumpAnalyzer.StartClrObjExplorer(_DumpFileName);
                     });
                     _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
                 }

@@ -79,6 +79,7 @@ namespace Microsoft.Test.Stress
                 var isApexTest = IsTestApexTest(test);
                 logger.LogMessage($@"{
                     nameof(DoIterationsAsync)} TestName = {testContext.TestName} 
+                                        IsApexTest={isApexTest}
                                         NumIterations = {NumIterations}
                                         Sensitivity = {Sensitivity}
                                         CurDir = '{Environment.CurrentDirectory}'
