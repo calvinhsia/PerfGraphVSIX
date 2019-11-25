@@ -18,7 +18,7 @@ namespace Microsoft.Test.Stress
             this.logger = logger;
         }
 
-        public void AnalyzeDump(string dumpFile, out Dictionary<string,int> dictTypes, out Dictionary<string, int> dictStrings)
+        void AnalyzeDump(string dumpFile, out Dictionary<string,int> dictTypes, out Dictionary<string, int> dictStrings)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
             //  /s \\calvinhw8\c$\Users\calvinh\Documents;srv*C:\Users\calvinh\AppData\Local\Temp\Symbols*;\\ddelementary\public\CalvinH\VsDbgTestDumps\VSHeapAllocDetourDump;\\ddrps\symbols;http://symweb/ m "\\calvinhw8\c$\Users\calvinh\Documents\devenvNav2files700.dmp"
@@ -182,7 +182,7 @@ namespace Microsoft.Test.Stress
             return exeNameClrObj;
         }
 
-        public void StartClrObjExplorer(string _DumpFileName)
+        public static void StartClrObjExplorer(string _DumpFileName)
         {
             var args = $"/m \"{_DumpFileName}\"";
             Process.Start(GetClrObjExplorerPath(), args);

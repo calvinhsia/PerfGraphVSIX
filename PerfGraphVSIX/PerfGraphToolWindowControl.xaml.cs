@@ -120,7 +120,9 @@
             try
             {
                 LogMessage($"Starting {TipString}");
-
+                var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds;
+                System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime = TimeSpan.FromSeconds(2);
+                LogMessage($"Success Chaange System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval} to {System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds}");
                 LstPerfCounterData = PerfCounterData.GetPerfCountersForVSIX();
                 async Task RefreshCodeToRunAsync()
                 {
