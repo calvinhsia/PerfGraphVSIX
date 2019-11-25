@@ -32,7 +32,7 @@ namespace TestStressDll
         [ExpectedException(typeof(LeakException))]
         public async Task TestLeakyNative()
         {
-            await StressUtil.DoIterationsAsync(this, NumIterations: 17, ProcNamesToMonitor: "", ShowUI: false);
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 17, ProcNamesToMonitor = string.Empty });
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
         }
 

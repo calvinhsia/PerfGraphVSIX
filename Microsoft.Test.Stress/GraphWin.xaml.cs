@@ -42,7 +42,7 @@ namespace Microsoft.Test.Stress
             InitializeComponent();
             this.DataContext = this;
             this.measurementHolder = measurementHolder;
-            this.Title = $"{this.measurementHolder.TestName} #Iter =  {measurementHolder.NumTotalIterations}";
+            this.Title = $"{this.measurementHolder.TestName} #Iter =  {measurementHolder.stressUtilOptions.NumIterations}";
             this.WindowState = WindowState.Maximized;
             this.Loaded += GraphWin_Loaded;
         }

@@ -279,8 +279,8 @@
                 measurementHolderInteractiveUser = new MeasurementHolder(
                     TestNameOrTestContext: MeasurementHolder.InteractiveUser,
                     lstPCData: LstPerfCounterData,
+                    new StressUtilOptions() { NumIterations = -1 },
                     sampleType: SampleType.SampleTypeNormal,
-                    NumTotalIterations: -1,
                     logger: this);
                 _dataPoints.Clear();
                 _bufferIndex = 0;

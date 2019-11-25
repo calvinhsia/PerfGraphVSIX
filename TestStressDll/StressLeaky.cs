@@ -35,7 +35,7 @@ namespace TestStressDll
         public async Task StressLeaky()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
-            await StressUtil.DoIterationsAsync(this, NumIterations: 11, ProcNamesToMonitor: "", ShowUI: false);
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = false });
 
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
         }
@@ -56,14 +56,28 @@ namespace TestStressDll
             };
             try
             {
-                await StressUtil.DoIterationsAsync(this, NumIterations: 11, ProcNamesToMonitor: "", ShowUI: false, lstperfCounterDataSettings: lstperfCounterDataSettings);
+                var opts = new StressUtilOptions()
+                {
+                    lstperfCounterDataSettings = new List<PerfCounterDataSetting>
+                    {
+                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
+                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
+                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.ProcessorVirtualBytes, regressionThreshold = 9 * thresh } ,
+                        new PerfCounterDataSetting { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
+                    },
+                    NumIterations = 11,
+                    ProcNamesToMonitor = string.Empty,
+                    ShowUI = false
+
+                };
+                await StressUtil.DoIterationsAsync(this, opts);
 
             }
             catch (LeakException ex)
             {
                 // validate only one counter leaked: GCBytesInAllHeaps
                 var lkGCB = ex.lstLeakResults.Where(lk => lk.IsLeak && lk.perfCounterData.perfCounterType == PerfCounterType.GCBytesInAllHeaps).FirstOrDefault();
-                if ( lkGCB != null &&
+                if (lkGCB != null &&
                 //if (ex.lstLeakResults.Where(lk => lk.IsLeak && lk.perfCounterData.perfCounterType == PerfCounterType.GCBytesInAllHeaps).FirstOrDefault() != null &&
                     ex.lstLeakResults.Where(lk => lk.IsLeak).Count() == 1
                     )
@@ -88,7 +102,7 @@ namespace TestStressDll
         [Description("Sensitivity Leak a very small string of 14 chars")]
         public async Task StressLeakyDetectVerySmallLeak()
         {
-            await StressUtil.DoIterationsAsync(this, NumIterations: 711, ProcNamesToMonitor: "", Sensitivity: 1e6, ShowUI: false, DelayMultiplier: 0);
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 711, ProcNamesToMonitor = "", Sensitivity = 1e6, DelayMultiplier = 0 });
 
             myList.Add($"leaking string" + "asdfafsdfasdfasd".Substring(0, 14));// needs to be done at runtime to create a diff string each iter. Time dominated by GC
         }
@@ -101,7 +115,7 @@ namespace TestStressDll
             int numiter = 11;
             try
             {
-                await StressUtil.DoIterationsAsync(this, NumIterations: numiter, ProcNamesToMonitor: "", ShowUI: false);
+                await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = numiter, ProcNamesToMonitor = "" });
 
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
             }
@@ -160,7 +174,14 @@ namespace TestStressDll
             MemSpectAttribute attr = (MemSpectAttribute)(test.GetType().GetMethod(TestContext.TestName).GetCustomAttribute(typeof(MemSpectAttribute)));
 
             //            MemSpectAttribute attr = (MemSpectAttribute)_theTestMethod.GetCustomAttribute(typeof(MemSpectAttribute)));
-            await StressUtil.DoIterationsAsync(this, NumIterations: attr.NumIterations, attr.Sensitivity, ProcNamesToMonitor: "");
+            await StressUtil.DoIterationsAsync(
+                this,
+                new StressUtilOptions()
+                {
+                    NumIterations = attr.NumIterations,
+                    Sensitivity = attr.Sensitivity,
+                    ProcNamesToMonitor = ""
+                });
 
         }
     }

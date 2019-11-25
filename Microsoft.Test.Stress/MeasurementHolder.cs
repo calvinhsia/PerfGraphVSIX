@@ -127,6 +127,7 @@ namespace Microsoft.Test.Stress
         public const string InteractiveUser = "InteractiveUser";
         public const string DiffFileName = "String and Type Count differences";
         public string TestName;
+        internal readonly StressUtilOptions stressUtilOptions;
 
         /// <summary>
         /// The list of perfcounters to use
@@ -134,12 +135,6 @@ namespace Microsoft.Test.Stress
         public readonly List<PerfCounterData> lstPerfCounterData;
         readonly ILogger logger;
         readonly SampleType sampleType;
-        readonly double sensitivity;
-        public readonly int NumTotalIterations;
-        private readonly int NumIterationsBeforeTotalToTakeBaselineSnapshot;
-        private readonly bool ShowUI;
-        private readonly bool IsApexTest;
-        private readonly int DelayMultiplier;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
 
@@ -224,14 +219,9 @@ namespace Microsoft.Test.Stress
         /// </param>
         public MeasurementHolder(object TestNameOrTestContext,
                     List<PerfCounterData> lstPCData,
+                    StressUtilOptions stressUtilOptions,
                     SampleType sampleType,
-                    ILogger logger,
-                    int NumTotalIterations,
-                    int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4,
-                    bool ShowUI = false,
-                    double sensitivity = 1.0f,
-                    int DelayMultiplier = 1,
-                    bool IsApexTest = false)
+                    ILogger logger)
         {
             if (TestNameOrTestContext is TestContextWrapper)
             {
@@ -244,14 +234,9 @@ namespace Microsoft.Test.Stress
                 this.TestName = TestNameOrTestContext as string;
             }
             this.lstPerfCounterData = lstPCData;
+            this.stressUtilOptions = stressUtilOptions;
             this.sampleType = sampleType;
             this.logger = logger;
-            this.sensitivity = sensitivity;
-            this.NumTotalIterations = NumTotalIterations;
-            this.NumIterationsBeforeTotalToTakeBaselineSnapshot = NumIterationsBeforeTotalToTakeBaselineSnapshot;
-            this.ShowUI = ShowUI;
-            this.IsApexTest = IsApexTest;
-            this.DelayMultiplier = DelayMultiplier;
 
             foreach (var entry in lstPCData)
             {
@@ -265,14 +250,21 @@ namespace Microsoft.Test.Stress
             {
                 desc = TestName;
             }
-            if (PerfCounterData.ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
+            await Task.Delay(stressUtilOptions.timeBetweenIterations);
+
+            if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
             {
-                GC.Collect(); // ok to collect twice
+                GC.Collect();
             }
             else
             {
-                await IfApexTestDelayAsync();
+                // we just finished executing the user code. The IDE might be busy executing the last request.
+                // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
+                await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
             }
+
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
             foreach (var ctr in lstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
             {
@@ -300,10 +292,10 @@ namespace Microsoft.Test.Stress
             {
                 nSamplesTaken++;
             }
-            if (NumTotalIterations >= NumIterationsBeforeTotalToTakeBaselineSnapshot)
+            if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
-                if (nSamplesTaken == NumTotalIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot)
+                if (nSamplesTaken == stressUtilOptions.NumIterations - stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
                 {
                     logger.LogMessage("Taking base snapshot dump");
                     baseDumpFileName = await CreateDumpAsync(
@@ -312,11 +304,11 @@ namespace Microsoft.Test.Stress
                         memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
                     lstFileResults.Add(new FileResultsData() { filename = baseDumpFileName, description = $"BaselineDumpFile taken after iteration # {nSamplesTaken}" });
                 }
-                else if (nSamplesTaken == NumTotalIterations) // final snapshot?
+                else if (nSamplesTaken == stressUtilOptions.NumIterations) // final snapshot?
                 {
                     var filenameResultsCSV = DumpOutMeasurementsToCsv();
                     logger.LogMessage($"Measurement Results {filenameResultsCSV}");
-                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: ShowUI))
+                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI))
                         .Where(r => r.IsLeak).ToList();
                     if (lstLeakResults.Count > 0)
                     {
@@ -326,19 +318,19 @@ namespace Microsoft.Test.Stress
                         }
                         var currentDumpFile = await CreateDumpAsync(
                             PerfCounterData.ProcToMonitor.Id,
-                            desc: TestName + "_" + NumTotalIterations.ToString(),
-                            memoryAnalysisType: ShowUI ? MemoryAnalysisType.StartClrObjExplorer : MemoryAnalysisType.JustCreateDump);
+                            desc: TestName + "_" + stressUtilOptions.NumIterations.ToString(),
+                            memoryAnalysisType: stressUtilOptions.ShowUI ? MemoryAnalysisType.StartClrObjExplorer : MemoryAnalysisType.JustCreateDump);
                         lstFileResults.Add(new FileResultsData() { filename = currentDumpFile, description = "CurrentDumpFile" });
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
                             var oDumpAnalyzer = new DumpAnalyzer(logger);
                             var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
                                             currentDumpFile,
-                                            NumTotalIterations,
-                                            NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                                            stressUtilOptions.NumIterations,
+                                            stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);
                             var fname = Path.Combine(ResultsFolder, $"{TestName} {DiffFileName}.txt");
                             File.WriteAllText(fname, sb.ToString());
-                            if (ShowUI)
+                            if (stressUtilOptions.ShowUI)
                             {
                                 Process.Start(fname);
                             }
@@ -359,22 +351,22 @@ namespace Microsoft.Test.Stress
             return sBuilderMeasurementResult.ToString();
         }
 
-        private async Task IfApexTestDelayAsync()
-        {
-            if (IsApexTest)
-            {
-                var ApexLeaseDelay = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime + TimeSpan.FromSeconds(10 * DelayMultiplier); // a little more than the lease lifetime
-                logger.LogMessage($"Apex test: waiting {ApexLeaseDelay.TotalSeconds:n0} seconds for leaselifetime to expire");
-                await Task.Delay(ApexLeaseDelay);
-            }
-            else
-            {
-                if (PerfCounterData.ProcToMonitor.Id != Process.GetCurrentProcess().Id)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
-                }
-            }
-        }
+        //private async Task IfApexTestDelayAsync()
+        //{
+        //    if (stressUtilOptions.IsTestApexTest())
+        //    {
+        //        var ApexLeaseDelay = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime + TimeSpan.FromSeconds(10 * stressUtilOptions.DelayMultiplier); // a little more than the lease lifetime
+        //        logger.LogMessage($"Apex test: waiting {ApexLeaseDelay.TotalSeconds:n0} seconds for leaselifetime to expire");
+        //        await Task.Delay(ApexLeaseDelay);
+        //    }
+        //    else
+        //    {
+        //        if (PerfCounterData.ProcToMonitor.Id != Process.GetCurrentProcess().Id)
+        //        {
+        //            await Task.Delay(TimeSpan.FromSeconds(2 * stressUtilOptions.DelayMultiplier));
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// get the counter for graphing
@@ -399,7 +391,7 @@ namespace Microsoft.Test.Stress
                 var leakAnalysis = new LeakAnalysisResult()
                 {
                     perfCounterData = ctr,
-                    sensitivity = this.sensitivity
+                    sensitivity = stressUtilOptions.Sensitivity
                 };
                 int ndx = 1;
                 foreach (var itm in measurements[ctr.perfCounterType])

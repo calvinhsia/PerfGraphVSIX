@@ -286,8 +286,8 @@ namespace MyCustomCode
             var measurementHolder = new MeasurementHolder(
                 ""testTODOTODO"",
                 PerfCounterData.GetPerfCountersForStress(),
+                new StressUtilOptions() { NumIterations = -1},
                 SampleType.SampleTypeIteration,
-                NumTotalIterations: NumberOfIterations,
                 logger: logger);
 
 
@@ -469,8 +469,8 @@ namespace MyCustomCode
                 var measurementHolder = new MeasurementHolder(
                     ""testTODOTODO"",
                     PerfCounterData.GetPerfCountersForStress(),
+                    new StressUtilOptions() { NumIterations = -1},
                     SampleType.SampleTypeIteration,
-                    NumTotalIterations: 4,
                     logger: logger);
 
 
