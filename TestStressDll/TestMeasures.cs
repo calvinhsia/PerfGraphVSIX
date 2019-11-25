@@ -57,9 +57,8 @@ namespace TestStressDll
             using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
                 PerfCounterData.GetPerfCountersForStress().Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList(),
-                new StressUtilOptions() { NumIterations = -1},
-                SampleType.SampleTypeIteration,
-                logger: this))
+                new StressUtilOptions() { NumIterations = -1, logger = this },
+                SampleType.SampleTypeIteration))
             {
                 resultsFolder = measurementHolder.ResultsFolder;
                 for (int iter = 0; iter < 10; iter++)
@@ -171,9 +170,8 @@ namespace TestStressDll
             using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
                 lstPCs,
-                new StressUtilOptions() { NumIterations = -1, Sensitivity = RatioThresholdSensitivity },
-                SampleType.SampleTypeIteration,
-                this))
+                new StressUtilOptions() { NumIterations = -1, Sensitivity = RatioThresholdSensitivity, logger = this },
+                SampleType.SampleTypeIteration))
             {
                 var lstBigStuff = new List<byte[]>();
                 LogMessage($"nIter={nIter:n0} ArraySize= {nArraySize:n0}");

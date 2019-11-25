@@ -133,7 +133,12 @@ namespace Microsoft.Test.Stress
         /// The list of perfcounters to use
         /// </summary>
         public readonly List<PerfCounterData> lstPerfCounterData;
-        readonly ILogger logger;
+        ILogger Logger {
+            get
+            {
+                return stressUtilOptions.logger;
+            }
+        }
         readonly SampleType sampleType;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         int nSamplesTaken;
@@ -220,8 +225,7 @@ namespace Microsoft.Test.Stress
         public MeasurementHolder(object TestNameOrTestContext,
                     List<PerfCounterData> lstPCData,
                     StressUtilOptions stressUtilOptions,
-                    SampleType sampleType,
-                    ILogger logger)
+                    SampleType sampleType)
         {
             if (TestNameOrTestContext is TestContextWrapper)
             {
@@ -236,7 +240,6 @@ namespace Microsoft.Test.Stress
             this.lstPerfCounterData = lstPCData;
             this.stressUtilOptions = stressUtilOptions;
             this.sampleType = sampleType;
-            this.logger = logger;
 
             foreach (var entry in lstPCData)
             {
@@ -297,7 +300,7 @@ namespace Microsoft.Test.Stress
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
                 if (nSamplesTaken == stressUtilOptions.NumIterations - stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
                 {
-                    logger.LogMessage("Taking base snapshot dump");
+                    Logger.LogMessage("Taking base snapshot dump");
                     baseDumpFileName = await CreateDumpAsync(
                         System.Diagnostics.Process.GetCurrentProcess().Id,
                         desc: TestName + "_" + nSamplesTaken.ToString(),
@@ -307,14 +310,14 @@ namespace Microsoft.Test.Stress
                 else if (nSamplesTaken == stressUtilOptions.NumIterations) // final snapshot?
                 {
                     var filenameResultsCSV = DumpOutMeasurementsToCsv();
-                    logger.LogMessage($"Measurement Results {filenameResultsCSV}");
+                    Logger.LogMessage($"Measurement Results {filenameResultsCSV}");
                     var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI))
                         .Where(r => r.IsLeak).ToList();
                     if (lstLeakResults.Count > 0)
                     {
                         foreach (var leak in lstLeakResults)
                         {
-                            logger.LogMessage($"Leak Detected!!!!! {leak}");
+                            Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
                         var currentDumpFile = await CreateDumpAsync(
                             PerfCounterData.ProcToMonitor.Id,
@@ -323,7 +326,7 @@ namespace Microsoft.Test.Stress
                         lstFileResults.Add(new FileResultsData() { filename = currentDumpFile, description = "CurrentDumpFile" });
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
-                            var oDumpAnalyzer = new DumpAnalyzer(logger);
+                            var oDumpAnalyzer = new DumpAnalyzer(Logger);
                             var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
@@ -335,11 +338,11 @@ namespace Microsoft.Test.Stress
                                 Process.Start(fname);
                             }
                             lstFileResults.Add(new FileResultsData() { filename = fname, description = "Differences for Type and String counts" });
-                            logger.LogMessage("DumpDiff Analysis " + fname);
+                            Logger.LogMessage("DumpDiff Analysis " + fname);
                         }
                         else
                         {
-                            logger.LogMessage($"No baseline dump: not enough iterations");
+                            Logger.LogMessage($"No baseline dump: not enough iterations");
                         }
                         if (this.testContext != null)
                         {
@@ -399,7 +402,7 @@ namespace Microsoft.Test.Stress
                     leakAnalysis.lstData.Add(new PointF() { X = ndx++, Y = itm });
                 }
                 leakAnalysis.rmsError = FindLinearLeastSquaresFit(leakAnalysis.lstData, out leakAnalysis.slope, out leakAnalysis.yintercept);
-                logger.LogMessage($"{leakAnalysis}");
+                Logger.LogMessage($"{leakAnalysis}");
                 lstResults.Add(leakAnalysis);
             }
             if (showGraph)
@@ -407,7 +410,7 @@ namespace Microsoft.Test.Stress
                 var tcs = new TaskCompletionSource<int>();
                 // if we're running in testhost process, then we want a timeout
                 var timeoutEnabled = this.testContext != null;
-                logger.LogMessage($"Showing graph  timeoutenabled ={timeoutEnabled}");
+                Logger.LogMessage($"Showing graph  timeoutenabled ={timeoutEnabled}");
                 var thr = new Thread((o) =>
                 {
                     try
@@ -419,11 +422,11 @@ namespace Microsoft.Test.Stress
                             //                            graphWin.WindowState = WindowState.Maximized;
                         }
                         graphWin.ShowDialog();
-                        logger.LogMessage($"finished showing graph");
+                        Logger.LogMessage($"finished showing graph");
                     }
                     catch (Exception ex)
                     {
-                        logger.LogMessage($"graph {ex.ToString()}");
+                        Logger.LogMessage($"graph {ex.ToString()}");
                     }
                     tcs.SetResult(0);
                 });
@@ -431,7 +434,7 @@ namespace Microsoft.Test.Stress
                 thr.Start();
                 if (await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(120))) != tcs.Task)
                 {
-                    logger.LogMessage($"Timedout showing graph");
+                    Logger.LogMessage($"Timedout showing graph");
                 }
             }
             // do this after showgraph else hang
@@ -506,7 +509,7 @@ namespace Microsoft.Test.Stress
                     }
                     else
                     {
-                        logger.LogMessage($"Index out of range {ctr.PerfCounterName}  {i}  {measurements[ctr.perfCounterType].Count}");
+                        Logger.LogMessage($"Index out of range {ctr.PerfCounterName}  {i}  {measurements[ctr.perfCounterType].Count}");
                     }
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
@@ -529,18 +532,18 @@ namespace Microsoft.Test.Stress
                     };
                 if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjExplorer))
                 {
-                    logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
+                    Logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
                     arglist.Add("-c");
                 }
                 var odumper = new DumperViewerMain(arglist.ToArray())
                 {
-                    _logger = logger
+                    _logger = Logger
                 };
                 await odumper.DoitAsync();
             }
             catch (Exception ex)
             {
-                logger.LogMessage(ex.ToString());
+                Logger.LogMessage(ex.ToString());
             }
             return pathDumpFile;
         }
@@ -590,7 +593,7 @@ namespace Microsoft.Test.Stress
         {
             if (this.testContext != null)
             {
-                if (logger is Logger myLogger)
+                if (Logger is Logger myLogger)
                 {
                     var sb = new StringBuilder();
                     foreach (var str in myLogger._lstLoggedStrings)
