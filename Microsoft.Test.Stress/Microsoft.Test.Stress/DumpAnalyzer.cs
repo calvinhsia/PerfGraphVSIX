@@ -179,7 +179,7 @@ namespace Microsoft.Test.Stress
                         var UnZippedFolder = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), "ClrObjExplorer");
                         if (Directory.Exists(UnZippedFolder))
                         {
-                            Directory.Delete(UnZippedFolder);
+                            Directory.Delete(UnZippedFolder, recursive: true);
                         }
                         ZipFile.ExtractToDirectory(zipNameClrObjTry, UnZippedFolder);
                         exeNameClrObj = Path.Combine(UnZippedFolder, "ClrObjExplorer.exe");
