@@ -105,7 +105,7 @@ namespace TestStressDll
             var eatmem = new byte[1024 * 1024 * 8];
 
             // too small to trigger threshold, but close to boundary, so making more sensitive triggers regression
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 3f);
+            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 5f);
             Assert.IsTrue(res, $"Expected Regression because more sensitive");
         }
 
