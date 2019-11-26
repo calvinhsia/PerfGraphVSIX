@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,7 +19,7 @@ namespace Microsoft.Test.Stress
             this.logger = logger;
         }
 
-        void AnalyzeDump(string dumpFile, out Dictionary<string,int> dictTypes, out Dictionary<string, int> dictStrings)
+        void AnalyzeDump(string dumpFile, out Dictionary<string, int> dictTypes, out Dictionary<string, int> dictStrings)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
             //  /s \\calvinhw8\c$\Users\calvinh\Documents;srv*C:\Users\calvinh\AppData\Local\Temp\Symbols*;\\ddelementary\public\CalvinH\VsDbgTestDumps\VSHeapAllocDetourDump;\\ddrps\symbols;http://symweb/ m "\\calvinhw8\c$\Users\calvinh\Documents\devenvNav2files700.dmp"
@@ -160,26 +161,37 @@ namespace Microsoft.Test.Stress
             }
         }
 
+        static string _ClrObjExplorerExe = null;
         public static string GetClrObjExplorerPath()
         {
-            string exeNameClrObj = null;
-            var searchpaths = new[] { string.Empty, @"..\..\" }; // works with nuget deployment too
-            foreach (var tryPath in searchpaths)
+            if (_ClrObjExplorerExe == null)
             {
-                var exeNameClrObjTry = Path.Combine(
-                   Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location),
-                   tryPath + "ClrObjExplorer",
-                   "ClrObjExplorer.exe");
-                if (File.Exists(exeNameClrObjTry))
+                string exeNameClrObj = null;
+                var searchpaths = new[] { string.Empty, @"..\..\" }; // works with nuget deployment too
+                foreach (var tryPath in searchpaths)
                 {
-                    exeNameClrObj = exeNameClrObjTry;
+                    var zipNameClrObjTry = Path.Combine(
+                       Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location),
+                       tryPath + "ClrObjExplorer",
+                       "ClrObjExplorer.zip");
+                    if (File.Exists(zipNameClrObjTry)) // todo: don't unzip every time... 
+                    {
+                        var UnZippedFolder = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), "ClrObjExplorer");
+                        if (Directory.Exists(UnZippedFolder))
+                        {
+                            Directory.Delete(UnZippedFolder);
+                        }
+                        ZipFile.ExtractToDirectory(zipNameClrObjTry, UnZippedFolder);
+                        exeNameClrObj = Path.Combine(UnZippedFolder, "ClrObjExplorer.exe");
+                    }
                 }
+                if (string.IsNullOrEmpty(exeNameClrObj))
+                {
+                    throw new FileNotFoundException($"Looking for ClrObjExplorer.zip relative to {Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location)}");
+                }
+                _ClrObjExplorerExe = exeNameClrObj;
             }
-            if (string.IsNullOrEmpty(exeNameClrObj))
-            {
-                throw new FileNotFoundException($"Looking for ClrObjExplorer.exe relative to {Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location)}");
-            }
-            return exeNameClrObj;
+            return _ClrObjExplorerExe;
         }
 
         public static void StartClrObjExplorer(string _DumpFileName)
