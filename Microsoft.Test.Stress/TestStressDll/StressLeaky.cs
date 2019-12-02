@@ -31,13 +31,13 @@ namespace TestStressDll
 
 
         [TestMethod]
-//        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeaky()
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
             await StressUtil.DoIterationsAsync(
                 this, 
-                new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = true }
+                new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = false }
                 );
 
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
