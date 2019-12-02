@@ -301,13 +301,13 @@ namespace Microsoft.Test.Stress
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
                                             stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                            var fname = Path.Combine(ResultsFolder, $"{TestName} {DiffFileName}.txt");
+                            var fname = Path.Combine(ResultsFolder, $"{TestName} {DiffFileName}_{nSamplesTaken}.txt");
                             File.WriteAllText(fname, sb.ToString());
                             if (stressUtilOptions.ShowUI)
                             {
                                 Process.Start(fname);
                             }
-                            lstFileResults.Add(new FileResultsData() { filename = fname, description = "Differences for Type and String counts" });
+                            lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {nSamplesTaken}" });
                             Logger.LogMessage("DumpDiff Analysis " + fname);
                         }
                         else
