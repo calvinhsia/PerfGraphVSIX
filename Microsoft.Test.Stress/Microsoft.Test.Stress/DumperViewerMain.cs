@@ -181,6 +181,10 @@ namespace Microsoft.Test.Stress
             }
         }
 
+        /// <summary>
+        /// Temppath + "PerfGraphVSIX"
+        /// </summary>
+        /// <returns></returns>
         public static string EnsureResultsFolderExists()
         {
             var dirMyTemp = Path.Combine(Path.GetTempPath(), "PerfGraphVSIX");

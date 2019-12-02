@@ -1,4 +1,5 @@
 ﻿//using Microsoft.Diagnostics.Runtime;
+using EnvDTE;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -166,30 +168,25 @@ namespace Microsoft.Test.Stress
         {
             if (_ClrObjExplorerExe == null)
             {
-                string exeNameClrObj = null;
-                var searchpaths = new[] { string.Empty, @"..\..\" }; // works with nuget deployment too
-                foreach (var tryPath in searchpaths)
+                var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), "ClrObjExplorer");
+                try
                 {
-                    var zipNameClrObjTry = Path.Combine(
-                       Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location),
-                       tryPath + "ClrObjExplorer",
-                       "ClrObjExplorer.zip");
-                    if (File.Exists(zipNameClrObjTry)) // todo: don't unzip every time... 
+                    if (Directory.Exists(clrObjDir))
                     {
-                        var UnZippedFolder = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), "ClrObjExplorer");
-                        if (Directory.Exists(UnZippedFolder))
-                        {
-                            Directory.Delete(UnZippedFolder, recursive: true);
-                        }
-                        ZipFile.ExtractToDirectory(zipNameClrObjTry, UnZippedFolder);
-                        exeNameClrObj = Path.Combine(UnZippedFolder, "ClrObjExplorer.exe");
+                        Directory.Delete(clrObjDir, recursive: true);
                     }
+                    Directory.CreateDirectory(clrObjDir);
+                    var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
+                    var zipArray = Microsoft.Test.Stress.Properties.Resources.ClrObjExplorer;
+                    File.WriteAllBytes(tempZipFile, zipArray);
+                    ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
                 }
-                if (string.IsNullOrEmpty(exeNameClrObj))
+                catch (IOException) { }
+                catch (UnauthorizedAccessException)
                 {
-                    throw new FileNotFoundException($"Looking for ClrObjExplorer.zip relative to {Path.GetDirectoryName(typeof(DumpAnalyzer).Assembly.Location)}");
+                    // use existing ClrObjExplorer: user may have left it open examining a prior trace (Unauth exce if in use) or it could be 
                 }
-                _ClrObjExplorerExe = exeNameClrObj;
+                _ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
             }
             return _ClrObjExplorerExe;
         }
@@ -197,7 +194,7 @@ namespace Microsoft.Test.Stress
         public static void StartClrObjExplorer(string _DumpFileName)
         {
             var args = $"/m \"{_DumpFileName}\"";
-            Process.Start(GetClrObjExplorerPath(), args);
+            System.Diagnostics.Process.Start(GetClrObjExplorerPath(), args);
         }
     }
 }
