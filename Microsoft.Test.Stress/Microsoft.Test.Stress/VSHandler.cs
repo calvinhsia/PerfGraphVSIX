@@ -204,6 +204,10 @@ namespace Microsoft.Test.Stress
                 }
                 await Task.Delay(1000); // one second (no multiplier needed)
             }
+            if (dte == null)
+            {
+                logger.LogMessage($"Couldn't get DTE in {timeout.TotalSeconds:n0} secs");
+            }
             return dte;
         }
 

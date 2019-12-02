@@ -32,7 +32,11 @@ namespace TestStressDll
         [ExpectedException(typeof(LeakException))]
         public async Task TestLeakyNative()
         {
-            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 17, ProcNamesToMonitor = string.Empty });
+            var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
+            {
+                new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 1024*1024 * 1.1f} ,
+            };
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 17, ProcNamesToMonitor = string.Empty, lstperfCounterOverrideSettings = lstperfCounterOverrideDataSettings });
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 1024 * 1024));
         }
 
@@ -44,7 +48,7 @@ namespace TestStressDll
         public async Task TestLeakyDetectNativeVerySmallLeak()
         {
             var thresh = 1e3f;
-            var lstperfCounterDataSettings = new List<PerfCounterOverrideThreshold>
+            var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
             {
                 new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = 9 * thresh } ,// use a very high thresh so this counter won't show as leak
                 new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = thresh} ,
@@ -52,7 +56,7 @@ namespace TestStressDll
                 new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
             };
 
-            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 201, ProcNamesToMonitor = string.Empty, lstperfCounterOverrideSettings = lstperfCounterDataSettings, ShowUI = false });
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 201, ProcNamesToMonitor = string.Empty, lstperfCounterOverrideSettings = lstperfCounterOverrideDataSettings, ShowUI = false });
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 10000));
         }
 

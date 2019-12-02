@@ -34,3 +34,24 @@ C:\Users\calvinh\Source\repos\PerfGraphVSIX\StressTestUtility>
 nuget pack StressTestUtility.csproj -prop Configuration=Release -OutputDirectory bin\release
 ***!!! replace versionnumber:
 rem nuget push bin\release\StressTestUtility.1.0.0.121.nupkg oy2kaerby7bconfmf5qazrjif7b7tyuenmlppplvt2qefy -src https://api.nuget.org/v3/index.json
+
+
+
+
+
+Problem: 
+
+Putting the current stress code in the validation repo
+
+•	There are NO dependencies between existing Validation code and Stress code.
+•	The Validation Solution has 88 projects. Mine will add 6 projs
+•	Because mine includes a VSIX it will require everyone using that repo to add Workload to build VS Extensions.
+•	Every checkin will require code review.
+•	Need 5 gig space for Validation repo
+•	With same solution, my tests will be intermingled with all other Validation tests
+•	Some of my tests are Expected to fail (even with ExpectedException) because they show UI
+•	Much of my code is used for dev desktop execution analysis as well as unattended lab execution
+•	When I make changes to the desktop execution, I need to check into the Validation repo, triggering a needless CI build
+•	Solution wide style cop rules, etc.
+•	I work on 3 different machines: Syncing my changes from one machine to another requires syncing entire Validation repo
+•	Finding history of my changes intermingled with entire repo history

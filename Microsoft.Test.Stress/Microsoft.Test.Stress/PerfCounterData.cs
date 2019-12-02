@@ -98,6 +98,7 @@ namespace Microsoft.Test.Stress
         ThreadCount = 0x10000,
     }
 
+    [Serializable]
     /// <summary>
     /// Specify a user override to the current settings. Does not add new counters: just change threshold
     /// </summary>

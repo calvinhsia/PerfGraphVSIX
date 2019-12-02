@@ -223,7 +223,7 @@ namespace Microsoft.Test.Stress
             {
                 desc = TestName;
             }
-            await Task.Delay(stressUtilOptions.timeBetweenIterations);
+            await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsBetweenIterations));
 
             if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
             {

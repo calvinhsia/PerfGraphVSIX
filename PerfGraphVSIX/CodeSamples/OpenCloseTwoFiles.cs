@@ -40,13 +40,13 @@ namespace MyCodeToExecute
         {
             g_dte.ExecuteCommand("File.OpenFile", file1);
             await Task.Delay(2000, _CancellationTokenExecuteCode); // wait one second to allow UI thread to catch  up
-            g_dte.ExecuteCommand("File.Close", file1);
+            g_dte.ExecuteCommand("File.Close");
             await Task.Delay(2000, _CancellationTokenExecuteCode); // wait one second to allow UI thread to catch  up
 
 
             g_dte.ExecuteCommand("File.OpenFile", file2);
             await Task.Delay(2000, _CancellationTokenExecuteCode); // wait one second to allow UI thread to catch  up
-            g_dte.ExecuteCommand("File.Close", file2);
+            g_dte.ExecuteCommand("File.Close");
             await Task.Delay(2000, _CancellationTokenExecuteCode); // wait one second to allow UI thread to catch  up
         }
         public override async Task DoCleanupAsync()

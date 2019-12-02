@@ -5,9 +5,11 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace Microsoft.Test.Stress
 {
+    [Serializable]
     public class StressUtilOptions
     {
         /// <summary>
@@ -70,14 +72,18 @@ namespace Microsoft.Test.Stress
         ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.<VsTextView>k__BackingField (#instances = 22)
         ///               --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter  (#instances = 27)
         /// </summary>
-        public TimeSpan timeBetweenIterations = TimeSpan.FromSeconds(0);
+        public int SecsBetweenIterations = 0;
 
 
         private object theTest;
         internal VSHandler VSHandler;
 
         private bool? _isApexTest;
-        public ILogger logger; // this has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
+        [XmlIgnore]
+        /// <summary>
+        /// used internally, but has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
+        /// </summary>
+        public ILogger logger;
         
 
         internal TestContextWrapper testContext;

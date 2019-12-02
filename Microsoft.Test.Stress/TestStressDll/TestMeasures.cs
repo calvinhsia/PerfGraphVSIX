@@ -123,7 +123,7 @@ namespace TestStressDll
         {
             //            var cts = new CancellationTokenSource();
             var lstHandles = new List<HANDLE>();
-            var res = await DoStressSimulation(nIter: 10, nArraySize: 0, RatioThresholdSensitivity: 1, () =>
+            var res = await DoStressSimulation(nIter: 10, nArraySize: 0, RatioThresholdSensitivity: 1, action: () =>
             {
                 // see https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3803/CancellationToken-and-CancellationTokenSource-Leaks
                 for (int i = 0; i < 1; i++)

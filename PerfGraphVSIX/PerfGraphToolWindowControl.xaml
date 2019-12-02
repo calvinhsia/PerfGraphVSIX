@@ -68,7 +68,7 @@
                 <StackPanel Orientation="Vertical">
                     <Label Content="Opened TextViews" ToolTip="Views that are currently opened. (Refreshed by UpdateInterval, which does GC)"/>
                     <ListBox ItemsSource="{Binding OpenedViews}" MaxHeight = "400"/>
-                    <Label Content="Leaked TextViews" ToolTip="Views that have ITextView.IsClosed==true, but still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh"/>
+                    <Label Content="Leaked TextViews" ToolTip="Each row is a views that has ITextView.IsClosed==true, but is still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh"/>
                     <ListBox ItemsSource="{Binding LeakedViews}" MaxHeight = "400"/>
                 </StackPanel>
             </TabItem>
