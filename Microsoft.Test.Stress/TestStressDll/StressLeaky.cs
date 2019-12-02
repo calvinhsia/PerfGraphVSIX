@@ -27,8 +27,13 @@ namespace TestStressDll
             public string MyString = ($"leaking string" + DateTime.Now.ToString()).Substring(0, 14); // make a calculated non-unique string so it looks like a leak
         }
 
-        readonly List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+        List<BigStuffWithLongNameSoICanSeeItBetter> _lst;
 
+        [TestInitialize]
+        public void TestInit()
+        {
+            _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+        }
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
