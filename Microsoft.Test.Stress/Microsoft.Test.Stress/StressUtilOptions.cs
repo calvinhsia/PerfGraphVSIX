@@ -75,6 +75,12 @@ namespace Microsoft.Test.Stress
         public int SecsBetweenIterations = 0;
 
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public int SecsToWaitForDevenv = 60; 
+
+
         private object theTest;
         internal VSHandler VSHandler;
 
@@ -181,7 +187,7 @@ namespace Microsoft.Test.Stress
                         testContext.Properties[StressUtil.PropNameVSHandler] = vSHandler;
                     }
                 }
-                await vSHandler?.EnsureGotDTE(); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
+                await vSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv)); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 VSHandler = vSHandler;
             }
             if (lstperfCounterOverrideSettings != null)
