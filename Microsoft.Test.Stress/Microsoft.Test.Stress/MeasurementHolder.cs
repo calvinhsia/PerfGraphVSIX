@@ -272,7 +272,7 @@ namespace Microsoft.Test.Stress
                 {
                     Logger.LogMessage("Taking base snapshot dump");
                     baseDumpFileName = await CreateDumpAsync(
-                        System.Diagnostics.Process.GetCurrentProcess().Id,
+                        PerfCounterData.ProcToMonitor.Id,
                         desc: TestName + "_" + nSamplesTaken.ToString(),
                         memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
                     lstFileResults.Add(new FileResultsData() { filename = baseDumpFileName, description = $"BaselineDumpFile taken after iteration # {nSamplesTaken}" });
