@@ -39,8 +39,8 @@ namespace Microsoft.Test.Stress
         public List<PerfCounterOverrideThreshold> lstperfCounterOverrideSettings = null;
         /// <summary>
         ///  Specifies the iteration # at which to take a baseline. 
-        ///    <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/> is subtracted from <paramref name="NumIterations"/> to get the baseline iteration number
-        /// e.g. 100 iterations, with <paramref name="NumIterationsBeforeTotalToTakeBaselineSnapshot"/>=4 means take a baseline at iteartion 100-4==96;
+        ///   NumIterationsBeforeTotalToTakeBaselineSnapshot is subtracted from NumIterations to get the baseline iteration number
+        /// e.g. 100 iterations, with NumIterationsBeforeTotalToTakeBaselineSnapshot ==4 means take a baseline at iteartion 100-4==96;
         /// </summary>
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
         /// <summary>
@@ -69,14 +69,14 @@ namespace Microsoft.Test.Stress
         ///               --> 0445a4e4 System.Collections.Hashtable.buckets (#instances = 3225)
         ///               --> 1de643d4 System.Collections.Hashtable+bucket[]  (#instances = 3228)
         ///               --> 1e040eb0 System.Runtime.Remoting.Lifetime.Lease.managedObject (#instances = 135)
-        ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.<VsTextView>k__BackingField (#instances = 22)
+        ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.&lt;VsTextView>k__BackingField (#instances = 22)
         ///               --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter  (#instances = 27)
         /// </summary>
         public int SecsBetweenIterations = 0;
 
 
         /// <summary>
-        /// 
+        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
         /// </summary>
         public int SecsToWaitForDevenv = 60; 
 
@@ -85,10 +85,11 @@ namespace Microsoft.Test.Stress
         internal VSHandler VSHandler;
 
         private bool? _isApexTest;
-        [XmlIgnore]
+
         /// <summary>
         /// used internally, but has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
         /// </summary>
+        [XmlIgnore]
         public ILogger logger;
         
 

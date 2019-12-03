@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -170,7 +171,8 @@ namespace Microsoft.Test.Stress
                     await Task.Run(() =>
                     {
                         LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
-                        DumpAnalyzer.StartClrObjExplorer(_DumpFileName);
+                        var oAnalyzer = new DumpAnalyzer(_logger);
+                        oAnalyzer.StartClrObjExplorer(_DumpFileName);
                     });
                     _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
                 }

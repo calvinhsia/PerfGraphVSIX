@@ -193,7 +193,6 @@ namespace Microsoft.Test.Stress
         ///         When run from command line there will be no TestContext</param>
         ///<param name="stressUtilOptions">Set of options to use</param>
         /// <param name="sampleType"></param>
-        /// <param name="NumTotalIterations">-1 means don't take base or final dump. </param>
         public MeasurementHolder(object TestNameOrTestContext,
                     StressUtilOptions stressUtilOptions,
                     SampleType sampleType)

@@ -11,7 +11,6 @@ namespace Microsoft.Test.Stress
     /// <summary>
     /// Apex uses an older version:  Assembly Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
     /// we're using                  Assembly Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
-
     /// </summary>
     public class TestContextWrapper
     {

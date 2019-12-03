@@ -56,21 +56,13 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="propertyName"></param>
-        /// <param name="columnWidth"></param>
-        /// <param name="columnHeaderText"></param>
-        /// <param name="columnHeaderTip"></param>
-        /// <param name="insertIndex">-1 means append. Else index before which to insert column</param>
-        public void AddColumnForProperty(string propertyName, int columnWidth, string columnHeaderText, string columnHeaderTip, int insertIndex = -1)
-        {
-            BrowseList.AddAColumn(BrowseList.View as GridView, propertyName, bindingObjectName: null, toolTipHdr: columnHeaderTip, colWidth: columnWidth, insertIndex: insertIndex);
-            //var columnFactory = new CustomColumnFactory(propertyName, columnWidth, columnHeaderText, columnHeaderTip);
-            //var newColumn = columnFactory.CreateColumn();
-            //(_BrowseList.View as GridView).Columns.Add(newColumn);
-        }
+        //public void AddColumnForProperty(string propertyName, int columnWidth, string columnHeaderText, string columnHeaderTip, int insertIndex = -1)
+        //{
+        //    BrowseList.AddAColumn(BrowseList.View as GridView, propertyName, bindingObjectName: null, toolTipHdr: columnHeaderTip, colWidth: columnWidth, insertIndex: insertIndex);
+        //    //var columnFactory = new CustomColumnFactory(propertyName, columnWidth, columnHeaderText, columnHeaderTip);
+        //    //var newColumn = columnFactory.CreateColumn();
+        //    //(_BrowseList.View as GridView).Columns.Add(newColumn);
+        //}
     }
 
     internal class ListFilter : DockPanel
