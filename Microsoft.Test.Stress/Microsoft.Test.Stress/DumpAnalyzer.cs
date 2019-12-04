@@ -123,11 +123,10 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        public StringBuilder GetDiff(string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        public void GetDiff(StringBuilder sb, string pathDumpBase, string pathDumpCurrent,  int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
             AnalyzeDump(pathDumpBase, out var dictTypesBaseline, out var dictStringsBaseline);
             AnalyzeDump(pathDumpCurrent, out var dictTypesCurrent, out var dictStringsCurrent);
-            var sb = new StringBuilder();
             sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
             sb.AppendLine($"Below are 2 lists: the counts of Types and Strings in each dump. The 1st column is the number in the 1st dump, the 2nd is the number found in the 2nd dump and the 3rd column is the Type or String");
             sb.AppendLine($"For example if # iterations  = 11, 2 dumps are taken after iterations 7 and 11., '17  56  System.Guid' means there were 17 instances of System.Guid in the 1st dump and 56 in the 2nd");
@@ -140,7 +139,6 @@ namespace Microsoft.Test.Stress
             AnalyzeDiff(sb, dictStringsBaseline, dictStringsCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             logger.LogMessage($"analyzed types and strings {pathDumpBase} {pathDumpCurrent}");
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
-            return sb;
         }
 
         private void AnalyzeDiff(StringBuilder sb, Dictionary<string, int> dictBase, Dictionary<string, int> dictCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
@@ -172,31 +170,39 @@ namespace Microsoft.Test.Stress
                 logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
                 try
                 {
+                    var testClrObjExpPath = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
                     if (Directory.Exists(clrObjDir))
                     {
-                        logger.LogMessage($"Deleting existing {clrObjDir}");
-                        Directory.Delete(clrObjDir, recursive: true);
+                        if (File.Exists(testClrObjExpPath))
+                        {
+                            _ClrObjExplorerExe = testClrObjExpPath;
+                        }
+                        else
+                        {
+                            logger.LogMessage($"Deleting existing {clrObjDir}");
+                            Directory.Delete(clrObjDir, recursive: true);
+                        }
                     }
-                    logger.LogMessage($"Creating {clrObjDir}");
-                    Directory.CreateDirectory(clrObjDir);
-                    var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-                    logger.LogMessage($"Unzip to {tempZipFile}");
-                    var zipArray = Microsoft.Test.Stress.Properties.Resources.ClrObjExplorer;
-                    File.WriteAllBytes(tempZipFile, zipArray);
-                    logger.LogMessage($"Extracting zip {tempZipFile}");
-                    ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
-                    logger.LogMessage($"Done Extracting zip {tempZipFile}");
+                    if (string.IsNullOrEmpty(_ClrObjExplorerExe))
+                    {
+                        logger.LogMessage($"Creating {clrObjDir}");
+                        Directory.CreateDirectory(clrObjDir);
+                        var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
+                        logger.LogMessage($"Unzip to {tempZipFile}");
+                        var zipArray = Properties.Resources.ClrObjExplorer;
+                        File.WriteAllBytes(tempZipFile, zipArray);
+                        logger.LogMessage($"Extracting zip {tempZipFile}");
+                        ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
+                        logger.LogMessage($"Done Extracting zip {tempZipFile}");
+                        File.Delete(tempZipFile);
+                        _ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
+                    }
                 }
-                catch (IOException ex)
-                {
-                    logger.LogMessage(ex.ToString());
-                }
-                catch (UnauthorizedAccessException ex)
+                catch (Exception ex)
                 {
                     logger.LogMessage(ex.ToString());
                     // use existing ClrObjExplorer: user may have left it open examining a prior trace (Unauth exce if in use) or it could be 
                 }
-                _ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
                 logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
             }
             return _ClrObjExplorerExe;

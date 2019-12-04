@@ -40,7 +40,14 @@ namespace TestStressDll
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 1024 * 1024));
         }
 
-        readonly List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+        List<BigStuffWithLongNameSoICanSeeItBetter> _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+
+        [TestInitialize]
+        public void TestInit()
+        {
+            _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+            GC.Collect();
+        }
 
 
         [TestMethod]
@@ -57,7 +64,7 @@ namespace TestStressDll
             };
 
             await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 201, ProcNamesToMonitor = string.Empty, lstperfCounterOverrideSettings = lstperfCounterOverrideDataSettings, ShowUI = false });
-            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 10000));
+            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 100000));
         }
 
 

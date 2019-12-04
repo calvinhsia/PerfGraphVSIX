@@ -33,6 +33,7 @@ namespace TestStressDll
         public void TestInit()
         {
             _lst = new List<BigStuffWithLongNameSoICanSeeItBetter>();
+            GC.Collect();
         }
 
         [TestMethod]
@@ -91,7 +92,7 @@ namespace TestStressDll
                 Assert.Fail("Didn't get expected leak type");
             }
 
-            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(initSize: (int)(thresh + 10000)));
+            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(initSize: (int)(thresh + 100000)));
         }
 
 

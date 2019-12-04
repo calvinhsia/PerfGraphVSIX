@@ -113,7 +113,7 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,10:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
         }
     }
 
@@ -296,7 +296,15 @@ namespace Microsoft.Test.Stress
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
                             var oDumpAnalyzer = new DumpAnalyzer(Logger);
-                            var sb = oDumpAnalyzer.GetDiff(baseDumpFileName,
+                            var sb = new StringBuilder();
+                            sb.AppendLine($"'{TestName}' Leaks Found");
+                            foreach (var leak in lstLeakResults)
+                            {
+                                sb.AppendLine($"Leak Detected: {leak}");
+                            }
+                            sb.AppendLine();
+                            oDumpAnalyzer.GetDiff(sb,
+                                            baseDumpFileName,
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
                                             stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);

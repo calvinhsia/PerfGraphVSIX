@@ -189,7 +189,8 @@ namespace Microsoft.Test.Stress
         /// <returns></returns>
         public static string EnsureResultsFolderExists()
         {
-            var dirMyTemp = Path.Combine(Path.GetTempPath(), "PerfGraphVSIX");
+            var asmVer = typeof(DumperViewerMain).Assembly.GetName().Version.ToString().Replace("{",string.Empty).Replace("}",string.Empty);
+            var dirMyTemp = Path.Combine(Path.GetTempPath(), $"PerfGraphVSIX{asmVer}");
             if (!Directory.Exists(dirMyTemp))
             {
                 Directory.CreateDirectory(dirMyTemp);
