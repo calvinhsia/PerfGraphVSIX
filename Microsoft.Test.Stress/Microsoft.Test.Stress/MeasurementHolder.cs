@@ -509,7 +509,6 @@ namespace Microsoft.Test.Stress
                     };
                 if (memoryAnalysisType.HasFlag(MemoryAnalysisType.StartClrObjExplorer))
                 {
-                    Logger.LogMessage($"start clrobjexplorer {pathDumpFile}");
                     arglist.Add("-c");
                 }
                 var odumper = new DumperViewerMain(arglist.ToArray())
