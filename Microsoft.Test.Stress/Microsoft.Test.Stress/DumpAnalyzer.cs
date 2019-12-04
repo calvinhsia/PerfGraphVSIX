@@ -123,7 +123,7 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        public void GetDiff(StringBuilder sb, string pathDumpBase, string pathDumpCurrent,  int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        public void GetDiff(StringBuilder sb, string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
             AnalyzeDump(pathDumpBase, out var dictTypesBaseline, out var dictStringsBaseline);
             AnalyzeDump(pathDumpCurrent, out var dictTypesCurrent, out var dictStringsCurrent);
@@ -167,7 +167,7 @@ namespace Microsoft.Test.Stress
             if (_ClrObjExplorerExe == null)
             {
                 var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), "ClrObjExplorer");
-//                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
+                //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
                 try
                 {
                     var testClrObjExpPath = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
@@ -188,10 +188,10 @@ namespace Microsoft.Test.Stress
                         logger.LogMessage($"Creating {clrObjDir}");
                         Directory.CreateDirectory(clrObjDir);
                         var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-//                        logger.LogMessage($"Unzip to {tempZipFile}");
+                        //                        logger.LogMessage($"Unzip to {tempZipFile}");
                         var zipArray = Properties.Resources.ClrObjExplorer;
                         File.WriteAllBytes(tempZipFile, zipArray);
-//                        logger.LogMessage($"Extracting zip {tempZipFile}");
+                        //                        logger.LogMessage($"Extracting zip {tempZipFile}");
                         ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
                         logger.LogMessage($"Done Extracting zip {tempZipFile}");
                         File.Delete(tempZipFile);
@@ -203,7 +203,7 @@ namespace Microsoft.Test.Stress
                     logger.LogMessage(ex.ToString());
                     // use existing ClrObjExplorer: user may have left it open examining a prior trace (Unauth exce if in use) or it could be 
                 }
-//                logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
+                //                logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
             }
             return _ClrObjExplorerExe;
         }
@@ -211,9 +211,7 @@ namespace Microsoft.Test.Stress
         public void StartClrObjExplorer(string _DumpFileName)
         {
             var args = $"/m \"{_DumpFileName}\"";
-            var pathClrObjExp = GetClrObjExplorerPath();
-            logger.LogMessage($@"Start ClrObjExplorer: ""{pathClrObjExp}"" ""{_DumpFileName}""");
-            System.Diagnostics.Process.Start(pathClrObjExp, args);
+            System.Diagnostics.Process.Start(GetClrObjExplorerPath(), args);
         }
     }
 }

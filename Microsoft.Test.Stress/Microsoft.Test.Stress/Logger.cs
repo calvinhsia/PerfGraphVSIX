@@ -29,12 +29,7 @@ namespace Microsoft.Test.Stress
         {
             try
             {
-                var dt = string.Format("[{0}],",
-                DateTime.Now.ToString("hh:mm:ss:fff")
-                );
-                str = string.Format(dt + str, args);
-                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {str}";
-
+                var msgstr = DateTime.Now.ToString("hh:mm:ss:fff") + $" {Thread.CurrentThread.ManagedThreadId,2} {string.Format(str, args)}";
                 testContext?.WriteLine(msgstr);
                 if (Debugger.IsAttached)
                 {

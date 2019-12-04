@@ -172,9 +172,15 @@ namespace Microsoft.Test.Stress
                     {
                         LogMessage($"Loading dump in DumpAnalyzer {_DumpFileName}");
                         var oAnalyzer = new DumpAnalyzer(_logger);
+                        _logger.LogMessage($@"Start ClrObjExplorer: ""{oAnalyzer.GetClrObjExplorerPath()}"" ""{_DumpFileName}""");
                         oAnalyzer.StartClrObjExplorer(_DumpFileName);
                     });
                     _logger.LogMessage($"Done Analyzing dump {_procTarget.Id} {_procTarget.ProcessName}  Secs={sw.Elapsed.TotalSeconds:f3}");
+                }
+                else
+                {
+                    var oAnalyzer = new DumpAnalyzer(_logger);
+                    LogMessage($@"To start ClrObjExplorer:""{oAnalyzer.GetClrObjExplorerPath()}"" ""{_DumpFileName}""");
                 }
             }
             catch (Exception ex)
