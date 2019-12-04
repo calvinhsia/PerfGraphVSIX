@@ -40,7 +40,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 19, Sensitivity: .1);
+                await oMyClass.DoTheTest(numIterations: 19, Sensitivity: 10);
             }
         }
         string somestring = "somestring1";

@@ -1,4 +1,4 @@
-﻿using DumperViewer;
+﻿using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 using System;
@@ -168,6 +168,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.Test.Stress;
 
 //using Microsoft.VisualStudio.Threading;
 
@@ -248,6 +249,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.Test.Stress;
 using Task = System.Threading.Tasks.Task;
 
 namespace MyCustomCode
@@ -268,7 +270,7 @@ namespace MyCustomCode
 
         void foo()
         {
-            var odumper = new DumperViewer.DumperViewerMain(null)
+            var odumper = new DumperViewerMain(null)
                 {
                     _logger = logger
                 };
@@ -283,9 +285,8 @@ namespace MyCustomCode
             logger.LogMessage(""Starting iterations "" + NumberOfIterations.ToString());
             var measurementHolder = new MeasurementHolder(
                 ""testTODOTODO"",
-                PerfCounterData._lstPerfCounterDefinitionsForStressTest,
-                SampleType.SampleTypeIteration,
-                logger: logger);
+                new StressUtilOptions() { NumIterations = -1},
+                SampleType.SampleTypeIteration);
 
 
             for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)
@@ -362,6 +363,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
@@ -464,9 +466,8 @@ namespace MyCustomCode
                 // Keep in mind that the UI will be unresponsive if you have no await and no main thread idle time
                 var measurementHolder = new MeasurementHolder(
                     ""testTODOTODO"",
-                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
-                    SampleType.SampleTypeIteration,
-                    logger: logger);
+                    new StressUtilOptions() { NumIterations = -1},
+                    SampleType.SampleTypeIteration);
 
 
                 for (int i = 0; i < NumberOfIterations && !_CancellationToken.IsCancellationRequested; i++)

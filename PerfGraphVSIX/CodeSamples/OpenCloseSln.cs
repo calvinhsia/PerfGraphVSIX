@@ -18,7 +18,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 31);
+                await oMyClass.DoTheTest(numIterations: 7);
             }
         }
         public MyClass(object[] args) : base(args) { }

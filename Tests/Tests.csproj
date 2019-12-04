@@ -62,7 +62,7 @@
     <Compile Include="TestCancellationToken.cs" />
     <Compile Include="TestCompile.cs" />
     <Compile Include="TestDumperViewer.cs" />
-    <Compile Include="TestMeasures.cs" />
+    <Compile Include="TestLease.cs" />
     <Compile Include="TestRefl.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -72,9 +72,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DumperViewer\DumperViewer.csproj">
-      <Project>{006276CD-726B-4A0D-A6EA-57D99480CE1B}</Project>
-      <Name>DumperViewer</Name>
+    <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
+      <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
+      <Name>Microsoft.Test.Stress</Name>
     </ProjectReference>
     <ProjectReference Include="..\PerfGraphVSIX\PerfGraphVSIX.csproj">
       <Project>{1ce249e2-a3f2-43f6-a37f-9329fa947660}</Project>

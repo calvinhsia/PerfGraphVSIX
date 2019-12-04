@@ -1,6 +1,5 @@
 ﻿namespace PerfGraphVSIX
 {
-    using DumperViewer;
     using EnvDTE;
     using Microsoft;
     using Microsoft.Build.Utilities;
@@ -9,6 +8,7 @@
     using Microsoft.VisualStudio.Shell;
     using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Shell.Interop;
+    using Microsoft.Test.Stress;
     using Microsoft.VisualStudio.Threading;
     using System;
     using System.Collections.Generic;
@@ -99,7 +99,7 @@
         public bool TrackProjectObjects { get; set; } = true;
         public bool TrackContainedObjects { get; set; } = true;
 
-        public List<PerfCounterData> LstPerfCounterData => throw new NotImplementedException();
+        public List<PerfCounterData> LstPerfCounterData;
 
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
@@ -120,7 +120,25 @@
             try
             {
                 LogMessage($"Starting {TipString}");
-
+                var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
+                var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime;
+                if (oldval == tspanDesiredLeaseLifetime)
+                {
+                    LogMessage($"System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds already set at {oldval.TotalSeconds} secs");
+                }
+                else
+                {
+                    try
+                    {
+                        System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime = tspanDesiredLeaseLifetime;
+                        LogMessage($"Success Change System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval.TotalSeconds} secs to {System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds}");
+                    }
+                    catch (System.Runtime.Remoting.RemotingException)
+                    {
+                        LogMessage($"Failed to Change System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval.TotalSeconds} secs to {tspanDesiredLeaseLifetime.TotalSeconds} secs");
+                    }
+                }
+                LstPerfCounterData = PerfCounterData.GetPerfCountersForVSIX();
                 async Task RefreshCodeToRunAsync()
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -130,7 +148,14 @@
                         LstCodeSamples.Add(Path.GetFileName(file));
                     }
                     //_ctsExecuteCode?.Cancel();
-                    lvCodeSamples.SelectedItem = LstCodeSamples[0];
+                    if (LstCodeSamples[0].Contains("ExecCodeBase.cs")) // The base class doesn't have a Static Main
+                    {
+                        lvCodeSamples.SelectedItem = LstCodeSamples[1];
+                    }
+                    else
+                    {
+                        lvCodeSamples.SelectedItem = LstCodeSamples[0];
+                    }
                 }
                 _ = RefreshCodeToRunAsync();
 
@@ -165,9 +190,9 @@
                   };
 
 
-                lbPCounters.ItemsSource = PerfCounterData._lstPerfCounterDefinitionsForVSIX.Select(s => s.perfCounterType);
+                lbPCounters.ItemsSource = LstPerfCounterData.Select(s => s.perfCounterType);
                 lbPCounters.SelectedIndex = 0;
-                PerfCounterData._lstPerfCounterDefinitionsForVSIX.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
+                LstPerfCounterData.Where(s => s.perfCounterType == PerfCounterType.GCBytesInAllHeaps).Single().IsEnabledForGraph = true;
 #pragma warning disable VSTHRD101 // Avoid unsupported async delegates
                 lbPCounters.SelectionChanged += async (ol, el) =>
                 {
@@ -191,9 +216,9 @@
                         await Task.Run(async () =>
                         {
                             // run on threadpool thread
-                            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                            lock (LstPerfCounterData)
                             {
-                                foreach (var itm in PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+                                foreach (var itm in LstPerfCounterData)
                                 {
                                     itm.IsEnabledForGraph = pctrEnum.HasFlag(itm.perfCounterType);
                                 }
@@ -264,13 +289,12 @@
             {
                 await _tcsPcounter.Task;
             }
-            lock (PerfCounterData._lstPerfCounterDefinitionsForVSIX)
+            lock (LstPerfCounterData)
             {
                 measurementHolderInteractiveUser = new MeasurementHolder(
-                    TestNameOrTestContext: string.Empty,
-                    lstPCData: PerfCounterData._lstPerfCounterDefinitionsForVSIX, 
-                    sampleType: SampleType.SampleTypeNormal,
-                    logger: this);
+                    TestNameOrTestContext: MeasurementHolder.InteractiveUser,
+                    new StressUtilOptions() { NumIterations = -1, logger = this, lstPerfCountersToUse = LstPerfCounterData },
+                    sampleType: SampleType.SampleTypeNormal);
                 _dataPoints.Clear();
                 _bufferIndex = 0;
             }
@@ -315,19 +339,16 @@
             {
                 measurementHolder = measurementHolderInteractiveUser;
             }
-            List<uint> lstPerfCtrCurrentMeasurements;
             try
             {
                 var res = string.Empty;
-
-                lock (measurementHolder.lstPerfCounterData)
-                {
-                    res = measurementHolder.TakeMeasurement(descriptionOverride);
-                    lstPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
-                }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                DoGC();
+                await TaskScheduler.Default;
                 try
                 {
-                    await AddDataPointsAsync(lstPerfCtrCurrentMeasurements);
+                    res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, IsForInteractiveGraph: UpdateInterval != 0 ? true : false);
+                    await AddDataPointsAsync(measurementHolder);
                 }
                 catch (Exception ex)
                 {
@@ -340,9 +361,9 @@
                 if (ex.Message.Contains("Instance 'devenv#")) // user changed # of instance of devenv runnning
                 {
                     await AddStatusMsgAsync($"Resetting perf counters due to devenv instances change");
-                    lock (measurementHolder.lstPerfCounterData)
+                    lock (measurementHolder.LstPerfCounterData)
                     {
-                        foreach (var ctr in measurementHolder.lstPerfCounterData)
+                        foreach (var ctr in measurementHolder.LstPerfCounterData)
                         {
                             ctr.ResetCounter();
                         }
@@ -359,18 +380,19 @@
             }
         }
 
-        async Task AddDataPointsAsync(List<uint> lstPerfCtrCurrentMeasurements)
+        async Task AddDataPointsAsync(MeasurementHolder measurementHolder)
         {
+            var dictPerfCtrCurrentMeasurements = measurementHolder.GetLastMeasurements();
             if (_dataPoints.Count == 0) // nothing yet
             {
                 for (int i = 0; i < NumDataPoints; i++)
                 {
-                    _dataPoints[i] = new List<uint>(lstPerfCtrCurrentMeasurements); // let all init points be equal, so y axis scales IsStartedFromZero
+                    _dataPoints[i] = new List<uint>(dictPerfCtrCurrentMeasurements.Values); // let all init points be equal, so y axis scales IsStartedFromZero
                 }
             }
             else
             {
-                _dataPoints[_bufferIndex++] = new List<uint>(lstPerfCtrCurrentMeasurements);
+                _dataPoints[_bufferIndex++] = new List<uint>(dictPerfCtrCurrentMeasurements.Values);
                 if (_bufferIndex == _dataPoints.Count) // wraparound?
                 {
                     _bufferIndex = 0;
@@ -391,13 +413,19 @@
             {
                 _chart.ChartAreas[0].AxisY.Maximum = 100;
             }
-            foreach (var entry in lstPerfCtrCurrentMeasurements)
+            foreach (var entry in dictPerfCtrCurrentMeasurements)
             {
                 var series = new Series
                 {
-                    ChartType = SeriesChartType.Line
+                    ChartType = SeriesChartType.Line,
+                    Name = entry.Key.ToString()
                 };
                 _chart.Series.Add(series);
+                if (UpdateInterval == 0) // if we're not doing auto update on timer, we're iterating or doing manual measurement
+                {
+                    series.MarkerSize = 10;
+                    series.MarkerStyle = MarkerStyle.Circle;
+                }
                 for (int i = 0; i < _dataPoints.Count; i++)
                 {
                     var ndx = _bufferIndex + i;
@@ -410,6 +438,8 @@
                 }
                 ndxSeries++;
             }
+            _chart.Legends.Clear();
+            _chart.Legends.Add(new Legend());
             _chart.DataBind();
 
             if (_editorTracker != null)
@@ -427,7 +457,7 @@
                 foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} {entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = FontFamilyMono });
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} Ser#={entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = FontFamilyMono });
                     LeakedViews.Add(sp);
                 }
             }
@@ -533,14 +563,11 @@
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             await measurementHolderInteractiveUser.CreateDumpAsync(
-                System.Diagnostics.Process.GetCurrentProcess().Id, 
-                MemoryAnalysisType.StartClrObjectExplorer, 
-                desc: string.Empty);
+                System.Diagnostics.Process.GetCurrentProcess().Id,
+                MemoryAnalysisType.StartClrObjExplorer,
+                desc: "InteractiveDump");
 
             btnClrObjExplorer.IsEnabled = true;
-
-            //var x = new DumpAnalyzer(this);
-            //x.StartClrObjectExplorer(pathDumpFile);
         }
 
 #pragma warning disable VSTHRD100 // Avoid async void methods

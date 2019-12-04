@@ -1,7 +1,6 @@
-﻿using DumperViewer;
-using LeakTestDatacollector;
+﻿using LeakTestDatacollector;
+using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PerfGraphVSIX;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,12 +29,13 @@ namespace TestStress
         }
 
         [TestMethod]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressOpenCloseSln()
         {
             try
             {
                 // the only change to existing test required: call to static method
-                await StressUtil.DoIterationsAsync(this, NumIterations: 3, Sensitivity: 1);
+                await StressUtil.DoIterationsAsync(this, NumIterations: 7);
 
                 await _VSHandler.OpenSolution(SolutionToLoad);
 
@@ -44,6 +44,7 @@ namespace TestStress
             catch (Exception ex)
             {
                 logger.LogMessage($"Exception {ex}");
+                throw;
             }
         }
         [TestCleanup]
@@ -112,7 +113,6 @@ namespace TestStress
         {
             try
             {
-                // the only change to existing test required: call to static method
                 await StressUtil.DoIterationsAsync(this, NumIterations: 3);
 
 
@@ -128,6 +128,7 @@ namespace TestStress
             catch (Exception ex)
             {
                 logger.LogMessage($"Exception {ex}");
+                throw;
             }
         }
 
@@ -168,7 +169,7 @@ namespace TestStress
                 try
                 {
                     // the only change to existing test required: call to static method
-                    await StressUtil.DoIterationsAsync(this, NumIterations: 3);
+                    await StressUtil.DoIterationsAsync(this, NumIterations: 2);
 
 
                     if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
@@ -184,6 +185,7 @@ namespace TestStress
                 catch (Exception ex)
                 {
                     logger.LogMessage($"Exception {ex}");
+                    throw;
                 }
             }
         }

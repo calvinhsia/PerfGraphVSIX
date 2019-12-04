@@ -1,4 +1,4 @@
-﻿using DumperViewer;
+﻿using Microsoft.Test.Stress;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -182,7 +182,7 @@ namespace PerfGraphVSIX
                                   {
                                       asm = this.GetType().Assembly;
                                   }
-                                  else if (requestName == nameof(DumperViewer))
+                                  else if (requestName == nameof(Microsoft.Test.Stress))
                                   {
                                       asm = typeof(ILogger).Assembly;
                                   }

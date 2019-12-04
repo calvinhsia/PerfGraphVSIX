@@ -39,7 +39,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
-
+using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using EnvDTE;
 
@@ -57,7 +57,7 @@ namespace MyCodeToExecute
         public EnvDTE.DTE g_dte;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
-        public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 3;
+        public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
         public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
 
         public BuildEvents BuildEvents;
@@ -132,68 +132,38 @@ namespace MyCodeToExecute
         {
             try
             {
-                var measurementHolder = new MeasurementHolder(
+                using (var measurementHolder = new MeasurementHolder(
                     TestName,
-                    PerfCounterData._lstPerfCounterDefinitionsForStressTest,
-                    SampleType.SampleTypeIteration,
-                    logger,
-                    Sensitivity);
-
-                var baseDumpFileName = string.Empty;
-                for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
+                    new StressUtilOptions() { NumIterations = numIterations, ProcNamesToMonitor = string.Empty, ShowUI = true, logger = logger, Sensitivity = Sensitivity },
+                    SampleType.SampleTypeIteration))
                 {
-                    await DoIterationBodyAsync();
-                    await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
-                    var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
-                    // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
-                    await itakeSample.DoSampleAsync(measurementHolder, desc);
-                    if (numIterations > NumIterationsBeforeTotalToTakeBaselineSnapshot && iteration == numIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    var baseDumpFileName = string.Empty;
+                    for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier));
-                        logger.LogMessage("Taking base snapshot dump");
-                        baseDumpFileName = await measurementHolder.CreateDumpAsync(
-                            System.Diagnostics.Process.GetCurrentProcess().Id,
-                            desc: TestName + "_" + iteration.ToString(),
-                            memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                    }
+                        await DoIterationBodyAsync();
+                        await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
+                        var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
+                        // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
+                        await itakeSample.DoSampleAsync(measurementHolder, desc);
 
-                    if (_CancellationTokenExecuteCode.IsCancellationRequested)
+                        if (_CancellationTokenExecuteCode.IsCancellationRequested)
+                        {
+                            break;
+                        }
+                    }
+                    if (!_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
-                        break;
+                        logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
+                    }
+                    else
+                    {
+                        logger.LogMessage("Cancelled Code Execution");
                     }
                 }
-                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
-                {
-                    logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
-                }
-                else
-                {
-                    logger.LogMessage("Cancelled Code Execution");
-                }
-                // cleanup code here: compare measurements, take a dump, examine for types, etc.
-                var filenameResults = measurementHolder.DumpOutMeasurementsToTempFile(StartExcel: false);
-                logger.LogMessage("Measurement Results " + filenameResults);
-                var lstRegResults = (await measurementHolder.CalculateRegressionAsync(showGraph: true)).Where(r => r.IsRegression).ToList();
+            }
+            catch (LeakException)
+            {
 
-                if (lstRegResults.Count > 0)
-                {
-                    foreach (var regres in lstRegResults)
-                    {
-                        logger.LogMessage("Regression!!!!!" + regres.ToString());
-                    }
-                    var currentDumpFile = await measurementHolder.CreateDumpAsync(
-                        System.Diagnostics.Process.GetCurrentProcess().Id,
-                        desc: TestName + "_" + numIterations.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.StartClrObjectExplorer);
-
-                    if (!string.IsNullOrEmpty(baseDumpFileName))
-                    {
-                        var oDumpAnalyzer = new DumperViewer.DumpAnalyzer(logger);
-                        var sb = oDumpAnalyzer.GetDiff(baseDumpFileName, currentDumpFile, numIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                        var fname = BrowseList.WriteOutputToTempFile(sb.ToString());
-                        logger.LogMessage("DumpDiff Analysis"+ fname);
-                    }
-                }
             }
             catch (OperationCanceledException)
             {

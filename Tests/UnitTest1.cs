@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
 
@@ -493,6 +494,5 @@ namespace Tests
             Assert.AreEqual(nIter, coll.Count, $" should be equal");
 
         }
-
     }
 }

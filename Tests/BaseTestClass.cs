@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PerfGraphVSIX;
+using Microsoft.Test.Stress;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

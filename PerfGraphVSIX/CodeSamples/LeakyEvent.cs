@@ -44,7 +44,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 19, Sensitivity: .4, delayBetweenIterationsMsec: 800);
+                await oMyClass.DoTheTest(numIterations: 19, Sensitivity: 2.5, delayBetweenIterationsMsec: 800);
             }
         }
         public MyClass(object[] args) : base(args)
