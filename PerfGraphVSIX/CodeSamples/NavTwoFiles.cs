@@ -24,6 +24,7 @@ namespace MyCodeToExecute
         }
         public MyClass(object[] args) : base(args) { }
 
+        /// Note: replace this with an existing file on your machine!
         string file1 = @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs"; // 1642 lines
         string file2 = @"C:\Users\calvinh\Source\repos\hWndHost\Fish\FishWindow.xaml.cs"; // 1047 lines
 

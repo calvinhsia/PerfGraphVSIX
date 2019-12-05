@@ -627,6 +627,7 @@
                 LogMessage(ex.ToString());
                 this.btnExecCode.Content = "ExecCode";
                 this.btnExecCode.IsEnabled = true;
+                _ctsExecuteCode = null;
             }
         }
 

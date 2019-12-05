@@ -26,6 +26,7 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
+            /// Note: replace this with an existing file on your machine!
             SolutionToLoad = @"C:\Users\calvinh\Source\repos\ReflectCPP\ReflectCpp\ReflectCpp.sln";
             await OpenASolutionAsync();
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode);

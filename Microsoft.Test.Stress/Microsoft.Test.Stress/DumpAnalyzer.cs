@@ -135,7 +135,7 @@ namespace Microsoft.Test.Stress
             sb.AppendLine("Types:");
             AnalyzeDiff(sb, dictTypesBaseline, dictTypesCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             sb.AppendLine();
-            sb.AppendLine("Strings");
+            sb.AppendLine("Strings:");
             AnalyzeDiff(sb, dictStringsBaseline, dictStringsCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
             logger.LogMessage($"analyzed types and strings {pathDumpBase} {pathDumpCurrent}");
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");

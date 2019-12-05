@@ -27,6 +27,7 @@ namespace MyCodeToExecute
         public override async Task DoInitializeAsync()
         {
             await OpenASolutionAsync();
+            /// Note: replace this with an existing file on your machine!
             g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
             await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
         }
