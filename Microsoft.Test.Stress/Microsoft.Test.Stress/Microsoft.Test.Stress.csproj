@@ -144,7 +144,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="Key.snk" />
-    <None Include="StressTestUtility.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="GraphWin.xaml">
