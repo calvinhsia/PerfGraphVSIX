@@ -194,6 +194,8 @@ namespace Microsoft.Test.Stress
                                         TestResultsDirectory='{testContext.TestResultsDirectory}' 
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
+
+            testContext.Properties[StressUtil.PropNameLogger] = logger;
             /*
              * probs: the curdir is not empty, so results will be overwritten (might have ClrObjExplorer or WinDbg open with a result dump)
              *       The Test*dirs are all deleted after the run.
@@ -213,12 +215,15 @@ namespace Microsoft.Test.Stress
 
              * */
 
-            var optFile = Path.Combine(testContext.TestDeploymentDir, "Assets", @"StressLeakyWithCustomXMLSettings.settings.xml");
+            var optFile = Path.Combine(testContext.TestDeploymentDir, "Assets", $"{testContext.TestName}.settings.xml");
             if (File.Exists(optFile))
             {
                 logger.LogMessage($"Reading settings from {optFile}");
                 ReadOptionsFromFile(optFile);
-
+                if (logger is Logger mylogger) // since logger was already instantiated, apply logger options after reading from file
+                {
+                    mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
+                }
             }
 
             VSHandler vSHandler = null;

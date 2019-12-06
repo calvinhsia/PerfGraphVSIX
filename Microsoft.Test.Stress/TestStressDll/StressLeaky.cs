@@ -42,7 +42,7 @@ namespace TestStressDll
         {
             // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
             await StressUtil.DoIterationsAsync(
-                this, 
+                this,
                 new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = false }
                 );
 
@@ -117,8 +117,24 @@ namespace TestStressDll
         public async Task StressLeakyWithCustomXMLSettings()
         {
 
+            string didValidateSettingsRead = "didValidateSettingsRead";
             await StressUtil.DoIterationsAsync(this);
-
+            var curIter = (int)TestContext.Properties[StressUtil.PropNameCurrentIteration];
+            if (TestContext.Properties.Contains(StressUtil.PropNameLogger))
+            {
+                if (TestContext.Properties[StressUtil.PropNameLogger] is Logger logger)
+                {
+                    if (curIter == 0)
+                    {
+                        Assert.IsNotNull(logger._lstLoggedStrings.Where(s => s.Contains("Reading settings from")).First(), "should have read settings from xml file"); // this will assert each iteration
+                        TestContext.Properties[didValidateSettingsRead] = 1;
+                    }
+                }
+            }
+            if (curIter == 0)
+            {
+                Assert.IsTrue((int)TestContext.Properties[didValidateSettingsRead] > 0, "didn't validate settings read");
+            }
             myList.Add($"leaking string" + "asdfafsdfasdfasd".Substring(0, 14));// needs to be done at runtime to create a diff string each iter. Time dominated by GC
 
         }

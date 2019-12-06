@@ -13,10 +13,11 @@ namespace Microsoft.Test.Stress
 {
     public class StressUtil
     {
-        public const string PropNameIteration = "IterationNumber"; // range from 0 - #Iter -  1
+        public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
         public const string PropNameListFileResults = "DictListFileResults";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
         internal const string PropNameVSHandler = "VSHandler";
+        internal const string PropNameLogger = "Logger";
         /// <summary>
         /// Iterate the test method the desired number of times
         /// The call can be made from the TestInitialize or the beginning of the TestMethod
@@ -49,7 +50,7 @@ namespace Microsoft.Test.Stress
                     SampleType.SampleTypeIteration))
                 {
                     var baseDumpFileName = string.Empty;
-                    stressUtilOptions.testContext.Properties[PropNameIteration] = 0;
+                    stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
 
                     for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                     {
@@ -62,7 +63,7 @@ namespace Microsoft.Test.Stress
 
                         var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
                         stressUtilOptions.logger.LogMessage(res);
-                        stressUtilOptions.testContext.Properties[PropNameIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameIteration]) + 1;
+                        stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                     }
                 }
             }
