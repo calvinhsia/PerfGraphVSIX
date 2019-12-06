@@ -37,16 +37,29 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeaky()
         {
-            // Need add only 1 line in test (either at beginning of TestMethod or at end of TestInitialize)
-            await StressUtil.DoIterationsAsync(
-                this,
-                new StressUtilOptions() { NumIterations = 11, ProcNamesToMonitor = string.Empty, ShowUI = false }
-                );
+            string didGetLeakException = "didGetLeakException";
+            int numIter = 11;
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = true }
+                    );
 
-            _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+            }
+            if ((int)TestContext.Properties[StressUtil.PropNameCurrentIteration] == numIter) // 1 beyond
+            {
+                var didGetLeak = (int)(TestContext.Properties[didGetLeakException]);
+                Assert.IsTrue(didGetLeak == 1, "didn't get leak exception");
+            }
         }
 
 

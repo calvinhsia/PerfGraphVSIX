@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
+using System.Windows.Threading;
 
 namespace Microsoft.Test.Stress
 {
@@ -387,16 +388,28 @@ namespace Microsoft.Test.Stress
                 var tcs = new TaskCompletionSource<int>();
                 // if we're running in testhost process, then we want a timeout
                 var timeoutEnabled = this.testContext != null;
-                Logger.LogMessage($"Showing graph  timeoutenabled ={timeoutEnabled}");
-                var thr = new Thread((o) =>
+                var timeout = TimeSpan.FromSeconds(60);
+                Logger.LogMessage($"Showing graph  timeoutenabled ={timeoutEnabled} {timeout.TotalSeconds:n0} secs");
+                var thr = new Thread((oparam) =>
                 {
                     try
                     {
-                        var graphWin = new GraphWin(this);
-                        graphWin.AddGraph(lstResults);
-                        if (!timeoutEnabled)
+                        var timer = new DispatcherTimer()
                         {
-                            //                            graphWin.WindowState = WindowState.Maximized;
+                            Interval = timeout
+                        };
+                        var graphWin = new GraphWin(this);
+                        timer.Tick += (o, e) =>
+                          {
+                              Logger.LogMessage($"Timedout showing graph");
+                              timer.Stop();
+                              graphWin.Close();
+                          };
+                        timer.Start();
+                        graphWin.AddGraph(lstResults);
+                        if (timeoutEnabled)
+                        {
+                            graphWin.Title += $" timeout {timeout.TotalSeconds:n0}";
                         }
                         graphWin.ShowDialog();
                         Logger.LogMessage($"finished showing graph");
@@ -409,12 +422,13 @@ namespace Microsoft.Test.Stress
                 });
                 thr.SetApartmentState(ApartmentState.STA);
                 thr.Start();
-                if (await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(120))) != tcs.Task)
-                {
-                    Logger.LogMessage($"Timedout showing graph");
-                }
+                await tcs.Task;
+                //if (await Task.WhenAny(tcs.Task, Task.Delay(timeout)) != tcs.Task)
+                //{
+                //    Logger.LogMessage($"Timedout showing graph");
+                //}
             }
-            // do this after showgraph else hang
+            // Create graphs as files. do this after showgraph else hang
             foreach (var item in lstResults)
             {
                 using (var chart = new Chart())
