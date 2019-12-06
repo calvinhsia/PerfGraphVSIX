@@ -48,6 +48,36 @@ namespace TestStressDll
     public class TestMeasures : BaseTestClass
     {
 
+        [TestMethod] 
+        public void TestXmlSerializeOptions()
+        {
+            var thresh = 1e6f;
+            var stressUtilOptions = new StressUtilOptions()
+            {
+                PerfCounterOverrideSettings = new List<PerfCounterOverrideThreshold>
+                    {
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorVirtualBytes, regressionThreshold = 9 * thresh } ,
+                        new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
+                    },
+                NumIterations = 7,
+                ShowUI = false
+            };
+
+            var filename = Path.Combine(TestContext.DeploymentDirectory, "opts.xml");
+            stressUtilOptions.WritedOptionsToFile(filename);
+            LogMessage($"Output to {filename}");
+
+            LogMessage(File.ReadAllText(filename));
+
+            var newopts = new StressUtilOptions() { NumIterations = 321 };
+
+            newopts.ReadOptionsFromFile(filename);
+            Assert.AreEqual(stressUtilOptions.NumIterations, 7);
+        }
+
+
         [TestMethod]
         [Ignore]
         public async Task TestMeasureRegressionVerifyGraph()

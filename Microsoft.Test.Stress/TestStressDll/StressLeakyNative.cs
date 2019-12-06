@@ -36,7 +36,7 @@ namespace TestStressDll
             {
                 new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 1024*1024 * 1.1f} ,
             };
-            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 17, ProcNamesToMonitor = string.Empty, lstperfCounterOverrideSettings = lstperfCounterOverrideDataSettings });
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 17, ProcNamesToMonitor = string.Empty, PerfCounterOverrideSettings = lstperfCounterOverrideDataSettings });
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 1024 * 1024));
         }
 
@@ -63,7 +63,7 @@ namespace TestStressDll
                 new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.KernelHandleCount, regressionThreshold = 9 * thresh } ,
             };
 
-            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 201, ProcNamesToMonitor = string.Empty, lstperfCounterOverrideSettings = lstperfCounterOverrideDataSettings, ShowUI = false });
+            await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 201, ProcNamesToMonitor = string.Empty, PerfCounterOverrideSettings = lstperfCounterOverrideDataSettings, ShowUI = false });
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 100000));
         }
 

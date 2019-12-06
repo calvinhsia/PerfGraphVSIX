@@ -60,7 +60,7 @@ namespace TestStressDll
             {
                 var opts = new StressUtilOptions()
                 {
-                    lstperfCounterOverrideSettings = new List<PerfCounterOverrideThreshold>
+                    PerfCounterOverrideSettings = new List<PerfCounterOverrideThreshold>
                     {
                         new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.GCBytesInAllHeaps, regressionThreshold = thresh } ,
                         new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 9 * thresh } , // use a very high thresh so this counter won't show as leak
@@ -102,11 +102,25 @@ namespace TestStressDll
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         [Description("Sensitivity Leak a very small string of 14 chars")]
+        [Ignore] // same test below with XML settings.
         public async Task StressLeakyDetectVerySmallLeak()
         {
             await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 711, ProcNamesToMonitor = "", Sensitivity = 1e6, DelayMultiplier = 0 });
 
             myList.Add($"leaking string" + "asdfafsdfasdfasd".Substring(0, 14));// needs to be done at runtime to create a diff string each iter. Time dominated by GC
+        }
+
+
+        [TestMethod]
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        [DeploymentItem("StressLeakyWithCustomXMLSettings.settings.xml", "Assets")]
+        public async Task StressLeakyWithCustomXMLSettings()
+        {
+
+            await StressUtil.DoIterationsAsync(this);
+
+            myList.Add($"leaking string" + "asdfafsdfasdfasd".Substring(0, 14));// needs to be done at runtime to create a diff string each iter. Time dominated by GC
+
         }
 
 

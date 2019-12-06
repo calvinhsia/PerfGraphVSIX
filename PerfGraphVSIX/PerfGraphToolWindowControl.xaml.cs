@@ -237,6 +237,14 @@
                 _chart = new Chart();
                 wfhost.Child = _chart;
 
+
+                txtStatus.ContextMenu = new ContextMenu();
+                txtStatus.ContextMenu.AddMenuItem((o, e) =>
+                {
+                    txtStatus.Clear();
+
+                }, "_Clear All", "Clear the current contents");
+
                 _ = Task.Run(async () =>
                 {
                     await ResetPerfCounterMonitorAsync();

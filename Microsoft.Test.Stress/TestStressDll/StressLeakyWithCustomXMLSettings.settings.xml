@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<StressUtilOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <NumIterations>711</NumIterations>
+  <Sensitivity>1000000</Sensitivity>
+  <DelayMultiplier>1</DelayMultiplier>
+  <ProcNamesToMonitor></ProcNamesToMonitor>
+  <ShowUI>false</ShowUI>
+  <PerfCounterOverrideSettings>
+    <PerfCounterOverrideThreshold>
+      <perfCounterType>GCBytesInAllHeaps</perfCounterType>
+      <regressionThreshold>1000000</regressionThreshold>
+    </PerfCounterOverrideThreshold>
+    <PerfCounterOverrideThreshold>
+      <perfCounterType>ProcessorPrivateBytes</perfCounterType>
+      <regressionThreshold>9000000</regressionThreshold>
+    </PerfCounterOverrideThreshold>
+    <PerfCounterOverrideThreshold>
+      <perfCounterType>ProcessorVirtualBytes</perfCounterType>
+      <regressionThreshold>9000000</regressionThreshold>
+    </PerfCounterOverrideThreshold>
+    <PerfCounterOverrideThreshold>
+      <perfCounterType>KernelHandleCount</perfCounterType>
+      <regressionThreshold>9000000</regressionThreshold>
+    </PerfCounterOverrideThreshold>
+  </PerfCounterOverrideSettings>
+  <NumIterationsBeforeTotalToTakeBaselineSnapshot>4</NumIterationsBeforeTotalToTakeBaselineSnapshot>
+  <LoggerLogOutputToDestkop>false</LoggerLogOutputToDestkop>
+  <SecsBetweenIterations>0</SecsBetweenIterations>
+  <SecsToWaitForDevenv>60</SecsToWaitForDevenv>
+</StressUtilOptions>

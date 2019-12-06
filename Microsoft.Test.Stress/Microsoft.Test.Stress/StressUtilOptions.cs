@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Serialization;
 
 namespace Microsoft.Test.Stress
@@ -36,7 +38,8 @@ namespace Microsoft.Test.Stress
         /// Show results automatically, like the Graph of Measurements, the Dump in ClrObjExplorer, the Diff Analysis
         /// </summary>
         public bool ShowUI = false;
-        public List<PerfCounterOverrideThreshold> lstperfCounterOverrideSettings = null;
+
+        public List<PerfCounterOverrideThreshold> PerfCounterOverrideSettings = null;
         /// <summary>
         ///  Specifies the iteration # at which to take a baseline. 
         ///   NumIterationsBeforeTotalToTakeBaselineSnapshot is subtracted from NumIterations to get the baseline iteration number
@@ -78,24 +81,68 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
         /// </summary>
-        public int SecsToWaitForDevenv = 60; 
+        public int SecsToWaitForDevenv = 60;
 
 
-        private object theTest;
+        internal object theTest;
         internal VSHandler VSHandler;
 
-        private bool? _isApexTest;
+        internal bool? _isApexTest;
 
         /// <summary>
         /// used internally, but has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
         /// </summary>
         [XmlIgnore]
         public ILogger logger;
-        
+
 
         internal TestContextWrapper testContext;
         internal MethodInfo _theTestMethod;
         internal List<PerfCounterData> lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress();
+
+        internal void ReadOptionsFromFile(string fileNameOptions)
+        {
+            StressUtilOptions fileOptions;
+            var xmlSerializer = new XmlSerializer(typeof(StressUtilOptions));
+            using (var sr = new StreamReader(fileNameOptions))
+            {
+                fileOptions = (StressUtilOptions)xmlSerializer.Deserialize(sr);
+            }
+            // the file settings override the passed in values, if any
+            PerfCounterOverrideSettings = fileOptions.PerfCounterOverrideSettings;
+            var mems = typeof(StressUtilOptions).GetMembers(BindingFlags.Public | BindingFlags.Instance);
+            foreach (var mem in mems)
+            {
+                if (mem is FieldInfo fldInfo)
+                {
+                    if (fldInfo.Name != nameof(logger) && fldInfo.Name != nameof(PerfCounterOverrideSettings))
+                    {
+                        var newval = fldInfo.GetValue(fileOptions);
+//                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");
+                        fldInfo.SetValue(this, newval);
+                    }
+                }
+            }
+        }
+
+
+        internal void WritedOptionsToFile(string fileNameOptions)
+        {
+            var xmlSerializer = new XmlSerializer(typeof(StressUtilOptions));
+            var settings = new XmlWriterSettings()
+            {
+                Indent = true,
+                IndentChars = " "
+            };
+            using (var strm = File.Create(fileNameOptions))
+            {
+                using (var writer = XmlWriter.Create(strm, settings))
+                {
+                    xmlSerializer.Serialize(writer, this);
+                }
+            }
+        }
+
 
         /// <summary>
         /// if we're being called from a test, pass the test in. Else being called from a dynamic asm
@@ -116,7 +163,7 @@ namespace Microsoft.Test.Stress
 
             if (testContext.Properties[StressUtil.PropNameRecursionPrevention] != null)
             {
-                return false;
+                return false; // we're recurring
             }
             testContext.Properties[StressUtil.PropNameRecursionPrevention] = 1;
 
@@ -165,6 +212,15 @@ namespace Microsoft.Test.Stress
                     TestRunResultsDirectory='C:\VS\src\Tests\Stress\Project\TestResults\Deploy_calvinh 2019-11-14 18_09_34\In\calvinhW7'
 
              * */
+
+            var optFile = Path.Combine(testContext.TestDeploymentDir, "Assets", @"StressLeakyWithCustomXMLSettings.settings.xml");
+            if (File.Exists(optFile))
+            {
+                logger.LogMessage($"Reading settings from {optFile}");
+                ReadOptionsFromFile(optFile);
+
+            }
+
             VSHandler vSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
             {
@@ -191,22 +247,20 @@ namespace Microsoft.Test.Stress
                 await vSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv)); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 VSHandler = vSHandler;
             }
-            if (lstperfCounterOverrideSettings != null)
+            if (PerfCounterOverrideSettings != null)
             {
-                if (lstperfCounterOverrideSettings != null)
+                foreach (var userSettingItem in PerfCounterOverrideSettings) // for each user settings // very small list: linear search
                 {
-                    foreach (var userSettingItem in lstperfCounterOverrideSettings) // for each user settings // very small list: linear search
+                    var pCounterToModify = lstPerfCountersToUse.Where(p => p.perfCounterType == userSettingItem.perfCounterType).FirstOrDefault();
+                    if (pCounterToModify != null)
                     {
-                        var pCounterToModify = lstPerfCountersToUse.Where(p => p.perfCounterType == userSettingItem.perfCounterType).FirstOrDefault();
-                        if (pCounterToModify != null)
-                        {
-                            pCounterToModify.thresholdRegression = userSettingItem.regressionThreshold;
-                        }
+                        pCounterToModify.thresholdRegression = userSettingItem.regressionThreshold;
                     }
                 }
             }
-            return true;
+            return true; // not recurring
         }
+
         internal bool IsTestApexTest()
         {
             if (!_isApexTest.HasValue)
