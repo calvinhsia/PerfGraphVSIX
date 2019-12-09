@@ -394,18 +394,21 @@ namespace Microsoft.Test.Stress
                 {
                     try
                     {
-                        var timer = new DispatcherTimer()
-                        {
-                            Interval = timeout
-                        };
                         var graphWin = new GraphWin(this);
-                        timer.Tick += (o, e) =>
-                          {
-                              Logger.LogMessage($"Timedout showing graph");
-                              timer.Stop();
-                              graphWin.Close();
-                          };
-                        timer.Start();
+                        if (timeoutEnabled)
+                        {
+                            var timer = new DispatcherTimer()
+                            {
+                                Interval = timeout
+                            };
+                            timer.Tick += (o, e) =>
+                              {
+                                  Logger.LogMessage($"Timedout showing graph");
+                                  timer.Stop();
+                                  graphWin.Close();
+                              };
+                            timer.Start();
+                        }
                         graphWin.AddGraph(lstResults);
                         if (timeoutEnabled)
                         {
@@ -590,7 +593,7 @@ namespace Microsoft.Test.Stress
                     {
                         sb.AppendLine(str);
                     }
-                    var filename = Path.Combine(ResultsFolder, "StressTestLog.log");
+                    var filename = Path.Combine(ResultsFolder, $"{testContext.TestName} StressTestLog.log");
                     File.WriteAllText(filename, sb.ToString());
                     lstFileResults.Add(new FileResultsData() { filename = filename, description = "Stress Test Log" });
                 }
