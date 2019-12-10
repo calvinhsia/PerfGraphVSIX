@@ -11,6 +11,27 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Test.Stress
 {
+    /// <summary>
+    /// MemSpect tracks native and managed allocations, as well as files, heapcreates, etc. Each allocation has ThreadId, call stack, size, additional info (like filename)
+    /// When an object is freed (or Garbage collected) this info is discarded)
+    /// Things are much slower with MemSpect, but can be much easier to diagnose. Tracking only native or only managed makes things faster.
+    /// To use MemSpect here, environment variables need to be set before the target process starts the CLR.
+    /// </summary>
+    [Flags]
+    public enum MemSpectModeFlags
+    {
+        MemSpectModeNone = 0,
+        /// <summary>
+        /// Track Native Allocations.
+        /// </summary>
+        MemSpectModeNative = 0x1,
+        /// <summary>
+        /// Tracks managed memory allocations
+        /// </summary>
+        MemSpectModeManaged = 0x2,
+        MemSpectModeFull = MemSpectModeManaged | MemSpectModeNative,
+    }
+
     public class StressUtil
     {
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
@@ -74,6 +95,28 @@ namespace Microsoft.Test.Stress
                 throw;
             }
         }
+
+        public static void SetEnvironmentForMemSpect(IDictionary<string,string> environment, MemSpectModeFlags memSpectModeFlags)
+        {
+            /*
+Set COR_ENABLE_PROFILING=1
+Set COR_PROFILER={01673DDC-46F5-454F-84BC-F2F34564C2AD}
+Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
+*/
+            var pathMemSpectDll = @"c:\MemSpect\MemSpectDll.dll"; // @"C:\VS\src\ExternalAPIs\MemSpect\MemSpectDll.dll"
+
+
+            environment["COR_ENABLE_PROFILING"] = "1";
+            environment["COR_PROFILER"]= "{01673DDC-46F5-454F-84BC-F2F34564C2AD}";
+            environment["COR_PROFILER_PATH"] = pathMemSpectDll;
+            if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeFull)
+            { //todo
+                //var MemSpectInitFile = Path.Combine(Path.GetDirectoryName(pathMemSpectDll), "MemSpect.ini");
+                // need to WritePrivateProfileString  "TrackClrObjects"  "fTrackHeap" "EnableAsserts"
+            }
+
+        }
+
     }
 
     public class LeakException : Exception

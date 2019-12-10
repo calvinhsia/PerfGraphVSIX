@@ -15,7 +15,7 @@ namespace Microsoft.Test.Stress
     {
         public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
         private readonly ILogger logger;
-        private readonly int _DelayMultiplier;
+        public int _DelayMultiplier;
         private EnvDTE.DTE _vsDTE;
         /// <summary>
         /// The process we're monitoring may be different from vs: e.g. servicehub
@@ -128,14 +128,25 @@ namespace Microsoft.Test.Stress
             return vsPath;
         }
 
-        public async Task<Process> StartVSAsync(string vsPath = null)
+        /* Apex: set env vars
+            VisualStudio = Operations.CreateHost<VisualStudioHost>();
+            VisualStudio.Configuration.Environment.Add("FooBar", "FooBar3");
+            VisualStudio.Start();
+         */
+        public async Task<Process> StartVSAsync(string vsPath = null, MemSpectModeFlags memSpectModeFlags = MemSpectModeFlags.MemSpectModeNone)
         {
             if (string.IsNullOrEmpty(vsPath))
             {
                 vsPath = GetVSFullPath();
             }
             logger.LogMessage($"{ nameof(StartVSAsync)}");
-            vsProc = Process.Start(vsPath);
+            var startOptions = new ProcessStartInfo(vsPath);
+            if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeNone)
+            {
+                startOptions.UseShellExecute = false; // must be calse to use env
+                StressUtil.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags);
+            }
+            vsProc = Process.Start(startOptions);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
             await EnsureGotDTE();
             logger.LogMessage($"done {nameof(StartVSAsync)}");

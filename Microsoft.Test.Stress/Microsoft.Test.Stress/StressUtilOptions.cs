@@ -11,6 +11,7 @@ using System.Xml.Serialization;
 
 namespace Microsoft.Test.Stress
 {
+
     [Serializable]
     public class StressUtilOptions
     {
@@ -145,10 +146,9 @@ namespace Microsoft.Test.Stress
 
 
         /// <summary>
-        /// if we're being called from a test, pass the test in. Else being called from a dynamic asm
+        /// if we're being called from a test, pass the test in. Else being called from a dynamic asm in devenv process from vsix (in which case SetTest is not called)
         /// </summary>
-        /// <param name="test"></param>
-        /// <returns></returns>
+        /// <returns>false if recurring</returns>
         internal async Task<bool> SetTest(object test)
         {
             theTest = test;
@@ -226,7 +226,7 @@ namespace Microsoft.Test.Stress
                 }
             }
 
-            VSHandler vSHandler = null;
+            VSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
             {
                 PerfCounterData.ProcToMonitor = Process.GetCurrentProcess();
@@ -235,22 +235,26 @@ namespace Microsoft.Test.Stress
             {
                 var vsHandlerFld = testType.GetFields(
                         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                    .Where(m => m.FieldType.Name == "VSHandler").FirstOrDefault();
+                    .Where(m => m.FieldType.Name == nameof(VSHandler)).FirstOrDefault();
                 if (vsHandlerFld != null)
                 {
-                    vSHandler = vsHandlerFld.GetValue(test) as VSHandler;
-                }
-                if (vSHandler == null)
-                {
-                    vSHandler = testContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
-                    if (vSHandler == null)
+                    theVSHandler = vsHandlerFld.GetValue(test) as VSHandler;
+                    if (theVSHandler._DelayMultiplier > DelayMultiplier) //take the longer of the delaymultipliers
                     {
-                        vSHandler = new VSHandler(logger, DelayMultiplier);
-                        testContext.Properties[StressUtil.PropNameVSHandler] = vSHandler;
+                        DelayMultiplier = theVSHandler._DelayMultiplier;
                     }
                 }
-                await vSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv)); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
-                VSHandler = vSHandler;
+                if (theVSHandler == null)
+                {
+                    theVSHandler = testContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
+                    if (theVSHandler == null)
+                    {
+                        theVSHandler = new VSHandler(logger, DelayMultiplier);
+                        testContext.Properties[StressUtil.PropNameVSHandler] = theVSHandler;
+                    }
+                }
+                await theVSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv)); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
+                VSHandler = theVSHandler;
             }
             if (PerfCounterOverrideSettings != null)
             {

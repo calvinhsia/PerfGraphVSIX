@@ -47,6 +47,8 @@ namespace TestStress
                 throw;
             }
         }
+
+
         [TestCleanup]
         public void TestCleanup()
         {
@@ -66,7 +68,7 @@ namespace TestStress
         {
             logger = new Logger(new TestContextWrapper(TestContext));
             _VSHandler = new VSHandler(logger);
-            await  _VSHandler.StartVSAsync();
+            await _VSHandler.StartVSAsync();
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
         }
 
@@ -114,7 +116,7 @@ namespace TestStress
         {
             try
             {
-                await StressUtil.DoIterationsAsync(this, NumIterations: 3);
+                await StressUtil.DoIterationsAsync(this, NumIterations: 2);
 
 
                 if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
