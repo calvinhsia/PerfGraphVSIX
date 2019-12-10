@@ -16,7 +16,7 @@ namespace Tests
         [TestMethod]
         public void TestGetVSPath()
         {
-            _ = VSHandler.GetVSFullPath();
+            Assert.IsNotNull(VSHandler.GetVSFullPath());
         }
 
         [TestMethod]
@@ -29,7 +29,7 @@ namespace Tests
             {
                 File.Delete(pathDumpFile);
             }
-            var args = new[] { 
+            var args = new[] {
                 "-p", pid.ToString(),
                 "-f",  "\"" + pathDumpFile + "\""
             };

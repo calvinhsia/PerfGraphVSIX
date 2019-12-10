@@ -13,6 +13,7 @@ namespace Tests
     public class NativeTests : BaseTestClass
     {
         [TestMethod]
+        [Ignore]
         public void TestRegex()
         {
             NativeMethods.TestRegEx(1, "^Microsoft.VisualStudio.Text.Implementation.TextBuffer", "Microsoft.VisualStudio.Text.Implementation.TextBuffer", IsCaseSensitive: true, out string res);

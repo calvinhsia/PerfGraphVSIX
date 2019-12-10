@@ -172,7 +172,7 @@ namespace TestStressDll
                 TestContext.WriteLine("Verifying diff file");
                 Assert.IsTrue(diffs.Contains("TestStressDll.StressLeakyClass+BigStuffWithLongNameSoICanSeeItBetter"), "doesn't have leaking type");
 
-                Assert.IsTrue(diffs.Contains("    8    12 leaking string"), "doesn't have leaking string"); // there's one more "leaking string" because it's a class static internally (in System.Object[] array of Pinned handle statics)
+                Assert.IsTrue(diffs.Contains("leaking string"), "doesn't have leaking string"); // there's one more "leaking string" because it's a class static internally (in System.Object[] array of Pinned handle statics)
 
                 Assert.IsTrue(lstFileResults.Where(r => Path.GetExtension(r.filename) == ".dmp").Count() == 2, "expected 2 dumps");
                 throw;

@@ -128,7 +128,7 @@ namespace Microsoft.Test.Stress
             return vsPath;
         }
 
-        public async Task StartVSAsync(string vsPath)
+        public async Task<Process> StartVSAsync(string vsPath = null)
         {
             if (string.IsNullOrEmpty(vsPath))
             {
@@ -139,6 +139,7 @@ namespace Microsoft.Test.Stress
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
             await EnsureGotDTE();
             logger.LogMessage($"done {nameof(StartVSAsync)}");
+            return vsProc;
         }
 
         public async Task OpenSolution(string SolutionToLoad)

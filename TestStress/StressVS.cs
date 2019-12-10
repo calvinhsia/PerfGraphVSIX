@@ -19,12 +19,13 @@ namespace TestStress
         ILogger logger;
         VSHandler _VSHandler;
         [TestInitialize]
-        public void TestInitialize()
+        public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            var procVS = Process.Start(VSHandler.GetVSFullPath());
-            logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
+
+            await _VSHandler.StartVSAsync();
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
         }
 
         [TestMethod]
@@ -61,12 +62,12 @@ namespace TestStress
         VSHandler _VSHandler;
 
         [TestInitialize]
-        public void TestInitialize()
+        public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            var procVS = Process.Start(VSHandler.GetVSFullPath());
-            logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
+            await  _VSHandler.StartVSAsync();
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
         }
 
         [TestCleanup]
@@ -151,7 +152,7 @@ namespace TestStress
                     }
                     await Task.Delay(TimeSpan.FromSeconds(nDelay));
                     logger.LogMessage($"TestInit : starting VS after {nDelay} secs delay");
-                    System.Diagnostics.Process.Start(VSHandler.GetVSFullPath()); // simulate Apex starting VS
+                    Process.Start(VSHandler.GetVSFullPath()); // simulate Apex starting VS
                 });
 
             }
