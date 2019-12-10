@@ -13,7 +13,6 @@ namespace TestStress
     [TestClass]
     public class StressVS
     {
-        public const string vsPath = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
         public const string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln";
 
         public TestContext TestContext { get; set; }
@@ -23,7 +22,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            var procVS = Process.Start(StressVS.vsPath);
+            var procVS = Process.Start(VSHandler.GetVSFullPath());
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
         }
@@ -60,11 +59,12 @@ namespace TestStress
         ILogger logger;
         public TestContext TestContext { get; set; }
         VSHandler _VSHandler;
+
         [TestInitialize]
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            var procVS = Process.Start(StressVS.vsPath);
+            var procVS = Process.Start(VSHandler.GetVSFullPath());
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
             _VSHandler = new VSHandler(logger);
         }
@@ -97,7 +97,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            procVS = Process.Start(StressVS.vsPath); // simulate Apex starting VS
+            procVS = Process.Start(VSHandler.GetVSFullPath()); // simulate Apex starting VS
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
         }
 
@@ -151,7 +151,7 @@ namespace TestStress
                     }
                     await Task.Delay(TimeSpan.FromSeconds(nDelay));
                     logger.LogMessage($"TestInit : starting VS after {nDelay} secs delay");
-                    System.Diagnostics.Process.Start(StressVS.vsPath); // simulate Apex starting VS
+                    System.Diagnostics.Process.Start(VSHandler.GetVSFullPath()); // simulate Apex starting VS
                 });
 
             }

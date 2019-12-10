@@ -85,10 +85,56 @@ namespace Microsoft.Test.Stress
             return true;
         }
 
+        /// <summary>
+        /// Find the location of the latest VS instance. Return the path to Devenv.exe
+        /// </summary>
+        /// <returns></returns>
+        public static string GetVSFullPath()
+        {
+            var vsPath = string.Empty;
+            var lstFileInfos = new List<FileInfo>();
+            // get VS Path, like @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
+            var lstProgFileDirs = new List<string>();
+            var dprogFiles = @"D:\Program Files (x86)";
+            var progfiles = Environment.GetEnvironmentVariable("ProgramFiles(x86)");
+            if (progfiles.ToUpper().StartsWith("C"))
+            {
+                lstProgFileDirs.Add(progfiles);
+                if (Directory.Exists(dprogFiles))
+                {
+                    lstProgFileDirs.Add(dprogFiles);
+                }
+            }
+            foreach (var progFileDir in lstProgFileDirs)
+            {
+                progfiles = Path.Combine(progfiles, "Microsoft Visual Studio");
+                foreach (var vsdir in Directory.GetDirectories(progfiles).Where(d => d.IndexOf("Installer") < 0 && d.IndexOf("Shared") < 0))
+                {
+                    foreach (var subdir in Directory.GetDirectories(vsdir))
+                    {
+                        var testVSPath = Path.Combine(subdir, @"Common7\IDE\devenv.exe");
+                        if (File.Exists(testVSPath))
+                        {
+                            lstFileInfos.Add(new FileInfo(testVSPath));
+                        }
+                    }
+                }
+            }
+            if (lstFileInfos.Count == 0)
+            {
+                throw new FileNotFoundException($"Could not find devenv under " + string.Join("|", lstProgFileDirs));
+            }
+            vsPath = lstFileInfos.OrderByDescending(f => f.CreationTime).First().FullName;
+            return vsPath;
+        }
 
         public async Task StartVSAsync(string vsPath)
         {
-            logger.LogMessage($"{nameof(StartVSAsync)}");
+            if (string.IsNullOrEmpty(vsPath))
+            {
+                vsPath = GetVSFullPath();
+            }
+            logger.LogMessage($"{ nameof(StartVSAsync)}");
             vsProc = Process.Start(vsPath);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
             await EnsureGotDTE();

@@ -14,6 +14,12 @@ namespace Tests
     public class TestDumperViewer : BaseTestClass
     {
         [TestMethod]
+        public void TestGetVSPath()
+        {
+            _ = VSHandler.GetVSFullPath();
+        }
+
+        [TestMethod]
         [Ignore]
         public void TestDumperInProc()
         {

@@ -170,7 +170,7 @@ namespace TestStressDll
                 var diffFile = lstFileResults.Where(r => Path.GetFileName(r.filename).Contains(MeasurementHolder.DiffFileName)).First();
                 var diffs = File.ReadAllText(diffFile.filename);
                 TestContext.WriteLine("Verifying diff file");
-                Assert.IsTrue(diffs.Contains("7    11 TestStressDll.StressLeakyClass+BigStuffWithLongNameSoICanSeeItBetter"), "doesn't have leaking type");
+                Assert.IsTrue(diffs.Contains("TestStressDll.StressLeakyClass+BigStuffWithLongNameSoICanSeeItBetter"), "doesn't have leaking type");
 
                 Assert.IsTrue(diffs.Contains("    8    12 leaking string"), "doesn't have leaking string"); // there's one more "leaking string" because it's a class static internally (in System.Object[] array of Pinned handle statics)
 
