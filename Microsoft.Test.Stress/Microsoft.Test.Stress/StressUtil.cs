@@ -86,6 +86,8 @@ namespace Microsoft.Test.Stress
                         stressUtilOptions.logger.LogMessage(res);
                         stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                     }
+                    // increment one last time, so test methods can check for final execution after measurements taken
+                    stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                 }
             }
             catch (Exception ex)
