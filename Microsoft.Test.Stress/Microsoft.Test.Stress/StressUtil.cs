@@ -96,19 +96,24 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        public static void SetEnvironmentForMemSpect(IDictionary<string,string> environment, MemSpectModeFlags memSpectModeFlags)
+        public static void SetEnvironmentForMemSpect(IDictionary<string, string> environment, MemSpectModeFlags memSpectModeFlags, string MemSpectDllPath)
         {
             /*
 Set COR_ENABLE_PROFILING=1
 Set COR_PROFILER={01673DDC-46F5-454F-84BC-F2F34564C2AD}
 Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
 */
-            var pathMemSpectDll = @"c:\MemSpect\MemSpectDll.dll"; // @"C:\VS\src\ExternalAPIs\MemSpect\MemSpectDll.dll"
-
-
+            if (string.IsNullOrEmpty(MemSpectDllPath))
+            {
+                MemSpectDllPath = @"c:\MemSpect\MemSpectDll.dll"; // @"C:\VS\src\ExternalAPIs\MemSpect\MemSpectDll.dll"
+            }
+            if (!File.Exists(MemSpectDllPath))
+            {
+                throw new FileNotFoundException($@"Couldn't find MemSpectDll.Dll at {MemSpectDllPath}. See http://Toolbox/MemSpect and/or VS\src\ExternalAPIs\MemSpect\MemSpectDll.dll");
+            }
             environment["COR_ENABLE_PROFILING"] = "1";
-            environment["COR_PROFILER"]= "{01673DDC-46F5-454F-84BC-F2F34564C2AD}";
-            environment["COR_PROFILER_PATH"] = pathMemSpectDll;
+            environment["COR_PROFILER"] = "{01673DDC-46F5-454F-84BC-F2F34564C2AD}";
+            environment["COR_PROFILER_PATH"] = MemSpectDllPath;
             if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeFull)
             { //todo
                 //var MemSpectInitFile = Path.Combine(Path.GetDirectoryName(pathMemSpectDll), "MemSpect.ini");

@@ -45,6 +45,13 @@ namespace TestStress
                 throw;
             }
         }
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            // we leave VS alive so can be controlled via MemSpect UI
+//            _VSHandler.ShutDownVSAsync().Wait();
+
+        }
 
     }
 }

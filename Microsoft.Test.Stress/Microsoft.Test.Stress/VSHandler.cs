@@ -133,7 +133,7 @@ namespace Microsoft.Test.Stress
             VisualStudio.Configuration.Environment.Add("FooBar", "FooBar3");
             VisualStudio.Start();
          */
-        public async Task<Process> StartVSAsync(string vsPath = null, MemSpectModeFlags memSpectModeFlags = MemSpectModeFlags.MemSpectModeNone)
+        public async Task<Process> StartVSAsync(string vsPath = null, MemSpectModeFlags memSpectModeFlags = MemSpectModeFlags.MemSpectModeNone, string MemSpectDllPath = "")
         {
             if (string.IsNullOrEmpty(vsPath))
             {
@@ -144,7 +144,7 @@ namespace Microsoft.Test.Stress
             if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeNone)
             {
                 startOptions.UseShellExecute = false; // must be calse to use env
-                StressUtil.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags);
+                StressUtil.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags, MemSpectDllPath);
             }
             vsProc = Process.Start(startOptions);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
