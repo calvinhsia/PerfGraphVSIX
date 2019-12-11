@@ -66,7 +66,7 @@ namespace TestStressDll
             };
 
             var filename = Path.Combine(TestContext.DeploymentDirectory, "opts.xml");
-            stressUtilOptions.WritedOptionsToFile(filename);
+            stressUtilOptions.WriteOptionsToFile(filename);
             LogMessage($"Output to {filename}");
 
             LogMessage(File.ReadAllText(filename));

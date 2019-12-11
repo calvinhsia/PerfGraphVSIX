@@ -127,7 +127,7 @@ namespace Microsoft.Test.Stress
         }
 
 
-        internal void WritedOptionsToFile(string fileNameOptions)
+        internal void WriteOptionsToFile(string fileNameOptions)
         {
             var xmlSerializer = new XmlSerializer(typeof(StressUtilOptions));
             var settings = new XmlWriterSettings()

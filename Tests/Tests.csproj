@@ -80,6 +80,14 @@
       <Project>{1ce249e2-a3f2-43f6-a37f-9329fa947660}</Project>
       <Name>PerfGraphVSIX</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ClrListener\ClrListener.vcxproj"> <!--https://blogs.msdn.microsoft.com/kirillosenkov/2015/04/04/how-to-have-a-project-reference-without-referencing-the-actual-binary/ -->
+      <Project>{BC8DE317-DADD-4685-B06F-849FC5518075}</Project>
+      <Name>ClrListener</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Content</OutputItemType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Targets>Build;DebugSymbolsProjectOutputGroup</Targets>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

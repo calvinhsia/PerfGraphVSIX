@@ -100,7 +100,6 @@
     </Link>
     <PostBuildEvent>
       <Command>
-        xcopy /fdy "$(TargetPath)" "$(SolutionDir)Tests\bin\$(Configuration)"
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

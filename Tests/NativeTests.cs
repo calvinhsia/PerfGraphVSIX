@@ -13,9 +13,10 @@ namespace Tests
     public class NativeTests : BaseTestClass
     {
         [TestMethod]
-        [Ignore]
+        //        [Ignore]
         public void TestRegex()
         {
+           // Assert.Fail(Environment.CurrentDirectory);
             NativeMethods.TestRegEx(1, "^Microsoft.VisualStudio.Text.Implementation.TextBuffer", "Microsoft.VisualStudio.Text.Implementation.TextBuffer", IsCaseSensitive: true, out string res);
             Assert.AreEqual(res, "Match");
             NativeMethods.TestRegEx(1, "Microsoft.VisualStudio.Text.Implementation.TextBuffer", "Microsoft.VisualStudio.Text.Implementation.TextBuffer", IsCaseSensitive: true, out res);
