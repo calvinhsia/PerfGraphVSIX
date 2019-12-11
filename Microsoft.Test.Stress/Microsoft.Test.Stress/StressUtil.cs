@@ -96,6 +96,21 @@ namespace Microsoft.Test.Stress
             }
         }
 
+        /// <summary>
+        /// Iterate the test method the desired number of times and with the specified options.
+        /// The call must be made after preparing the target process(es) for iteration.
+        /// </summary>
+        /// <param name="test">pass the test itself</param>
+        /// <param name="stressUtilOptions">If passed, includes all options: all other optional parameters are ignored</param>
+        /// <param name="numIterations">The number of iterations (defaults to 7)</param>
+        public static void DoIterations(object test, StressUtilOptions stressUtilOptions = null, int numIterations = 7)
+        {
+            AsyncPump.Run(async () =>
+            {
+                await DoIterationsAsync(test, stressUtilOptions, numIterations);
+            });
+        }
+
         public static void SetEnvironmentForMemSpect(IDictionary<string, string> environment, MemSpectModeFlags memSpectModeFlags, string MemSpectDllPath)
         {
             /*
