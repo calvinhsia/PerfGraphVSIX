@@ -37,7 +37,6 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeaky()
         {
             string didGetLeakException = "didGetLeakException";
