@@ -46,7 +46,7 @@ namespace TestStressDll
             {
                 await StressUtil.DoIterationsAsync(
                     this,
-                    new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = true }
+                    new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = false }
                     );
 
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
