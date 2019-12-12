@@ -40,6 +40,9 @@ namespace TestStressDll
         public async Task StressLeaky()
         {
             string didGetLeakException = "didGetLeakException";
+            TestContext.WriteLine($"Username=" + Environment.GetEnvironmentVariable("Username"));
+            TestContext.WriteLine($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
+            TestContext.WriteLine($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
             int numIter = 11;
             try
             {

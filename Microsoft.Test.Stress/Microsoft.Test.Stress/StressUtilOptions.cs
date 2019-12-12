@@ -24,7 +24,7 @@ namespace Microsoft.Test.Stress
         public int NumIterations = 7;
         /// <summary>
         /// Defaults to 1.0 Some perf counter thresholds are large (e.g. 1 megabyte for Private bytes). 
-        /// The actual threshold used is the Thresh divided by Sensitivity.
+        /// The actual threshold used is the per counter Threshold divided by Sensitivity.
         /// Thus, to find smaller leaks, magnify them by setting this to 1,000,000. Or make the test less sensitive by setting this to .1 (for 10 Meg threshold)
         /// </summary>
         public double Sensitivity = 1.0f;
@@ -35,12 +35,41 @@ namespace Microsoft.Test.Stress
         public int DelayMultiplier = 1;
         /// <summary>
         /// '|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. Defaults to 'devenv'
+        /// Set this to '' when measuring leaks in current process (like the testhost proess)
         /// </summary>
         public string ProcNamesToMonitor = "devenv";
+        private bool _ShowUI = false;
         /// <summary>
         /// Show results automatically, like the Graph of Measurements, the Dump in ClrObjExplorer, the Diff Analysis
         /// </summary>
-        public bool ShowUI = false;
+        public bool ShowUI
+        {
+            get
+            {
+                if (IsRunningInBuildMachine())
+                {
+                    _ShowUI = false;
+                }
+                return _ShowUI;
+            }
+            set
+            {
+                _ShowUI = value;
+            }
+        }
+
+        public static bool IsRunningInBuildMachine()
+        {
+            /*On build machine:
+             * Computername=fv-az683
+             * UserDomain=fv-az683
+             */
+            if (Environment.GetEnvironmentVariable("Computername") == Environment.GetEnvironmentVariable("UserDomain"))
+            {
+                return true;
+            }
+            return false;
+        }
 
         public List<PerfCounterOverrideThreshold> PerfCounterOverrideSettings = null;
         /// <summary>
@@ -121,7 +150,7 @@ namespace Microsoft.Test.Stress
                     if (fldInfo.Name != nameof(logger) && fldInfo.Name != nameof(PerfCounterOverrideSettings))
                     {
                         var newval = fldInfo.GetValue(fileOptions);
-//                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");
+                        //                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");
                         fldInfo.SetValue(this, newval);
                     }
                 }
