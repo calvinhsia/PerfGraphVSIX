@@ -77,7 +77,7 @@ namespace Microsoft.Test.Stress
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
-                    if (slope >= .8) // 80% means in 10 iterations, grew by at least 8
+                    if (slope >= .8) // 80% means in 10 iterations, grew by at least 8. E.G. For HandleCount, must leak at least .8 per iteration
                     //if (lstData[lstData.Count - 1].Y - lstData[0].Y >= lstData.Count - 1)
                     {
                         isLeak = true;
