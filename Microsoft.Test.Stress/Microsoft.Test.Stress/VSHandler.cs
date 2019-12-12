@@ -37,10 +37,14 @@ namespace Microsoft.Test.Stress
         /// </summary>
         /// <param name="timeSpan"></param>
         /// <returns></returns>
-        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan)
+        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
         {
             if (_vsDTE == null)
             {
+                if (timeSpan == default)
+                {
+                    timeSpan = TimeSpan.FromSeconds(50);
+                }
                 await Task.Run(async () =>
                 {
                     logger.LogMessage($"{nameof(EnsureGotDTE)}");
@@ -144,7 +148,7 @@ namespace Microsoft.Test.Stress
             }
             vsProc = Process.Start(startOptions);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
-            await EnsureGotDTE(TimeSpan.FromSeconds(50));
+            await EnsureGotDTE();
             logger.LogMessage($"done {nameof(StartVSAsync)}");
             return vsProc;
         }
