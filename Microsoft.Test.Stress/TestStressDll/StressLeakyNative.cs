@@ -34,7 +34,7 @@ namespace TestStressDll
         {
             var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
             {
-                new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 1024*1024 * 1.1f} ,
+                new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 1024*1024 * .8f} ,
             };
             await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 17, ProcNamesToMonitor = string.Empty, PerfCounterOverrideSettings = lstperfCounterOverrideDataSettings });
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter(sizeToAllocate: 1024 * 1024));
