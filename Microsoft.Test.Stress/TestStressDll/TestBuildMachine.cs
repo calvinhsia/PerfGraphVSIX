@@ -18,6 +18,7 @@ namespace TestStressDll
         [TestInitialize]
         public async Task TestInitialize()
         {
+            await Task.Yield();
             logger = new Logger(new TestContextWrapper(TestContext));
             _VSHandler = new VSHandler(logger);
             logger.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
@@ -30,19 +31,20 @@ namespace TestStressDll
             logger.LogMessage($"Path=" + Environment.GetEnvironmentVariable("path"));
             logger.LogMessage($"VS Path={VSHandler.GetVSFullPath()}");
 
-            await _VSHandler.StartVSAsync();
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
-        }
-        [TestMethod]
-        public async Task TestBuildMachineDTE()
-        {
-            await Task.Yield();
             var vsprocs = Process.GetProcessesByName("devenv");
             logger.LogMessage($"# of devenv = {vsprocs.Length}");
             foreach (var devenv in vsprocs)
             {
                 logger.LogMessage($" {devenv.MainModule.FileName}");
             }
+
+//            await _VSHandler.StartVSAsync();
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+        }
+        [TestMethod]
+        public async Task TestBuildMachineDTE()
+        {
+            await Task.Yield();
 
         }
         [TestCleanup]
