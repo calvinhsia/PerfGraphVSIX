@@ -17,7 +17,9 @@ namespace Microsoft.Test.Stress
     {
         /// <summary>
         /// Specify the number of iterations to do. Some scenarios are large (open/close solution)
-        /// Others are small (scroll up/down a file)
+        /// Others are small (scroll up/down a file). Should be >= 5 iterations for best results.
+        /// To determine a good value: Run the tests and examine the measurement graphs. If there is a lot of noise in the graphs, but the trend line slope indicates a leak, 
+        /// increase the # iterations to get a better R² value, which indicates how well the trend line matches the data.
         /// </summary>
         public int NumIterations = 7;
         /// <summary>
