@@ -217,7 +217,7 @@ namespace TestStressDll
                     var res = await measurementHolder.TakeMeasurementAsync($"iter {i}/{nIter}");
                     LogMessage(res);
                 }
-                var filename = measurementHolder.DumpOutMeasurementsToCsv();
+                var filename = measurementHolder.DumpOutMeasurementsToTxtFile();
                 LogMessage($"Results file name = {filename}");
                 lstRegResults = (await measurementHolder.CalculateLeaksAsync(showGraph: false)).Where(r => r.IsLeak).ToList();
             }

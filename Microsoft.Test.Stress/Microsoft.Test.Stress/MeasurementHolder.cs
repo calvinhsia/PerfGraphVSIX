@@ -279,7 +279,7 @@ namespace Microsoft.Test.Stress
                 }
                 else if (nSamplesTaken == stressUtilOptions.NumIterations) // final snapshot?
                 {
-                    var filenameResultsCSV = DumpOutMeasurementsToCsv();
+                    var filenameResultsCSV = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameResultsCSV}");
                     var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI))
                         .Where(r => r.IsLeak).ToList();
@@ -482,7 +482,7 @@ namespace Microsoft.Test.Stress
             return lstResults;
         }
 
-        public string DumpOutMeasurementsToCsv()
+        public string DumpOutMeasurementsToTxtFile()
         {
             var sb = new StringBuilder();
             var lst = new List<string>();
@@ -508,9 +508,9 @@ namespace Microsoft.Test.Stress
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
             }
-            var filename = Path.Combine(ResultsFolder, $"{TestName} Measurements.csv");
+            var filename = Path.Combine(ResultsFolder, $"{TestName} Measurements.txt");
             File.WriteAllText(filename, sb.ToString());
-            lstFileResults.Add(new FileResultsData() { filename = filename, description = "Raw Measuremensts as CSV File to open in Excel" });
+            lstFileResults.Add(new FileResultsData() { filename = filename, description = "Raw Measuremensts as Txt File to open/graph in Excel" });
             return filename;
         }
 

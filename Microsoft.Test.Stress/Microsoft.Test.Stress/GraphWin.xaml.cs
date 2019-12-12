@@ -167,7 +167,7 @@ namespace Microsoft.Test.Stress
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var filename = this.measurementHolder.DumpOutMeasurementsToCsv();
+            var filename = this.measurementHolder.DumpOutMeasurementsToTxtFile();
             System.Diagnostics.Process.Start(filename);
         }
     }
