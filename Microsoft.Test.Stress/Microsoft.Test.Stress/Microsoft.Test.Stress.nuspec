@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$NuGetPackageVersion$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <projectUrl>https://devdiv.visualstudio.com/Engineering/_git/DevDivStress</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes>Release of $title$ as a NuGet package.</releaseNotes>
+    <copyright>Copyright 2019</copyright>
+    <tags>engineering</tags>
+  </metadata>
+</package>
