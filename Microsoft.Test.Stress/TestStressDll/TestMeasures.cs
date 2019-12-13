@@ -48,7 +48,7 @@ namespace TestStressDll
     public class TestMeasures : BaseTestClass
     {
 
-        [TestMethod] 
+        [TestMethod]
         public void TestXmlSerializeOptions()
         {
             var thresh = 1e6f;
@@ -86,7 +86,7 @@ namespace TestStressDll
             var resultsFolder = string.Empty;
             using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
-                new StressUtilOptions() { NumIterations = -1, logger = this, lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress().Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList() },
+                new StressUtilOptions() { NumIterations = -1, logger = this, lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true).Where(p => p.perfCounterType == PerfCounterType.KernelHandleCount).ToList() },
                 SampleType.SampleTypeIteration))
             {
                 resultsFolder = measurementHolder.ResultsFolder;
@@ -190,7 +190,7 @@ namespace TestStressDll
         /// </summary>
         private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity, Action action = null)
         {
-            var lstPCs = PerfCounterData.GetPerfCountersForStress();
+            var lstPCs = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true);
             foreach (var ctr in lstPCs)
             {
                 ctr.IsEnabledForMeasurement = true;

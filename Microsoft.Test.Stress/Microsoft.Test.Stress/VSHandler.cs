@@ -37,10 +37,14 @@ namespace Microsoft.Test.Stress
         /// </summary>
         /// <param name="timeSpan"></param>
         /// <returns></returns>
-        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan)
+        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
         {
             if (_vsDTE == null)
             {
+                if (timeSpan == default)
+                {
+                    timeSpan = TimeSpan.FromSeconds(50);
+                }
                 await Task.Run(async () =>
                 {
                     logger.LogMessage($"{nameof(EnsureGotDTE)}");
@@ -68,7 +72,6 @@ namespace Microsoft.Test.Stress
                             throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
                         }
                     }
-                    PerfCounterData.ProcToMonitor = procDevenv;
                     vsProc = procDevenv;
                     _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
                     _solutionEvents = _vsDTE.Events.SolutionEvents;
@@ -80,6 +83,16 @@ namespace Microsoft.Test.Stress
             }
             return true;
         }
+
+        // "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\VsRegEdit.exe"
+        //vsregedit.exe set "D:\Program Files (x86)\Microsoft Visual Studio 15.0" HKCU General\AutoRecover "AutoRecover Enabled" dword 0
+        //vsregedit.exe set "D:\Program Files (x86)\Microsoft Visual Studio 15.0" HKCU General DelayTimeThreshold dword 20000
+        // vsregedit read local HKCU General DelayTimeThreshold dword
+        // vsregedit set local HKCU General DelayTimeThreshold dword 20000
+        // vsregedit set local HKCU General MaxNavigationHistoryDepth dword 2
+        // vsregedit read local HKCU General MaxNavigationHistoryDepth dword
+
+
 
         /// <summary>
         /// Find the location of the latest VS instance. Return the path to Devenv.exe
@@ -144,7 +157,7 @@ namespace Microsoft.Test.Stress
             }
             vsProc = Process.Start(startOptions);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
-            await EnsureGotDTE(TimeSpan.FromSeconds(50));
+            await EnsureGotDTE();
             logger.LogMessage($"done {nameof(StartVSAsync)}");
             return vsProc;
         }

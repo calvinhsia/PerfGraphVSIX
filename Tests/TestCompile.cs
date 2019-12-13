@@ -229,6 +229,7 @@ namespace DoesntMatter
 // can add the fullpath to an assembly for reference like so:
 //  %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
 //  %VSRoot% will be changed to the fullpath to VS: e.g. ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview""
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 
 ////Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
 ////Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
@@ -285,7 +286,10 @@ namespace MyCustomCode
             logger.LogMessage(""Starting iterations "" + NumberOfIterations.ToString());
             var measurementHolder = new MeasurementHolder(
                 ""testTODOTODO"",
-                new StressUtilOptions() { NumIterations = -1},
+                new StressUtilOptions() { 
+                    NumIterations = -1,
+                    lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(System.Diagnostics.Process.GetCurrentProcess(), IsForStress: false)
+                },
                 SampleType.SampleTypeIteration);
 
 

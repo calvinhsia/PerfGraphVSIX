@@ -138,7 +138,7 @@
                         LogMessage($"Failed to Change System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime.TotalSeconds from {oldval.TotalSeconds} secs to {tspanDesiredLeaseLifetime.TotalSeconds} secs");
                     }
                 }
-                LstPerfCounterData = PerfCounterData.GetPerfCountersForVSIX();
+                LstPerfCounterData = PerfCounterData.GetPerfCountersToUse(System.Diagnostics.Process.GetCurrentProcess(), IsForStress: false);
                 async Task RefreshCodeToRunAsync()
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
