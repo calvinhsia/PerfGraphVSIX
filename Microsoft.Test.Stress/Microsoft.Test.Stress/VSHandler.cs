@@ -85,6 +85,16 @@ namespace Microsoft.Test.Stress
             return true;
         }
 
+        // "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\VsRegEdit.exe"
+        //vsregedit.exe set "D:\Program Files (x86)\Microsoft Visual Studio 15.0" HKCU General\AutoRecover "AutoRecover Enabled" dword 0
+        //vsregedit.exe set "D:\Program Files (x86)\Microsoft Visual Studio 15.0" HKCU General DelayTimeThreshold dword 20000
+        // vsregedit read local HKCU General DelayTimeThreshold dword
+        // vsregedit set local HKCU General DelayTimeThreshold dword 20000
+        // vsregedit set local HKCU General MaxNavigationHistoryDepth dword 2
+        // vsregedit read local HKCU General MaxNavigationHistoryDepth dword
+
+
+
         /// <summary>
         /// Find the location of the latest VS instance. Return the path to Devenv.exe
         /// </summary>
