@@ -16,7 +16,7 @@ namespace TestStressDll
         ILogger logger;
         VSHandler _VSHandler;
         [TestInitialize]
-//        [Ignore]
+        [Ignore]
         public async Task TestInitialize()
         {
             await Task.Yield();
