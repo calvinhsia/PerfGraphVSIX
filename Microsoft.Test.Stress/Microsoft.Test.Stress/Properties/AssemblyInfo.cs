@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Microsoft.Test.Stress")]
-[assembly: AssemblyDescription("Memory analsysis and leak detection")]
+[assembly: AssemblyDescription("Memory analysis and leak detection")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("Microsoft.Test.Stress")]
