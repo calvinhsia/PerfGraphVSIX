@@ -72,7 +72,6 @@ namespace Microsoft.Test.Stress
                             throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
                         }
                     }
-                    PerfCounterData.ProcToMonitor = procDevenv;
                     vsProc = procDevenv;
                     _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
                     _solutionEvents = _vsDTE.Events.SolutionEvents;

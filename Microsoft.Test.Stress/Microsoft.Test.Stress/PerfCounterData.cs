@@ -146,7 +146,7 @@ namespace Microsoft.Test.Stress
         /// </summary>
         public bool IsEnabledForGraph = false;
         public Lazy<PerformanceCounter> lazyPerformanceCounter;
-        public static Process ProcToMonitor;
+        public Process ProcToMonitor;
 
         public float LastValue;
         /// <summary>
@@ -164,6 +164,10 @@ namespace Microsoft.Test.Stress
         public float ReadNextValue()
         {
             float retVal = 0;
+            if (ProcToMonitor.HasExited)
+            {
+                throw new InvalidOperationException($"Process has exited {ProcToMonitor.ProcessName} PID = {ProcToMonitor.Id}");
+            }
             switch (perfCounterType)
             {
                 case PerfCounterType.UserHandleCount:
@@ -182,26 +186,24 @@ namespace Microsoft.Test.Stress
             LastValue = retVal;
             return retVal;
         }
-        public static List<PerfCounterData> GetPerfCountersForStress()
+        /// <summary>
+        /// get list of perf counters to measure
+        /// </summary>
+        /// <param name="processToMonitor"></param>
+        /// <param name="IsForStress">For VSIX, some counters aren't leaky, like % CPU</param>
+        /// <returns></returns>
+        public static List<PerfCounterData> GetPerfCountersToUse(Process processToMonitor, bool IsForStress)
         {
             var lst = new List<PerfCounterData>();
-            foreach (var pc in _lstPerfCounterDefinitions.Where(p => p.IsEnabledForMeasurement))
+            foreach (var pc in _lstPerfCounterDefinitions.Where(p => IsForStress ?  p.IsEnabledForMeasurement : true))
             {
-                lst.Add((PerfCounterData)pc.MemberwiseClone());
+                var newdata = (PerfCounterData)pc.MemberwiseClone();
+                newdata.ProcToMonitor = processToMonitor;
+                lst.Add(newdata);
             }
             return lst;
         }
-
-        public static List<PerfCounterData> GetPerfCountersForVSIX()
-        {
-            var lst = new List<PerfCounterData>();
-            foreach (var pc in _lstPerfCounterDefinitions)
-            {
-                lst.Add((PerfCounterData)pc.MemberwiseClone());
-            }
-            return lst;
-        }
-
+        
 
         public PerfCounterData(PerfCounterType perfCounterType, string perfCounterCategory, string perfCounterName, string perfCounterInstanceName)
         {
@@ -256,12 +258,12 @@ namespace Microsoft.Test.Stress
         [DllImport("User32")]
         extern public static int GetGuiResources(IntPtr hProcess, int uiFlags);
 
-        public static int GetGuiResourcesGDICount()
+        public int GetGuiResourcesGDICount()
         {
             return GetGuiResources(ProcToMonitor.Handle, uiFlags: 0);
         }
 
-        public static int GetGuiResourcesUserCount()
+        public int GetGuiResourcesUserCount()
         {
             return GetGuiResources(ProcToMonitor.Handle, uiFlags: 1);
         }

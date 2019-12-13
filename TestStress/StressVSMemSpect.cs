@@ -27,6 +27,7 @@ namespace TestStress
         }
 
         [TestMethod]
+        [Ignore]
         [ExpectedException(typeof(LeakException))]
         public async Task StressMemSpectOpenCloseSln()
         {

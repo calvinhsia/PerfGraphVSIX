@@ -134,7 +134,15 @@ namespace MyCodeToExecute
             {
                 using (var measurementHolder = new MeasurementHolder(
                     TestName,
-                    new StressUtilOptions() { NumIterations = numIterations, ProcNamesToMonitor = string.Empty, ShowUI = true, logger = logger, Sensitivity = Sensitivity },
+                    new StressUtilOptions()
+                    {
+                        NumIterations = numIterations,
+                        ProcNamesToMonitor = string.Empty,
+                        ShowUI = true,
+                        logger = logger,
+                        Sensitivity = Sensitivity,
+                        lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(System.Diagnostics.Process.GetCurrentProcess(), IsForStress: false)
+                    },
                     SampleType.SampleTypeIteration))
                 {
                     var baseDumpFileName = string.Empty;

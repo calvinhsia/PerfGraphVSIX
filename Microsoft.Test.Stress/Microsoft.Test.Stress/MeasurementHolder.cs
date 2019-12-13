@@ -225,7 +225,7 @@ namespace Microsoft.Test.Stress
             }
             await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsBetweenIterations));
 
-            if (PerfCounterData.ProcToMonitor.Id == Process.GetCurrentProcess().Id)
+            if (LstPerfCounterData[0].ProcToMonitor.Id == Process.GetCurrentProcess().Id)
             {
                 GC.Collect();
             }
@@ -238,7 +238,7 @@ namespace Microsoft.Test.Stress
                 await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
             }
 
-            var sBuilderMeasurementResult = new StringBuilder(desc + $" {PerfCounterData.ProcToMonitor.ProcessName} {PerfCounterData.ProcToMonitor.Id} ");
+            var sBuilderMeasurementResult = new StringBuilder(desc + $" {LstPerfCounterData[0].ProcToMonitor.ProcessName} {LstPerfCounterData[0].ProcToMonitor.Id} ");
             foreach (var ctr in LstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
             {
                 if (!measurements.TryGetValue(ctr.perfCounterType, out var lst))
@@ -272,7 +272,7 @@ namespace Microsoft.Test.Stress
                 {
                     Logger.LogMessage($"Taking base snapshot dump at iteration {nSamplesTaken}");
                     baseDumpFileName = await CreateDumpAsync(
-                        PerfCounterData.ProcToMonitor.Id,
+                        LstPerfCounterData[0].ProcToMonitor.Id,
                         desc: TestName + "_" + nSamplesTaken.ToString(),
                         memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
                     lstFileResults.Add(new FileResultsData() { filename = baseDumpFileName, description = $"BaselineDumpFile taken after iteration # {nSamplesTaken}" });
@@ -290,7 +290,7 @@ namespace Microsoft.Test.Stress
                             Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
                         var currentDumpFile = await CreateDumpAsync(
-                            PerfCounterData.ProcToMonitor.Id,
+                            LstPerfCounterData[0].ProcToMonitor.Id,
                             desc: TestName + "_" + stressUtilOptions.NumIterations.ToString(),
                             memoryAnalysisType: stressUtilOptions.ShowUI ? MemoryAnalysisType.StartClrObjExplorer : MemoryAnalysisType.JustCreateDump);
                         lstFileResults.Add(new FileResultsData() { filename = currentDumpFile, description = "CurrentDumpFile" });

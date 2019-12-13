@@ -130,7 +130,8 @@ namespace Microsoft.Test.Stress
 
         internal TestContextWrapper testContext;
         internal MethodInfo _theTestMethod;
-        internal List<PerfCounterData> lstPerfCountersToUse = PerfCounterData.GetPerfCountersForStress();
+        [XmlIgnore]
+        public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
 
         internal void ReadOptionsFromFile(string fileNameOptions)
         {
@@ -260,7 +261,7 @@ namespace Microsoft.Test.Stress
             VSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
             {
-                PerfCounterData.ProcToMonitor = Process.GetCurrentProcess();
+                lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true);
             }
             else
             {
@@ -286,6 +287,7 @@ namespace Microsoft.Test.Stress
                 }
                 await theVSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv * DelayMultiplier)); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 VSHandler = theVSHandler;
+                lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.vsProc, IsForStress: true);
             }
             if (PerfCounterOverrideSettings != null)
             {
