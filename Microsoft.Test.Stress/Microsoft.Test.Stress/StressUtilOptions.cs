@@ -46,7 +46,7 @@ namespace Microsoft.Test.Stress
         {
             get
             {
-                if (IsRunningInBuildMachine())
+                if (IsRunningOnBuildMachine())
                 {
                     _ShowUI = false;
                 }
@@ -58,7 +58,7 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        public static bool IsRunningInBuildMachine()
+        public static bool IsRunningOnBuildMachine()
         {
             /*On build machine:
              * Computername=fv-az683

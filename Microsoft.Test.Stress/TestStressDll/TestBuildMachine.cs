@@ -16,7 +16,6 @@ namespace TestStressDll
         ILogger logger;
         VSHandler _VSHandler;
         [TestInitialize]
-        [Ignore]
         public async Task TestInitialize()
         {
             await Task.Yield();
@@ -62,6 +61,7 @@ TestContext Messages:
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
         }
         [TestMethod]
+        [Ignore]
         public async Task TestBuildMachineDTE()
         {
             await Task.Yield();
