@@ -64,6 +64,7 @@
     <Compile Include="TestDumperViewer.cs" />
     <Compile Include="TestLease.cs" />
     <Compile Include="TestRefl.cs" />
+    <Compile Include="TestVSHandler.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -80,7 +81,8 @@
       <Project>{1ce249e2-a3f2-43f6-a37f-9329fa947660}</Project>
       <Name>PerfGraphVSIX</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ClrListener\ClrListener.vcxproj"> <!--https://blogs.msdn.microsoft.com/kirillosenkov/2015/04/04/how-to-have-a-project-reference-without-referencing-the-actual-binary/ -->
+    <ProjectReference Include="..\ClrListener\ClrListener.vcxproj">
+      <!--https://blogs.msdn.microsoft.com/kirillosenkov/2015/04/04/how-to-have-a-project-reference-without-referencing-the-actual-binary/ -->
       <Project>{BC8DE317-DADD-4685-B06F-849FC5518075}</Project>
       <Name>ClrListener</Name>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

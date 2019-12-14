@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,8 +15,15 @@ namespace Tests
     {
         [TestMethod]
         //        [Ignore]
+        [DeploymentItem("clrlistener.dll")]
         public void TestRegex()
         {
+            LogMessage($"Curdir = {Environment.CurrentDirectory}");
+            var clrldll = Path.Combine(Environment.CurrentDirectory, "ClrListener.dll");
+            if (!File.Exists(clrldll))
+            {
+                LogMessage($"Couldn't find {clrldll}");
+            }
            // Assert.Fail(Environment.CurrentDirectory);
             NativeMethods.TestRegEx(1, "^Microsoft.VisualStudio.Text.Implementation.TextBuffer", "Microsoft.VisualStudio.Text.Implementation.TextBuffer", IsCaseSensitive: true, out string res);
             Assert.AreEqual(res, "Match");
