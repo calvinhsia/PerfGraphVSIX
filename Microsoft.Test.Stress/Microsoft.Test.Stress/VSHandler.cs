@@ -91,11 +91,76 @@ namespace Microsoft.Test.Stress
         // vsregedit set local HKCU General DelayTimeThreshold dword 20000
         // vsregedit set local HKCU General MaxNavigationHistoryDepth dword 2
         // vsregedit read local HKCU General MaxNavigationHistoryDepth dword
+        /// <summary>
+        /// set things like Navigtion history to small, so it doesn't look like a leak. changes settings that are read when VS Starts
+        /// </summary>
+        public static void PrepareVSSettingsForLeakDetection(string vsPath = null, ILogger logger = null)
+        {
+            var r = VSHandler.DoVSRegEdit("set local HKCU General DelayTimeThreshold dword 20000", vsPath);
+            logger?.LogMessage(r);
+            r = VSHandler.DoVSRegEdit("set local HKCU General MaxNavigationHistoryDepth dword 2", vsPath);
+            logger?.LogMessage(r);
+        }
 
+
+        public static string DoVSRegEdit(string arg, string vsPath = null)
+        {
+            if (string.IsNullOrEmpty(vsPath))
+            {
+                vsPath = VSHandler.GetVSFullPath();
+            }
+            var vsRegEdit = Path.Combine(Path.GetDirectoryName(vsPath), "VsRegedit.exe");
+            var sb = new StringBuilder();
+
+            using (var proc = VSHandler.CreateProcess(vsRegEdit, arg, sb))
+            {
+                proc.Start();
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+                proc.WaitForExit();
+            }
+            return sb.ToString();
+        }
 
 
         /// <summary>
-        /// Find the location of the latest VS instance. Return the path to Devenv.exe
+        /// Execute the given process
+        /// </summary>
+        /// <param name="exeName">Process to be executed</param>
+        /// <param name="arguments">Process arguments</param>
+        /// <param name="sb">stringbuild for result</param>
+        /// <returns></returns>
+        internal static Process CreateProcess(string exeName, string arguments, StringBuilder sb)
+        {
+            ProcessStartInfo info = new ProcessStartInfo(exeName, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            Process process = new Process();
+            process.OutputDataReceived += (o, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    sb.AppendLine(string.Format("==>StdOut: {0}", e.Data));
+                }
+            };
+            process.ErrorDataReceived += (o, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    sb.AppendLine(string.Format("==>StdErr: {0}", e.Data));
+                }
+            };
+            info.CreateNoWindow = true;
+            process.StartInfo = info;
+            return process;
+        }
+
+        /// <summary>
+        /// Find the location of the latest VS instance. Return the full path of Devenv.exe
         /// </summary>
         /// <returns></returns>
         public static string GetVSFullPath()

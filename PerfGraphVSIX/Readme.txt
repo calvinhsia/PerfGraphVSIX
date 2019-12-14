@@ -11,6 +11,17 @@ The code in the repo:
 Wiki Page https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3829/Show-VS-memory-use-in-a-graph-PerfGraphVSIX
 
 
+Repo:
+https://devdiv.visualstudio.com/Engineering/_git/DevDivStress
+
+Enginering feed:
+https://devdiv.visualstudio.com/Engineering/_packaging?_a=feed&feed=Engineering
+e.g.
+	https://devdiv.visualstudio.com/Engineering/_packaging?_a=package&feed=Engineering&package=Microsoft.Test.Stress&protocolType=NuGet&version=1.1.6
+
+Tools->Options:
+	https://devdiv.pkgs.visualstudio.com/_packaging/Engineering/nuget/v3/index.json
+
 
 
 Note: this will cause significant delay every UpdateInterval because it does Full GC and tracking of newly referenced objects
