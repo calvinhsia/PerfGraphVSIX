@@ -13,4 +13,7 @@
     <copyright>Copyright 2019</copyright>
     <tags>engineering</tags>
   </metadata>
+  <files>
+      <file src="bin\Release\*.dll" target="lib\net461" />
+  </files>
 </package>
