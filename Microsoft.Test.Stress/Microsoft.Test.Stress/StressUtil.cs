@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Test.Stress
@@ -45,11 +39,11 @@ namespace Microsoft.Test.Stress
         /// </summary>
         /// <param name="test">pass the test itself</param>
         /// <param name="stressUtilOptions">If passed, includes all options: all other optional parameters are ignored</param>
-        /// <param name="NumIterations">The number of iterations (defaults to 7)</param>
+        /// <param name="NumIterations">The number of iterations (defaults to 71)</param>
         public static async Task DoIterationsAsync(
             object test,
             StressUtilOptions stressUtilOptions = null,
-            int NumIterations = 7)
+            int NumIterations = 71)
         {
             try
             {
@@ -104,8 +98,8 @@ namespace Microsoft.Test.Stress
         /// </summary>
         /// <param name="test">pass the test itself</param>
         /// <param name="stressUtilOptions">If passed, includes all options: all other optional parameters are ignored</param>
-        /// <param name="numIterations">The number of iterations (defaults to 7)</param>
-        public static void DoIterations(object test, StressUtilOptions stressUtilOptions = null, int numIterations = 7)
+        /// <param name="numIterations">The number of iterations (defaults to 71)</param>
+        public static void DoIterations(object test, StressUtilOptions stressUtilOptions = null, int numIterations = 71)
         {
             AsyncPump.Run(async () =>
             {
