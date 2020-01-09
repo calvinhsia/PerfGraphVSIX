@@ -21,7 +21,7 @@ namespace Microsoft.Test.Stress
         /// To determine a good value: Run the tests and examine the measurement graphs. If there is a lot of noise in the graphs, but the trend line slope indicates a leak, 
         /// increase the # iterations to get a better R² value, which indicates how well the trend line matches the data.
         /// </summary>
-        public int NumIterations = 7;
+        public int NumIterations = 71;
         /// <summary>
         /// Defaults to 1.0 Some perf counter thresholds are large (e.g. 1 megabyte for Private bytes). 
         /// The actual threshold used is the per counter Threshold divided by Sensitivity.
