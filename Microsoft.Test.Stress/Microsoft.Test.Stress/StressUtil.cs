@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
+
+using Microsoft.VisualStudio.Telemetry;
 
 namespace Microsoft.Test.Stress
 {
@@ -33,6 +37,10 @@ namespace Microsoft.Test.Stress
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
         internal const string PropNameVSHandler = "VSHandler";
         internal const string PropNameLogger = "Logger";
+
+        private static TelemetrySession telemetrySession = null;
+        private static bool firstIteration = true;
+
         /// <summary>
         /// Iterate the test method the desired number of times
         /// The call can be made from the TestInitialize or the beginning of the TestMethod
@@ -47,6 +55,12 @@ namespace Microsoft.Test.Stress
         {
             try
             {
+                if (firstIteration)
+                {
+                    PostInitialTelemetry();
+                    firstIteration = false;
+                }
+
                 if (stressUtilOptions == null)
                 {
                     stressUtilOptions = new StressUtilOptions()
@@ -82,12 +96,13 @@ namespace Microsoft.Test.Stress
                     }
                     // increment one last time, so test methods can check for final execution after measurements taken
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
+                    DisposeTelemetrySession();
                 }
             }
             catch (Exception ex)
             {
                 stressUtilOptions.logger.LogMessage(ex.ToString());
-
+                DisposeTelemetrySession();
                 throw;
             }
         }
@@ -133,6 +148,46 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
 
         }
 
+        private static void PostInitialTelemetry()
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+
+            Dictionary<string, string> telemetryProperties = new Dictionary<string, string>()
+            {
+                { "DevDivStress.StressUtil.Initialization.FileVersion",  fileVersionInfo.FileVersion},
+            };
+
+            PostTelemetryEvent("DevDivStress/StressUtil/Initialization", telemetryProperties);
+        }
+
+        private static void PostTelemetryEvent(string path, Dictionary<string, string> properties)
+        {
+            if (telemetrySession == null)
+            {
+                telemetrySession = TelemetryService.DefaultSession;
+                telemetrySession.IsOptedIn = true;
+                telemetrySession.Start();
+            }
+
+            TelemetryEvent telemetryEvent = new TelemetryEvent(path);
+
+            foreach (KeyValuePair<string, string> property in properties)
+            {
+                telemetryEvent.Properties[property.Key] = property.Value;
+            }
+
+            telemetrySession.PostEvent(telemetryEvent);
+        }
+
+        private static void DisposeTelemetrySession()
+        {
+            if (telemetrySession != null)
+            {
+                telemetrySession.Dispose();
+                telemetrySession = null;
+            }
+        }
     }
 
     public class LeakException : Exception
