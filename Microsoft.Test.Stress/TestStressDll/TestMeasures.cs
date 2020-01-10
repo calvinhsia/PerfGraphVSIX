@@ -51,9 +51,13 @@ namespace TestStressDll
         [TestMethod]
         public async Task TestOutliers()
         {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                return;
+            }
             await Task.Yield();
-            // from https://dev.azure.com/devdiv/DevDiv/_releaseProgress?_a=release-environment-extension&releaseId=548609&environmentId=2872682&extensionId=ms.vss-test-web.test-result-in-release-environment-editor-tab&runId=10533790&resultId=100000&paneView=attachments
-            var testData = new uint[] 
+            // data from https://dev.azure.com/devdiv/DevDiv/_releaseProgress?_a=release-environment-extension&releaseId=548609&environmentId=2872682&extensionId=ms.vss-test-web.test-result-in-release-environment-editor-tab&runId=10533790&resultId=100000&paneView=attachments
+            var testData = new uint[]
             {
 1867008,
 2713172,
@@ -128,15 +132,17 @@ namespace TestStressDll
 2904492,
             };
 
-
             var resultsFolder = string.Empty;
             using (var measurementHolder = new MeasurementHolder(
                 new TestContextWrapper(TestContext),
-                new StressUtilOptions() { 
-                    NumIterations = -1, 
-                    logger = this, 
-                    lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), 
-                    IsForStress: true).Where(p => p.perfCounterType == PerfCounterType.GCBytesInAllHeaps).ToList() },
+                new StressUtilOptions()
+                {
+                    NumIterations = -1,
+                    logger = this,
+                    pctOutliersToIgnore = 5,
+                    lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(),
+                    IsForStress: true).Where(p => p.perfCounterType == PerfCounterType.GCBytesInAllHeaps).ToList()
+                },
                 SampleType.SampleTypeIteration))
             {
                 resultsFolder = measurementHolder.ResultsFolder;
@@ -150,6 +156,7 @@ namespace TestStressDll
                 var res = await measurementHolder.CalculateLeaksAsync(showGraph: true);
             }
         }
+
         [TestMethod]
         public void TestXmlSerializeOptions()
         {

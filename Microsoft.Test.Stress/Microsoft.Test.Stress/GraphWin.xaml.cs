@@ -102,7 +102,13 @@ namespace Microsoft.Test.Stress
                 _chart.Series.Add(series);
                 for (int i = 0; i < item.lstData.Count; i++)
                 {
-                    var dp = new DataPoint(i + 1, item.lstData[i].Y);
+                    var dp = new DataPoint(i + 1, item.lstData[i].point.Y);
+                    if (item.lstData[i].IsOutlier)
+                    {
+                        dp.MarkerColor = System.Drawing.Color.Red;
+                        dp.MarkerStyle = MarkerStyle.Cross;
+                    }
+                    dp.ToolTip = $"outlier dist = {item.lstData[i].distance}";
                     series.Points.Add(dp);
                 }
                 if (ShowTrendLines)
@@ -143,7 +149,7 @@ namespace Microsoft.Test.Stress
                     foreach (var itm in lstdata)
                     {
                         var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                        sp.Children.Add(new TextBlock() { Text = $"{itm.X,4:n0} {itm.Y:n0}", FontFamily = ffamilty });
+                        sp.Children.Add(new TextBlock() { Text = $"{itm.point.X,4:n0} {itm.point.Y:n0}", FontFamily = ffamilty });
                         itmsUI.Add(sp);
                     }
                     this.lstValues.ItemsSource = itmsUI;

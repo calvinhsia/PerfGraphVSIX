@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI;
 using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
@@ -54,26 +55,124 @@ namespace Microsoft.Test.Stress
         /// </summary>
         OutputMeasurements = 0x10,
     }
-    /// <summary>
-    /// Todo: discard outliers
-    /// </summary>
     public class LeakAnalysisResult
     {
+        public class DataPoint
+        {
+            public PointF point;
+            public bool IsOutlier;
+            internal double distance; // distance from line
+        }
         public PerfCounterData perfCounterData;
-        public List<PointF> lstData = new List<PointF>();
+        public List<DataPoint> lstData = new List<DataPoint>();
         public double sensitivity;
         public double rmsError;
+        public int pctOutliersToIgnore;
         /// <summary>
         /// Slope represents the amount leaked per iteration. 0 means no leak.
         /// </summary>
         public double slope;
         public double yintercept;
+        private int NumOutliers => (int)(lstData.Count * pctOutliersToIgnore / 100.0);
+
+        public LeakAnalysisResult(List<uint> lst)
+        {
+            int ndx = 0;
+            foreach (var itm in lst)
+            {
+                lstData.Add(new DataPoint() { point = new PointF() { X = ++ndx, Y = itm } });
+            }
+        }
+
+        // http://csharphelper.com/blog/2014/10/find-a-linear-least-squares-fit-for-a-set-of-points-in-c/
+        // Find the least squares linear fit.
+        // Return the total error.
+        public double FindLinearLeastSquaresFit()
+        {
+            // preliminary slope and intercept 
+            CalcSlopeAndIntercept();
+            if (NumOutliers > 0)
+            {
+                // identify outliers by finding those with largest distance from line
+                foreach (var dp in lstData)
+                {
+                    var pt = dp.point;
+                    dp.distance = Math.Abs(yintercept + slope * pt.X - pt.Y) / Math.Sqrt(1 + slope * slope);
+                }
+                var sortedLst = lstData.OrderByDescending(p => p.distance).Take(NumOutliers);
+                foreach (var item in sortedLst)
+                {
+                    item.IsOutlier = true;
+                }
+                CalcSlopeAndIntercept();
+            }
+            return Math.Sqrt(ErrorSquared());
+        }
+
+        private void CalcSlopeAndIntercept()
+        {
+            double N = lstData.Count - NumOutliers;
+            double SumX = 0;
+            double SumY = 0;
+            double SumXX = 0;
+            double SumXY = 0;
+            foreach (var dp in lstData.Where(p => !p.IsOutlier))
+            {
+                var pt = dp.point;
+                SumX += pt.X;
+                SumY += pt.Y;
+                SumXX += pt.X * pt.X;
+                SumXY += pt.X * pt.Y;
+            }
+            slope = (SumXY * N - SumX * SumY) / (SumXX * N - SumX * SumX);
+            yintercept = (SumXY * SumX - SumY * SumXX) / (SumX * SumX - N * SumXX);
+        }
+
+        // Return the error squared.
+        public double ErrorSquared()
+        {
+            double total = 0;
+            foreach (var dp in lstData)
+            {
+                var pt = dp.point;
+                double dy = pt.Y - (slope * pt.X + yintercept);
+                total += dy * dy;
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// When RSquared (range 0-1) is close to 1, indicates how well the trend is linear and matches the line.
+        /// The smaller the value, the less likely the trend is linear
+        /// </summary>
+        public double RSquared()
+        {
+            var SStot = 0.0;
+            var SSerr = 0.0;
+            double YMean = 0;
+            lstData.ForEach(t => YMean += t.point.Y);
+            YMean /= (lstData.Count - NumOutliers);
+            double xMean = (lstData.Count - NumOutliers - 1) / 2;
+            for (int i = 0; i < lstData.Count; i++)
+            {
+                if (!lstData[i].IsOutlier)
+                {
+                    var t = lstData[i].point.Y - YMean;
+                    SStot += t * t;
+                    t = lstData[i].point.Y - (slope * lstData[i].point.X + yintercept);
+                    SSerr += t * t;
+                }
+            }
+            var rS = 1.0 - SSerr / SStot;
+            return rS;
+        }
+
         public bool IsLeak
         {
             get
             {
                 var isLeak = false;
-                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared > 0.5)
+                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > 0.5)
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
@@ -86,35 +185,11 @@ namespace Microsoft.Test.Stress
                 return isLeak;
             }
         }
-        /// <summary>
-        /// When RSquared (range 0-1) is close to 1, indicates how well the trend is linear and matches the line.
-        /// The smaller the value, the less likely the trend is linear
-        /// </summary>
-        public double RSquared
-        {
-            get
-            {
-                var SStot = 0.0;
-                var SSerr = 0.0;
-                double YMean = 0;
-                lstData.ForEach(t => YMean += t.Y);
-                YMean /= lstData.Count;
-                double xMean = (lstData.Count - 1) / 2;
-                for (int i = 0; i < lstData.Count; i++)
-                {
-                    var t = lstData[i].Y - YMean;
-                    SStot += t * t;
-                    t = lstData[i].Y - (slope * lstData[i].X + yintercept);
-                    SSerr += t * t;
-                }
-                var rS = 1.0 - SSerr / SStot;
-                return rS;
-            }
-        }
+
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared,8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared(),8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
         }
     }
 
@@ -369,17 +444,13 @@ namespace Microsoft.Test.Stress
             var lstResults = new List<LeakAnalysisResult>();
             foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
-                var leakAnalysis = new LeakAnalysisResult()
+                var leakAnalysis = new LeakAnalysisResult(measurements[ctr.perfCounterType])
                 {
                     perfCounterData = ctr,
-                    sensitivity = stressUtilOptions.Sensitivity
+                    sensitivity = stressUtilOptions.Sensitivity,
+                    pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore
                 };
-                int ndx = 1;
-                foreach (var itm in measurements[ctr.perfCounterType])
-                {
-                    leakAnalysis.lstData.Add(new PointF() { X = ndx++, Y = itm });
-                }
-                leakAnalysis.rmsError = FindLinearLeastSquaresFit(leakAnalysis.lstData, out leakAnalysis.slope, out leakAnalysis.yintercept);
+                leakAnalysis.FindLinearLeastSquaresFit();
                 Logger.LogMessage($"{leakAnalysis}");
                 lstResults.Add(leakAnalysis);
             }
@@ -457,7 +528,12 @@ namespace Microsoft.Test.Stress
                     chart.Series.Add(series);
                     for (int i = 0; i < item.lstData.Count; i++)
                     {
-                        var dp = new DataPoint(i + 1, item.lstData[i].Y); // measurements taken at end of iteration
+                        var dp = new DataPoint(i + 1, item.lstData[i].point.Y); // measurements taken at end of iteration
+                        if (item.lstData[i].IsOutlier)
+                        {
+                            dp.MarkerColor = System.Drawing.Color.Red;
+                            dp.MarkerStyle = MarkerStyle.Cross;
+                        }
                         series.Points.Add(dp);
                     }
                     // now show trend line
@@ -544,42 +620,6 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             return $"{TestName} #Samples={nSamplesTaken}";
-        }
-
-
-        // http://csharphelper.com/blog/2014/10/find-a-linear-least-squares-fit-for-a-set-of-points-in-c/
-        // Find the least squares linear fit.
-        // Return the total error.
-        public static double FindLinearLeastSquaresFit(
-            List<PointF> points, out double m, out double b)
-        {
-            double N = points.Count;
-            double SumX = 0;
-            double SumY = 0;
-            double SumXX = 0;
-            double SumXY = 0;
-            foreach (PointF pt in points)
-            {
-                SumX += pt.X;
-                SumY += pt.Y;
-                SumXX += pt.X * pt.X;
-                SumXY += pt.X * pt.Y;
-            }
-            m = (SumXY * N - SumX * SumY) / (SumXX * N - SumX * SumX);
-            b = (SumXY * SumX - SumY * SumXX) / (SumX * SumX - N * SumXX);
-            return Math.Sqrt(ErrorSquared(points, m, b));
-        }
-        // Return the error squared.
-        public static double ErrorSquared(List<PointF> points,
-            double m, double b)
-        {
-            double total = 0;
-            foreach (PointF pt in points)
-            {
-                double dy = pt.Y - (m * pt.X + b);
-                total += dy * dy;
-            }
-            return total;
         }
 
         public void Dispose()
