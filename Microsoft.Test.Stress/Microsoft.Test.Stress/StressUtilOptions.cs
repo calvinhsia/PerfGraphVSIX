@@ -221,17 +221,6 @@ namespace Microsoft.Test.Stress
                     }
                 }
             }
-            logger.LogMessage($@"TestName = {testContext.TestName} 
-                                        IsApexTest={IsTestApexTest()}
-                                        NumIterations = {NumIterations}
-                                        Sensitivity = {Sensitivity}
-                                        CurDir = '{Environment.CurrentDirectory}'
-                                        TestDeploymentDir = '{testContext.TestDeploymentDir}'
-                                        TestRunDirectory = '{testContext.TestRunDirectory}'  
-                                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
-                                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
-                ");
-
             testContext.Properties[StressUtil.PropNameLogger] = logger;
             /*
              * probs: the curdir is not empty, so results will be overwritten (might have ClrObjExplorer or WinDbg open with a result dump)
@@ -262,6 +251,17 @@ namespace Microsoft.Test.Stress
                     mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
                 }
             }
+            logger.LogMessage($@"TestName = {testContext.TestName} 
+                                        IsApexTest={IsTestApexTest()}
+                                        NumIterations = {NumIterations}
+                                        Sensitivity = {Sensitivity}
+                                        CurDir = '{Environment.CurrentDirectory}'
+                                        TestDeploymentDir = '{testContext.TestDeploymentDir}'
+                                        TestRunDirectory = '{testContext.TestRunDirectory}'  
+                                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
+                                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
+                ");
+
 
             VSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
