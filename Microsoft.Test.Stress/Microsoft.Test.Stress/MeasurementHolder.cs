@@ -62,6 +62,10 @@ namespace Microsoft.Test.Stress
             public PointF point;
             public bool IsOutlier;
             internal double distance; // distance from line
+            public override string ToString()
+            {
+                return $"{point} IsOutlier={IsOutlier}";
+            }
         }
         public PerfCounterData perfCounterData;
         public List<DataPoint> lstData = new List<DataPoint>();

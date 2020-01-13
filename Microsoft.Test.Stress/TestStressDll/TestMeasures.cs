@@ -153,7 +153,15 @@ namespace TestStressDll
                         measurementHolder.measurements[ctr.perfCounterType].Add(testData[iter]);
                     }
                 }
-                var res = await measurementHolder.CalculateLeaksAsync(showGraph: true);
+                var leakAnalysisResults = await measurementHolder.CalculateLeaksAsync(showGraph: false);
+                foreach (var res in leakAnalysisResults[0].lstData)
+                {
+                    LogMessage($"{res}");
+                }
+                Assert.IsTrue(leakAnalysisResults[0].lstData[0].IsOutlier);
+                Assert.IsTrue(leakAnalysisResults[0].lstData[1].IsOutlier);
+                Assert.IsTrue(leakAnalysisResults[0].lstData[2].IsOutlier);
+                Assert.IsFalse(leakAnalysisResults[0].lstData[3].IsOutlier);
             }
         }
 
