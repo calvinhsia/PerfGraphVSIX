@@ -49,6 +49,115 @@ namespace TestStressDll
     {
 
         [TestMethod]
+        public async Task TestOutliers()
+        {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                return;
+            }
+            await Task.Yield();
+            // data from https://dev.azure.com/devdiv/DevDiv/_releaseProgress?_a=release-environment-extension&releaseId=548609&environmentId=2872682&extensionId=ms.vss-test-web.test-result-in-release-environment-editor-tab&runId=10533790&resultId=100000&paneView=attachments
+            var testData = new uint[]
+            {
+1867008,
+2713172,
+2701928,
+2701928,
+2701800,
+2701800,
+2701700,
+2701700,
+2711368,
+2711368,
+2713228,
+2713228,
+2714876,
+2714876,
+2716588,
+2716588,
+2716588,
+2732980,
+2732980,
+2734848,
+2734848,
+2736536,
+2736536,
+2738052,
+2738052,
+2739908,
+2739908,
+2741400,
+2741400,
+2742916,
+2742916,
+2744548,
+2744548,
+2744548,
+2747340,
+2747340,
+2764696,
+2764696,
+2766384,
+2766384,
+2767888,
+2767888,
+2769756,
+2769756,
+2771260,
+2771260,
+2772764,
+2772764,
+2774268,
+2774268,
+2774268,
+2776140,
+2776140,
+2777468,
+2777468,
+2779168,
+2779168,
+2779836,
+2779836,
+2797744,
+2797744,
+2799236,
+2799236,
+2800996,
+2800996,
+2803548,
+2803548,
+2899440,
+2904492,
+2904492,
+2904492,
+            };
+
+            var resultsFolder = string.Empty;
+            using (var measurementHolder = new MeasurementHolder(
+                new TestContextWrapper(TestContext),
+                new StressUtilOptions()
+                {
+                    NumIterations = -1,
+                    logger = this,
+                    pctOutliersToIgnore = 5,
+                    lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(),
+                    IsForStress: true).Where(p => p.perfCounterType == PerfCounterType.GCBytesInAllHeaps).ToList()
+                },
+                SampleType.SampleTypeIteration))
+            {
+                resultsFolder = measurementHolder.ResultsFolder;
+                for (int iter = 0; iter < testData.Length; iter++)
+                {
+                    foreach (var ctr in measurementHolder.LstPerfCounterData)
+                    {
+                        measurementHolder.measurements[ctr.perfCounterType].Add(testData[iter]);
+                    }
+                }
+                var res = await measurementHolder.CalculateLeaksAsync(showGraph: true);
+            }
+        }
+
+        [TestMethod]
         public void TestXmlSerializeOptions()
         {
             var thresh = 1e6f;

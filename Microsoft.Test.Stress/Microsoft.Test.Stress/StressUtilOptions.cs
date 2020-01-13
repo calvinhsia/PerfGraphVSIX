@@ -21,7 +21,7 @@ namespace Microsoft.Test.Stress
         /// To determine a good value: Run the tests and examine the measurement graphs. If there is a lot of noise in the graphs, but the trend line slope indicates a leak, 
         /// increase the # iterations to get a better R² value, which indicates how well the trend line matches the data.
         /// </summary>
-        public int NumIterations = 7;
+        public int NumIterations = 71;
         /// <summary>
         /// Defaults to 1.0 Some perf counter thresholds are large (e.g. 1 megabyte for Private bytes). 
         /// The actual threshold used is the per counter Threshold divided by Sensitivity.
@@ -33,6 +33,11 @@ namespace Microsoft.Test.Stress
         /// Running the test with instrumented binaries (such as under http://Toolbox/MemSpect  will slow down the target process
         /// </summary>
         public int DelayMultiplier = 1;
+        /// <summary>
+        /// The percent of iterations for which outlier measurements are ignored
+        /// If there are a few outliers, they will be ignored for calculating the slope and R²
+        /// </summary>
+        public int pctOutliersToIgnore = 5;
         /// <summary>
         /// '|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. Defaults to 'devenv'
         /// Set this to '' when measuring leaks in current process (like the testhost proess)
@@ -216,17 +221,6 @@ namespace Microsoft.Test.Stress
                     }
                 }
             }
-            logger.LogMessage($@"TestName = {testContext.TestName} 
-                                        IsApexTest={IsTestApexTest()}
-                                        NumIterations = {NumIterations}
-                                        Sensitivity = {Sensitivity}
-                                        CurDir = '{Environment.CurrentDirectory}'
-                                        TestDeploymentDir = '{testContext.TestDeploymentDir}'
-                                        TestRunDirectory = '{testContext.TestRunDirectory}'  
-                                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
-                                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
-                ");
-
             testContext.Properties[StressUtil.PropNameLogger] = logger;
             /*
              * probs: the curdir is not empty, so results will be overwritten (might have ClrObjExplorer or WinDbg open with a result dump)
@@ -257,6 +251,17 @@ namespace Microsoft.Test.Stress
                     mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
                 }
             }
+            logger.LogMessage($@"TestName = {testContext.TestName} 
+                                        IsApexTest={IsTestApexTest()}
+                                        NumIterations = {NumIterations}
+                                        Sensitivity = {Sensitivity}
+                                        CurDir = '{Environment.CurrentDirectory}'
+                                        TestDeploymentDir = '{testContext.TestDeploymentDir}'
+                                        TestRunDirectory = '{testContext.TestRunDirectory}'  
+                                        TestResultsDirectory='{testContext.TestResultsDirectory}' 
+                                        TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
+                ");
+
 
             VSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))

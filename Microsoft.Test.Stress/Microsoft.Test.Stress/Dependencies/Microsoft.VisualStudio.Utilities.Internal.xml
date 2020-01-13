@@ -1,0 +1,742 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.VisualStudio.Utilities.Internal</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest">
+            <summary>
+            HttpWeb request wrapper
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.Url">
+            <summary>
+            Gets target Url
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.Method">
+            <summary>
+            Gets or sets used method (GET, HEAD, POST, PUT, DELETE, TRACE, or OPTIONS)
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.Timeout">
+            <summary>
+            Gets or sets timeout for response
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.CachePolicy">
+            <summary>
+            Gets or sets cache policy
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.ContentType">
+            <summary>
+            Gets or sets content type. For example, "application/x-www-form-urlencoded"
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest"/> class.
+            </summary>
+            <param name="url">Url</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.AddHeaders(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.String}})">
+            <summary>
+            Add HTTP headers.
+            </summary>
+            <param name="headers">Headers to add</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.AsyncHttpWebRequest.GetResponseAsync">
+            <summary>
+            Send request and get response back asynchronously.
+            </summary>
+            <returns>Response</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.CodeContract">
+            <summary>
+            CodeContract is used for validate input parameters
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.CodeContract.RequiresArgumentNotNull``1(``0,System.String)">
+            <summary>
+            Requires that argument is not null
+            </summary>
+            <typeparam name="T">type of argument</typeparam>
+            <param name="value">Value</param>
+            <param name="argumentName">string representation of the argument</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.CodeContract.RequiresArgumentNotEmptyOrWhitespace(System.String,System.String)">
+            <summary>
+            Requires that string is not empty or contains just whitespaces
+            </summary>
+            <param name="value">value</param>
+            <param name="argumentName">string representation of the argument</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.CodeContract.RequiresArgumentNotNullAndNotEmpty(System.String,System.String)">
+            <summary>
+            Requires that string is not null and not empty
+            </summary>
+            <param name="value">value</param>
+            <param name="argumentName">string representation of the argument</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.CodeContract.RequiresArgumentNotNullAndNotWhiteSpace(System.String,System.String)">
+            <summary>
+            Requires that argument not null and not whitespace
+            </summary>
+            <param name="value">value</param>
+            <param name="argumentName">string representation of the argument</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.CodeContract.RequiresArgumentNotEmpty(System.Guid,System.String)">
+            <summary>
+            Requires that Guid is not empty
+            </summary>
+            <param name="guid">Guid to validate</param>
+            <param name="argumentName">string representation of the argument</param>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.DictionaryExtensions">
+            <summary>
+            Several dictionary extension methods.
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.DictionaryExtensions.GetOrDefault``2(System.Collections.Generic.IDictionary{``0,``1},``0)">
+            <summary>
+            Gets a value by the given key.
+            </summary>
+            <typeparam name="TK">key type</typeparam>
+            <typeparam name="TV">value type</typeparam>
+            <param name="dictionary">dictionary</param>
+            <param name="key">key in the dictionary</param>
+            <returns>default if key doesn't exist in the dictionary.</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.DictionaryExtensions.AddRange``2(System.Collections.Generic.IDictionary{``0,``1},System.Collections.Generic.IDictionary{``0,``1},System.Boolean)">
+            <summary>
+            Add one dictionary content to the another dictionary
+            </summary>
+            <typeparam name="TKey">type of the dictionary argument key</typeparam>
+            <typeparam name="TValue">type of the dictionary argument value</typeparam>
+            <param name="target">target dictionary</param>
+            <param name="source">source dictionary</param>
+            <param name="forceUpdate">whether we need to force update value</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.DictionaryExtensions.Remove``2(System.Collections.Concurrent.ConcurrentDictionary{``0,``1},``0)">
+            <summary>
+            Remove key from the ConcurrentDictionary
+            </summary>
+            <typeparam name="TK">type of the dictionary argument key</typeparam>
+            <typeparam name="TV">type of the dictionary argument value</typeparam>
+            <param name="dictionary">dictionary</param>
+            <param name="key">key</param>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest">
+            <summary>
+            HttpWeb request wrapper interface.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.Url">
+            <summary>
+            Gets target Url
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.Method">
+            <summary>
+            Gets or sets used method (GET, HEAD, POST, PUT, DELETE, TRACE, or OPTIONS)
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.Timeout">
+            <summary>
+            Gets or sets timeout for response
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.CachePolicy">
+            <summary>
+            Gets or sets cache policy
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.ContentType">
+            <summary>
+            Gets or sets content type. For example, "application/x-www-form-urlencoded"
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.AddHeaders(System.Collections.Generic.IEnumerable{System.Collections.Generic.KeyValuePair{System.String,System.String}})">
+            <summary>
+            Add HTTP headers.
+            </summary>
+            <param name="headers">Headers</param>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IAsyncHttpWebRequest.GetResponseAsync">
+            <summary>
+            Send request and get response back asynchronously.
+            </summary>
+            <returns>Response</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools">
+            <summary>
+            Helper class to get information from the Registry
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.GetRegistryIntValueFromLocalMachineRoot(System.String,System.String,System.Nullable{System.Int32})">
+            <summary>
+            Get int registry value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.GetRegistryIntValueFromLocalMachineRoot(System.String,System.String,System.Boolean,System.Nullable{System.Int32})">
+            <summary>
+            Get int registry value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>\
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.GetRegistryValueFromLocalMachineRoot(System.String,System.String,System.Object)">
+            <summary>
+            Get registry key value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.GetRegistryValueFromLocalMachineRoot(System.String,System.String,System.Boolean,System.Object)">
+            <summary>
+            Get registry key value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.GetRegistryValueFromCurrentUserRoot(System.String,System.String,System.Object)">
+            <summary>
+            Get registry key value from the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.SetRegistryFromCurrentUserRoot(System.String,System.String,System.Object)">
+            <summary>
+            Sets a value in the registry from the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="value">value to set</param>
+            <returns>true if set or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools.SetRegistryFromLocalMachineRoot(System.String,System.String,System.Object,System.Boolean)">
+            <summary>
+            Sets a value in the registry from the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="value">value to set</param>
+            <param name="use64Bit">optional, if set to true, it uses the 64 bit registry, otherwise defaults to 32 bit</param>
+            <returns>true if set or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.GetRegistryValueNamesFromCurrentUserRoot(System.String)">
+            <summary>
+            Get the names of all values under a key in the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.GetRegistryValueNamesFromLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Get the names of all values under a key in the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.GetRegistrySubKeyNamesFromCurrentUserRoot(System.String)">
+            <summary>
+            Get the names of all subkeys under a key in the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.GetRegistrySubKeyNamesFromLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Get the names of all subkeys under a key in the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.DoesRegistryKeyExistInCurrentUserRoot(System.String)">
+            <summary>
+            Determines if a key exists in the HKCU root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>True if key exists, false if it does not</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.DoesRegistryKeyExistInLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Determines if a key exists in the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True if key exists, false if it does not</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.DeleteRegistryKeyFromCurrentUserRoot(System.String)">
+            <summary>
+            Deletes the specified registry key and all subkeys in the HKCU root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.DeleteRegistryKeyFromLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Deletes the specified registry key and all subkeys in the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.DeleteRegistryValueFromCurrentUserRoot(System.String,System.String)">
+            <summary>
+            Deletes the specified registry value from a key in the HKCU root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools2.DeleteRegistryValueFromLocalMachineRoot(System.String,System.String,System.Boolean)">
+            <summary>
+            Deletes the specified registry value from a key in the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools3.TryGetRegistryValueKindFromCurrentUserRoot(System.String,System.String,Microsoft.Win32.RegistryValueKind@)">
+            <summary>
+            Determines the kind of a property in the HKCU root registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="kind">current value kind</param>
+            <returns>True on success, false on failure</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IRegistryTools3.TryGetRegistryValueKindFromLocalMachineRoot(System.String,System.String,Microsoft.Win32.RegistryValueKind@,System.Boolean)">
+            <summary>
+            Determines the kind of a property in the HKLM root registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="kind">current value kind</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True on success, false on failure</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.ErrorCode">
+            <summary>
+            Possible error codes for response.
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.ErrorCode.NoError">
+            <summary>
+            No error occurs
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.ErrorCode.NullResponse">
+            <summary>
+            Null response was returned.
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.ErrorCode.RequestTimedOut">
+            <summary>
+            Request was cancelled by timeout.
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.ErrorCode.WebExceptionThrown">
+            <summary>
+            Other web exception was thrown.
+            </summary>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.IStreamedHttpWebResponse">
+            <summary>
+            HttpWeb response wrapper interface.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IStreamedHttpWebResponse.ErrorCode">
+            <summary>
+            Gets response error code.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IStreamedHttpWebResponse.ExceptionCode">
+            <summary>
+            Gets response exception code.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.IStreamedHttpWebResponse.StatusCode">
+            <summary>
+            Gets response status code.
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.IStreamedHttpWebResponse.GetResponseStream">
+            <summary>
+            Get response as a stream.
+            </summary>
+            <returns>Response stream</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.MacNativeMethods">
+            <summary>
+            Class containing all PInvoke definitions we use in the Telemetry Library that are used on macOS.
+            </summary>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.ObjectExtensions">
+            <summary>
+            Object extensions methods
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.ObjectExtensions.Enumerate``1(``0)">
+            <summary>
+            Returns an enumeration that contains only the given value.
+            </summary>
+            <typeparam name="T">type of value</typeparam>
+            <param name="value">value itself</param>
+            <returns>INumerable type with only 1 value</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.ObjectExtensions.EmptyIfNull``1(System.Collections.Generic.IEnumerable{``0})">
+            <summary>
+            Return this enumeration in case it is not null. In case it is null return empty enumeration.
+            </summary>
+            <typeparam name="T">type of the values</typeparam>
+            <param name="enumeration">enumeration</param>
+            <returns>result</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.Platform">
+            <summary>
+            Determines which platform the process is running on.
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.Platform.IsWindows">
+            <summary>
+            Returns true on Windows platform.
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.Platform.IsMac">
+            <summary>
+            Returns true on Mac OS platforms.
+            </summary>
+        </member>
+        <member name="F:Microsoft.VisualStudio.Utilities.Internal.Platform.IsLinux">
+            <summary>
+            Returns true on Linux platforms.
+            </summary>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.RegistryTools">
+            <summary>
+            Helper class to get information from the Registry
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryIntValueFromLocalMachineRoot(System.String,System.String,System.Nullable{System.Int32})">
+            <summary>
+            Get int registry value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryIntValueFromLocalMachineRoot(System.String,System.String,System.Boolean,System.Nullable{System.Int32})">
+            <summary>
+            Get int registry value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValueFromLocalMachineRoot(System.String,System.String,System.Object)">
+            <summary>
+            Get registry key value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValueFromLocalMachineRoot(System.String,System.String,System.Boolean,System.Object)">
+            <summary>
+            Get registry key value from the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValueFromCurrentUserRoot(System.String,System.String,System.Object)">
+            <summary>
+            Get registry key value from the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.TryGetRegistryValueKindFromCurrentUserRoot(System.String,System.String,Microsoft.Win32.RegistryValueKind@)">
+            <summary>
+            Determines the kind of a property in the HKCU root registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="kind">current value kind</param>
+            <returns>True on success, false on failure</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.TryGetRegistryValueKindFromLocalMachineRoot(System.String,System.String,Microsoft.Win32.RegistryValueKind@,System.Boolean)">
+            <summary>
+            Determines the kind of a property in the HKLM root registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="kind">current value kind</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True on success, false on failure</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValueNamesFromCurrentUserRoot(System.String)">
+            <summary>
+            Get the names of all values under a key in the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValueNamesFromLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Get the names of all values under a key in the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistrySubKeyNamesFromCurrentUserRoot(System.String)">
+            <summary>
+            Get the names of all subkeys under a key in the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistrySubKeyNamesFromLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Get the names of all subkeys under a key in the HKLM root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>Array of value names or empty</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DoesRegistryKeyExistInCurrentUserRoot(System.String)">
+            <summary>
+            Determines if a key exists in the HKCU root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>True if key exists, false if it does not</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DoesRegistryKeyExistInLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Determines if a key exists in the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True if key exists, false if it does not</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.SetRegistryFromCurrentUserRoot(System.String,System.String,System.Object)">
+            <summary>
+            Sets a value in the registry from the HKCU root Registry.
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="value">value to set</param>
+            <returns>true if set or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.SetRegistryFromLocalMachineRoot(System.String,System.String,System.Object,System.Boolean)">
+            <summary>
+            Sets a value in the registry from the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="value">value to set</param>
+            <param name="use64Bit">optional, if set to true, it uses the 64 bit registry, otherwise defaults to 32 bit</param>
+            <returns>true if set or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DeleteRegistryKeyFromCurrentUserRoot(System.String)">
+            <summary>
+            Deletes the specified registry key and all subkeys in the HKCU root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DeleteRegistryKeyFromLocalMachineRoot(System.String,System.Boolean)">
+            <summary>
+            Deletes the specified registry key and all subkey sin the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DeleteRegistryValueFromCurrentUserRoot(System.String,System.String)">
+            <summary>
+            Deletes the specified registry value from a key in the HKCU root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DeleteRegistryValueFromLocalMachineRoot(System.String,System.String,System.Boolean)">
+            <summary>
+            Deletes the specified registry value from a key in the HKLM root Registry
+            </summary>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="use64Bit">if true, it uses the 64 bit registry, otherwise 32 bit is used</param>
+            <returns>True if removed, or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValue(Microsoft.Win32.RegistryKey,System.String,System.String,System.Object)">
+            <summary>
+            Get registry key settings int value.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="defaultOnError">default value on error</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.TryGetRegistryValueKind(Microsoft.Win32.RegistryKey,System.String,System.String,Microsoft.Win32.RegistryValueKind@)">
+            <summary>
+            Get registry value kind.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="kind">current value kind</param>
+            <returns>True if no error, otherwise false</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistryValueNames(Microsoft.Win32.RegistryKey,System.String)">
+            <summary>
+            Get all values under a registry key. If none, an empty array is returned.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.GetRegistrySubKeyNames(Microsoft.Win32.RegistryKey,System.String)">
+            <summary>
+            Get all subkeys under a registry key. If none, an empty array is returned.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DoesRegistryKeyExist(Microsoft.Win32.RegistryKey,System.String)">
+            <summary>
+            Checks if registry key exists
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>current value or null in case</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.SetRegistryValue(Microsoft.Win32.RegistryKey,System.String,System.String,System.Object)">
+            <summary>
+            Set registry key settings value.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <param name="value">value to set</param>
+            <returns>true if set or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DeleteRegistrySubKey(Microsoft.Win32.RegistryKey,System.String)">
+            <summary>
+            Deletes registry subkey and removes all child subkeys.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <returns>true if deleted or false if error</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.RegistryTools.DeleteRegistryValue(Microsoft.Win32.RegistryKey,System.String,System.String)">
+            <summary>
+            Deletes registry value from the specified subkey.
+            </summary>
+            <param name="rootKey">Root key entry</param>
+            <param name="regKeyPath">Path to the registry key in the format key\subkey\subsubkey</param>
+            <param name="regKeyName">Variable name under the key</param>
+            <returns>true if deleted or false if error</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.StreamedHttpWebResponse">
+            <summary>
+            HttpWeb response wrapper with stream implementation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.StreamedHttpWebResponse.ErrorCode">
+            <summary>
+            Gets or sets response error code.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.StreamedHttpWebResponse.ExceptionCode">
+            <summary>
+            Gets or sets response exception code.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.StreamedHttpWebResponse.Response">
+            <summary>
+            Gets or sets response itself.
+            </summary>
+        </member>
+        <member name="P:Microsoft.VisualStudio.Utilities.Internal.StreamedHttpWebResponse.StatusCode">
+            <summary>
+            Gets or sets response status code.
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.StreamedHttpWebResponse.GetResponseStream">
+            <summary>
+            Get response as a stream.
+            </summary>
+            <returns>Response stream</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.StringExtensions">
+            <summary>
+            Extend several strings methods
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.StringExtensions.Join(System.Collections.Generic.IEnumerable{System.String},System.String)">
+            <summary>
+            Join string together using "separator" string as separator
+            </summary>
+            <param name="values">string array</param>
+            <param name="separator">separator string </param>
+            <returns>new string</returns>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.StringExtensions.IsNullOrWhiteSpace(System.String)">
+            <summary>
+            Check whether string is null or contains whitespaces only
+            </summary>
+            <param name="value">string to validate</param>
+            <returns>result of operation</returns>
+        </member>
+        <member name="T:Microsoft.VisualStudio.Utilities.Internal.TaskExtensions">
+            <summary>
+            Task extensions
+            </summary>
+        </member>
+        <member name="M:Microsoft.VisualStudio.Utilities.Internal.TaskExtensions.SwallowException(System.Threading.Tasks.Task)">
+             <summary>
+             Swallow exceptions for event handlers.
+             http://theburningmonk.com/2012/10/c-beware-of-async-void-in-your-code/
+            
+             We need to read an Exception to prevent throwing an Exception for
+             .NET 4.0 and below. See
+             http://stackoverflow.com/questions/25691114/where-does-an-async-task-throw-exception-if-it-is-not-awaited
+             </summary>
+             <param name="task">Task to swallow exception for</param>
+        </member>
+    </members>
+</doc>
