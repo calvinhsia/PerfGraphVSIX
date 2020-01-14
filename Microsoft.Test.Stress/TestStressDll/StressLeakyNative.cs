@@ -32,6 +32,10 @@ namespace TestStressDll
         [ExpectedException(typeof(LeakException))]
         public async Task TestLeakyNative()
         {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                return;
+            }
             var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
             {
                 new PerfCounterOverrideThreshold { perfCounterType = PerfCounterType.ProcessorPrivateBytes, regressionThreshold = 1024*1024 * .8f} ,
