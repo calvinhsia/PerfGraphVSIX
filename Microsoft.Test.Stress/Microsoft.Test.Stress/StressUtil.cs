@@ -35,8 +35,8 @@ namespace Microsoft.Test.Stress
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
         public const string PropNameListFileResults = "DictListFileResults";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
-        internal const string PropNameVSHandler = "VSHandler";
-        internal const string PropNameLogger = "Logger";
+        public const string PropNameVSHandler = "VSHandler";
+        public const string PropNameLogger = "Logger";
 
         private static TelemetrySession telemetrySession = null;
         private static bool firstIteration = true;
@@ -94,6 +94,7 @@ namespace Microsoft.Test.Stress
                         stressUtilOptions.logger.LogMessage(res);
                         stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                     }
+                    // note: if a leak is found an exception will be throw and this will not get called
                     // increment one last time, so test methods can check for final execution after measurements taken
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                     DisposeTelemetrySession();
@@ -161,7 +162,7 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
             PostTelemetryEvent("DevDivStress/StressUtil/Initialization", telemetryProperties);
         }
 
-        private static void PostTelemetryEvent(string path, Dictionary<string, string> properties)
+        public static void PostTelemetryEvent(string telemetryEventName, Dictionary<string, string> telemetryProperties)
         {
             if (telemetrySession == null)
             {
@@ -170,9 +171,9 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
                 telemetrySession.Start();
             }
 
-            TelemetryEvent telemetryEvent = new TelemetryEvent(path);
+            TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
 
-            foreach (KeyValuePair<string, string> property in properties)
+            foreach (KeyValuePair<string, string> property in telemetryProperties)
             {
                 telemetryEvent.Properties[property.Key] = property.Value;
             }

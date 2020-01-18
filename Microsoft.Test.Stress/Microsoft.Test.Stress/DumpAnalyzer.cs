@@ -119,7 +119,7 @@ namespace Microsoft.Test.Stress
             }
             catch (Exception ex)
             {
-                logger.LogMessage($"Exception analyzing dump {ex.ToString()}");
+                logger.LogMessage($"Exception analyzing dump {ex}");
             }
         }
 

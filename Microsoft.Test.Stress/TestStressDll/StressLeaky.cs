@@ -61,6 +61,29 @@ namespace TestStressDll
             }
         }
 
+        [TestMethod]
+//        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressLeakyLimitNumSamples()
+        {
+            string didGetLeakException = "didGetLeakException";
+            int numIter = 119;
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = false }
+                    );
+
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+        }
+
+
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
@@ -206,15 +229,15 @@ namespace TestStressDll
             {
                 if (ex.InnerExceptions?.Count == 1)
                 {
-                    TestContext.WriteLine($"Agg exception with 1 inner {ex.ToString()}");
+                    TestContext.WriteLine($"Agg exception with 1 inner {ex}");
                     throw ex.InnerExceptions[0];
                 }
-                TestContext.WriteLine($"Agg exception with !=1 inner {ex.ToString()}");
+                TestContext.WriteLine($"Agg exception with !=1 inner {ex}");
                 throw ex;
             }
             catch (Exception ex)
             {
-                TestContext.WriteLine($"Final exception {ex.ToString()}");
+                TestContext.WriteLine($"Final exception {ex}");
             }
         }
         public async Task ProcessAttributesAsync(object test)

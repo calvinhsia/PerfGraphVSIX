@@ -100,7 +100,7 @@ namespace Microsoft.Test.Stress
                 series.MarkerStyle = MarkerStyle.Circle;
                 series.MarkerSize = 10;
                 _chart.Series.Add(series);
-                for (int i = 0; i < item.lstData.Count; i++)
+                for (int i = 0; i < item.NumSamplesToUse; i++)
                 {
                     var dp = new DataPoint(i + 1, item.lstData[i].point.Y);
                     if (item.lstData[i].IsOutlier)
@@ -117,12 +117,12 @@ namespace Microsoft.Test.Stress
                     {
                         ChartType = SeriesChartType.Line,
                         Name = item.perfCounterData.PerfCounterName + " Trend",
-                        ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.lstData.Count} RmsErr={item.rmsError}  m={item.slope:n1} b= {item.yintercept:n1} IsRegression={item.IsLeak}"
+                        ToolTip = item.perfCounterData.PerfCounterName + $"Trend N={item.NumSamplesToUse} RmsErr={item.rmsError}  m={item.slope:n1} b= {item.yintercept:n1} IsRegression={item.IsLeak}"
                     };
                     _chart.Series.Add(seriesTrendLine);
                     var dp0 = new DataPoint(1, item.yintercept + item.slope);
                     seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.slope + item.yintercept);
+                    var dp1 = new DataPoint(item.NumSamplesToUse, item.NumSamplesToUse * item.slope + item.yintercept);
                     seriesTrendLine.Points.Add(dp1);
                 }
                 //                _chart.Legends.Add(new Legend());

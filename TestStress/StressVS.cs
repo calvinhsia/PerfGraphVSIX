@@ -26,6 +26,9 @@ namespace TestStress
 
             await _VSHandler.StartVSAsync();
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+            await _VSHandler.EnsureGotDTE(TimeSpan.FromSeconds(60));
+            await _VSHandler.DteExecuteCommand("View.ErrorList");
+
         }
 
         [TestMethod]

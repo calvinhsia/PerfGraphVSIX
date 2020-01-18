@@ -294,6 +294,13 @@ namespace Microsoft.Test.Stress
                 VSHandler = theVSHandler;
                 lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.vsProc, IsForStress: true);
             }
+            SetPerfCounterOverrideSettings();
+
+            return true; // not recurring
+        }
+
+        public void SetPerfCounterOverrideSettings()
+        {
             if (PerfCounterOverrideSettings != null)
             {
                 foreach (var userSettingItem in PerfCounterOverrideSettings) // for each user settings // very small list: linear search
@@ -305,7 +312,6 @@ namespace Microsoft.Test.Stress
                     }
                 }
             }
-            return true; // not recurring
         }
 
         internal bool IsTestApexTest()

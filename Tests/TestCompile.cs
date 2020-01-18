@@ -567,7 +567,7 @@ namespace MyCustomCode
             var task = res as Task;
             if (task.IsFaulted)
             {
-                LogMessage($"Faulted task {task.Exception.ToString()}");
+                LogMessage($"Faulted task {task.Exception}");
                 Assert.IsTrue(task.Exception.ToString().Contains(" The SVsSolution service is unavailable."));
             }
             //            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
