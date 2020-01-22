@@ -120,6 +120,10 @@ namespace Microsoft.Test.Stress
         /// </summary>
         public int SecsToWaitForDevenv = 60;
 
+        /// <summary>
+        /// Tests can specify the devenv process to monitor instead of having the stress library try to figure out which one the test launched.
+        /// </summary>
+        public int TargetDevEnvProcessId = 0;
 
         internal object theTest;
         internal VSHandler VSHandler;
@@ -290,7 +294,15 @@ namespace Microsoft.Test.Stress
                         testContext.Properties[StressUtil.PropNameVSHandler] = theVSHandler;
                     }
                 }
-                await theVSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv * DelayMultiplier)); // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
+                // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
+                if (TargetDevEnvProcessId == 0)
+                {
+                    await theVSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv * DelayMultiplier));
+                }
+                else
+                {
+                    await theVSHandler?.EnsureGotDTE(TargetDevEnvProcessId);
+                }
                 VSHandler = theVSHandler;
                 lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.vsProc, IsForStress: true);
             }
