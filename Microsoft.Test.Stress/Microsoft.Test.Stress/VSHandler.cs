@@ -32,12 +32,28 @@ namespace Microsoft.Test.Stress
             this._DelayMultiplier = delayMultiplier;
         }
 
+
+        /// <summary>
+        /// Get the DTE for a specific devenv process.
+        /// </summary>
+        /// <param name="targetDevEnvProcess"></param>
+        /// <returns></returns>
+        public async Task<bool> EnsureGotDTE(Process targetDevEnvProcess)
+        {
+            return await EnsureGotDTE(timeSpan: default, targetDevEnvProcess);
+        }
+
         /// <summary>
         /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
         /// </summary>
         /// <param name="timeSpan"></param>
         /// <returns></returns>
         public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
+        {
+            return await EnsureGotDTE(timeSpan, targetDevEnvProcess: null);
+        }
+
+        private async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default, Process targetDevEnvProcess = null)
         {
             if (_vsDTE == null)
             {
@@ -63,13 +79,21 @@ namespace Microsoft.Test.Stress
                         }
                         return fGotit;
                     }
-                    if (!GetTargetDevenvProcess())
+                    if (targetDevEnvProcess != null)
                     {
-                        logger.LogMessage($"Didn't find Devenv. Waiting til it starts {timeSpan.TotalSeconds:n0} secs");
-                        await Task.Delay(timeSpan);
+                        procDevenv = targetDevEnvProcess;
+                        logger.LogMessage($"Targeting devenv PID= {procDevenv.Id} as specified by the caller");
+                    }
+                    else
+                    {
                         if (!GetTargetDevenvProcess())
                         {
-                            throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
+                            logger.LogMessage($"Didn't find Devenv. Waiting til it starts {timeSpan.TotalSeconds:n0} secs");
+                            await Task.Delay(timeSpan);
+                            if (!GetTargetDevenvProcess())
+                            {
+                                throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
+                            }
                         }
                     }
                     vsProc = procDevenv;
@@ -222,7 +246,7 @@ namespace Microsoft.Test.Stress
             }
             vsProc = Process.Start(startOptions);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
-            await EnsureGotDTE();
+            await EnsureGotDTE(timeSpan: default);
             logger.LogMessage($"done {nameof(StartVSAsync)}");
             return vsProc;
         }
