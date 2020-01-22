@@ -36,11 +36,11 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// Get the DTE for a specific devenv process.
         /// </summary>
-        /// <param name="targetDevEnvProcess"></param>
+        /// <param name="targetDevEnvProcessId"></param>
         /// <returns></returns>
-        public async Task<bool> EnsureGotDTE(Process targetDevEnvProcess)
+        public async Task<bool> EnsureGotDTE(int targetDevEnvProcessId)
         {
-            return await EnsureGotDTE(timeSpan: default, targetDevEnvProcess);
+            return await EnsureGotDTE(timeSpan: default, targetDevEnvProcessId);
         }
 
         /// <summary>
@@ -50,10 +50,10 @@ namespace Microsoft.Test.Stress
         /// <returns></returns>
         public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
         {
-            return await EnsureGotDTE(timeSpan, targetDevEnvProcess: null);
+            return await EnsureGotDTE(timeSpan, targetDevEnvProcessId: 0);
         }
 
-        private async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default, Process targetDevEnvProcess = null)
+        private async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default, int targetDevEnvProcessId = 0)
         {
             if (_vsDTE == null)
             {
@@ -79,9 +79,9 @@ namespace Microsoft.Test.Stress
                         }
                         return fGotit;
                     }
-                    if (targetDevEnvProcess != null)
+                    if (targetDevEnvProcessId != 0)
                     {
-                        procDevenv = targetDevEnvProcess;
+                        procDevenv = Process.GetProcessById(targetDevEnvProcessId);
                         logger.LogMessage($"Targeting devenv PID= {procDevenv.Id} as specified by the caller");
                     }
                     else
