@@ -107,8 +107,12 @@ namespace Microsoft.Test.Stress
                     {
                         dp.MarkerColor = System.Drawing.Color.Red;
                         dp.MarkerStyle = MarkerStyle.Cross;
+                        dp.ToolTip = $"{item.lstData[i].point} outlier dist = {item.lstData[i].distance}";
                     }
-                    dp.ToolTip = $"outlier dist = {item.lstData[i].distance}";
+                    else
+                    {
+                        dp.ToolTip = $"{item.lstData[i].point} dist = {item.lstData[i].distance}";
+                    }
                     series.Points.Add(dp);
                 }
                 if (ShowTrendLines)

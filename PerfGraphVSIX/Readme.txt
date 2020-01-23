@@ -45,3 +45,6 @@ xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\release\
 
 
 
+
+
+xcopy /dy \\calvinh2\c$\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Release\Microsoft.Test.Stress.dll \vs\src\ExternalAPIs\Microsoft.Test.Stress\lib\net461

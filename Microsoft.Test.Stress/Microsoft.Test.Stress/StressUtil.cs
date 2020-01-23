@@ -34,6 +34,7 @@ namespace Microsoft.Test.Stress
     {
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
         public const string PropNameListFileResults = "DictListFileResults";
+        public const string PropNameStartTime = "TestStartTime";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
         public const string PropNameVSHandler = "VSHandler";
         public const string PropNameLogger = "Logger";
@@ -80,6 +81,7 @@ namespace Microsoft.Test.Stress
                 {
                     var baseDumpFileName = string.Empty;
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
+                    stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
 
                     for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                     {
@@ -97,16 +99,30 @@ namespace Microsoft.Test.Stress
                     // note: if a leak is found an exception will be throw and this will not get called
                     // increment one last time, so test methods can check for final execution after measurements taken
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
-                    DisposeTelemetrySession();
+                    DoIterationsFinished(stressUtilOptions, exception: null);
                 }
             }
             catch (Exception ex)
             {
-                stressUtilOptions.logger.LogMessage(ex.ToString());
-                DisposeTelemetrySession();
+                DoIterationsFinished(stressUtilOptions, ex);
                 throw;
             }
         }
+
+        private static void DoIterationsFinished(StressUtilOptions stressUtilOptions, Exception exception)
+        {
+            var numIterExecuted = (int)stressUtilOptions.testContext.Properties[PropNameCurrentIteration];
+            var startTime = (DateTime)stressUtilOptions.testContext.Properties[PropNameStartTime];
+            var secsPerIteration = (int)((DateTime.Now - startTime).TotalSeconds / numIterExecuted);
+            stressUtilOptions.logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration}");
+            if (exception != null)
+            {
+                stressUtilOptions.logger.LogMessage(exception.ToString());
+            }
+
+            DisposeTelemetrySession();
+        }
+
 
         /// <summary>
         /// Iterate the test method the desired number of times and with the specified options.

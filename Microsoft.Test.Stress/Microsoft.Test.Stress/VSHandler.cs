@@ -45,29 +45,30 @@ namespace Microsoft.Test.Stress
                 {
                     timeSpan = TimeSpan.FromSeconds(50);
                 }
+                var dtStartChecking = DateTime.Now;
                 await Task.Run(async () =>
                 {
                     logger.LogMessage($"{nameof(EnsureGotDTE)}");
                     await Task.Yield();
                     Process procDevenv;
-                    bool GetTargetDevenvProcess()
+                    bool GetTargetDevenvProcess() // need to find devenv that is not currently running test, but was started by test (either before or after this code is called
                     {
                         bool fGotit = false;
                         procDevenv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
-                        var dtNow = DateTime.Now;
-                        var diff = procDevenv.StartTime > dtNow - timeSpan;
-                        if (procDevenv.StartTime > dtNow - timeSpan) // the process start time must have started very recently
+                        // the process start time must have started very recently, but we need to exclude the case where user starts devenv, then immediately runs the test
+                        // IOW, it must have started at most 30 seconds ago
+                        if (procDevenv.StartTime > DateTime.Now - TimeSpan.FromSeconds(30)) 
                         {
                             logger.LogMessage($"Latest devenv PID= {procDevenv.Id} starttime = {procDevenv.StartTime}");
                             fGotit = true;
                         }
                         return fGotit;
                     }
-                    if (!GetTargetDevenvProcess())
+                    while  (!GetTargetDevenvProcess())
                     {
                         logger.LogMessage($"Didn't find Devenv. Waiting til it starts {timeSpan.TotalSeconds:n0} secs");
-                        await Task.Delay(timeSpan);
-                        if (!GetTargetDevenvProcess())
+                        await Task.Delay(TimeSpan.FromSeconds(5));
+                        if (DateTime.Now - dtStartChecking > timeSpan)
                         {
                             throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
                         }

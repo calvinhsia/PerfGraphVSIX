@@ -82,7 +82,7 @@ namespace Microsoft.Test.Stress
         /// </summary>
         public int NumSamplesToUse;
 
-        private int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
+        internal int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
 
         public LeakAnalysisResult(List<uint> lst, int numSamplesToUse)
         {
@@ -103,7 +103,8 @@ namespace Microsoft.Test.Stress
         // Return the total error.
         public double FindLinearLeastSquaresFit()
         {
-            // preliminary slope and intercept 
+            // preliminary slope and intercept with no outliers
+            lstData.ForEach(p => p.IsOutlier = false);
             CalcSlopeAndIntercept();
             if (NumOutliers > 0)
             {
@@ -125,11 +126,11 @@ namespace Microsoft.Test.Stress
 
         private void CalcSlopeAndIntercept()
         {
-            double N = NumSamplesToUse - NumOutliers;
             double SumX = 0;
             double SumY = 0;
             double SumXX = 0;
             double SumXY = 0;
+            int N = 0;
             foreach (var dp in lstData.Take(NumSamplesToUse).Where(p => !p.IsOutlier))
             {
                 var pt = dp.point;
@@ -137,6 +138,7 @@ namespace Microsoft.Test.Stress
                 SumY += pt.Y;
                 SumXX += pt.X * pt.X;
                 SumXY += pt.X * pt.Y;
+                N++;
             }
             slope = (SumXY * N - SumX * SumY) / (SumXX * N - SumX * SumX);
             yintercept = (SumXY * SumX - SumY * SumXX) / (SumX * SumX - N * SumXX);
@@ -203,7 +205,7 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared(),8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared(),8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} N={NumSamplesToUse} IsLeak={IsLeak}";
         }
     }
 
@@ -226,7 +228,7 @@ namespace Microsoft.Test.Stress
         ILogger Logger => stressUtilOptions.logger;
         readonly SampleType sampleType;
         internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
-        int nSamplesTaken;
+        public int nSamplesTaken;
 
         private string _ResultsFolder;
         /// <summary>
