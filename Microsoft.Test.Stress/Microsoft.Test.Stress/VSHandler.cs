@@ -104,6 +104,10 @@ namespace Microsoft.Test.Stress
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
                     logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
+                    foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p=>p.StartTime))
+                    {
+                        logger.LogMessage($"   Other {procToFind} running on machine: '{proc.MainWindowTitle}' {proc.MainModule.FileName} {proc.StartTime}");
+                    }
                 });
             }
             return true;
