@@ -81,6 +81,7 @@ namespace Microsoft.Test.Stress
         /// Normally the entire range of measurements. However, we can try using fewer data points to calculate slope and R² using fewer iterations
         /// </summary>
         public int NumSamplesToUse;
+        internal float RSquaredThreashold;
 
         public int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
 
@@ -188,7 +189,7 @@ namespace Microsoft.Test.Stress
             get
             {
                 var isLeak = false;
-                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > 0.5)
+                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > RSquaredThreashold)
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
@@ -219,7 +220,7 @@ namespace Microsoft.Test.Stress
         public const string InteractiveUser = "InteractiveUser";
         public const string DiffFileName = "String and Type Count differences";
         public string TestName;
-        internal readonly StressUtilOptions stressUtilOptions;
+        public readonly StressUtilOptions stressUtilOptions;
 
         /// <summary>
         /// The list of perfcounters to use
@@ -355,7 +356,21 @@ namespace Microsoft.Test.Stress
             {
                 nSamplesTaken++;
             }
+            var doCheck = true;
+            if (stressUtilOptions.actExecuteAfterEveryIterationAsync != null)
+            {
+                doCheck = await stressUtilOptions.actExecuteAfterEveryIterationAsync(nSamplesTaken, this);
+            }
+            if (doCheck)
+            {
+                await CheckIfDoingSnapshotsAsync();
+            }
 
+            return sBuilderMeasurementResult.ToString();
+        }
+
+        private async Task CheckIfDoingSnapshotsAsync()
+        {
             if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
@@ -423,10 +438,9 @@ namespace Microsoft.Test.Stress
                     }
                 }
             }
-            return sBuilderMeasurementResult.ToString();
         }
 
-        public async Task<string> DoCreateDumpAsync(string desc)
+        public async Task<string> DoCreateDumpAsync(string desc, string filenamepart = "")
         {
             if (stressUtilOptions.SecsDelayBeforeTakingDump > 0)
             {
@@ -444,7 +458,7 @@ namespace Microsoft.Test.Stress
             }
             var DumpFileName = await CreateDumpAsync(
                 LstPerfCounterData[0].ProcToMonitor.Id,
-                desc: TestName + "_" + nSamplesTaken.ToString(),
+                desc: TestName + filenamepart + "_" + nSamplesTaken.ToString(),
                 memoryAnalysisType: memAnalysisType);
             lstFileResults.Add(new FileResultsData() { filename = DumpFileName, description = $"DumpFile taken after iteration # {nSamplesTaken}" });
             return DumpFileName;
@@ -460,7 +474,7 @@ namespace Microsoft.Test.Stress
         // we know it leaks. Let's give guidance to user about recommended # of versions to get the same R² and slope
         public async Task CalculateMinimumNumberOfIterationsAsync(List<LeakAnalysisResult> lstLeakResults)
         {
-            if (stressUtilOptions.NumIterations > 10)
+            if (stressUtilOptions.NumIterations > 10 && lstLeakResults.Count > 0)
             {
                 Logger.LogMessage($"Calculating recommended # of iterations");
                 var lstItersWithSameResults = new List<int>();
@@ -526,7 +540,8 @@ namespace Microsoft.Test.Stress
                 {
                     perfCounterData = ctr,
                     sensitivity = stressUtilOptions.Sensitivity,
-                    pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore
+                    pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore,
+                    RSquaredThreashold = stressUtilOptions.RSquaredThreshold
                 };
                 leakAnalysis.FindLinearLeastSquaresFit();
                 if (NumSamplesToUse == -1) // only log the real iterations, not when we're calculating the min # of iterations

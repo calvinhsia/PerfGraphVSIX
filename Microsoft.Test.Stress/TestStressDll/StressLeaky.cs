@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
 using Microsoft.Test.Stress;
@@ -86,14 +85,14 @@ namespace TestStressDll
         [TestMethod]
         public async Task TestLeakyWithCustomActions()
         {
-            string didGetLeakException = "didGetLeakException";
-            string countActions = "countActions";
+            string prop_didGetLeakException = "didGetLeakException";
+            string prop_countActions = "countActions";
             int numIter = 5;
             try
             {
-                if (!TestContext.Properties.Contains(countActions))
+                if (!TestContext.Properties.Contains(prop_countActions))
                 {
-                    TestContext.Properties[countActions] = 0;
+                    TestContext.Properties[prop_countActions] = 0;
                 }
                 await StressUtil.DoIterationsAsync(
                     this,
@@ -103,15 +102,38 @@ namespace TestStressDll
                         ProcNamesToMonitor = string.Empty,
                         ShowUI = false,
                         Sensitivity = .001,
-                        actExecuteBeforeEveryIteration = (nIter, measurementHolder) =>
+                        actExecuteBeforeEveryIterationAsync = async (nIter, measurementHolder) =>
                         {
-                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteBeforeEveryIteration)}");
-                            TestContext.Properties[countActions] = (int)TestContext.Properties[countActions] + 1;
+                            await Task.Yield();
+                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteBeforeEveryIterationAsync)}");
+                            TestContext.Properties[prop_countActions] = (int)TestContext.Properties[prop_countActions] + 1;
                         },
-                        actExecuteAfterEveryIteration = (nIter, measurementHolder) =>
+                        actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
                         {
-                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteAfterEveryIteration)}");
-                            TestContext.Properties[countActions] = (int)TestContext.Properties[countActions] + 1;
+                            string prop_dumpPrior = "dumpPrior";
+                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteAfterEveryIterationAsync)}");
+                            var desc = $"Custom dump after iter {nIter}";
+                            var dump = await measurementHolder.DoCreateDumpAsync(desc, filenamepart: "Custom");
+                            if (nIter > 1)
+                            {
+                                var dumpPrior = (string)TestContext.Properties[prop_dumpPrior];
+                                if (!string.IsNullOrEmpty(dumpPrior))
+                                {
+                                    var oDumpAnalyzer = new DumpAnalyzer(measurementHolder.Logger);
+                                    var sb = new System.Text.StringBuilder();
+                                    oDumpAnalyzer.GetDiff(sb, pathDumpBase: dumpPrior, pathDumpCurrent: dump, TotNumIterations: nIter, NumIterationsBeforeTotalToTakeBaselineSnapshot: 1);
+                                    var fname = Path.Combine(measurementHolder.ResultsFolder, $"{TestContext.TestName} {MeasurementHolder.DiffFileName}_{nIter}.txt");
+                                    File.WriteAllText(fname, sb.ToString());
+                                    measurementHolder.lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {nIter}" });
+                                    measurementHolder.Logger.LogMessage("DumpDiff Analysis " + fname);
+                                    measurementHolder.Logger.LogMessage(System.Environment.NewLine + sb.ToString());
+                                }
+                            }
+                            TestContext.Properties[prop_dumpPrior] = dump;
+
+                            // this line is needed only in StressUtil unit tests. Remove from Stress test
+                            TestContext.Properties[prop_countActions] = (int)TestContext.Properties[prop_countActions] + 1; 
+                            return false; //do NOT do the default action after iteration of checking iteration number and taking dumps, comparing.
                         },
                     }
                     ); ;
@@ -119,13 +141,13 @@ namespace TestStressDll
 
                 if ((int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]) == numIter - 1)
                 {
-                    Assert.AreEqual((int)TestContext.Properties[countActions] + 1, numIter * 2); // we haven't finished the last iteration at this point.
+                    Assert.AreEqual((int)TestContext.Properties[prop_countActions] + 1, numIter * 2); // we haven't finished the last iteration at this point.
                     TestContext.WriteLine($"Got CustomActions");
                 }
             }
             catch (LeakException)
             {
-                TestContext.Properties[didGetLeakException] = 1;
+                TestContext.Properties[prop_didGetLeakException] = 1;
                 throw;
             }
 

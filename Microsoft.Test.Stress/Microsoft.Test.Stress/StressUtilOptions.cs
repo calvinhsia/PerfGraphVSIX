@@ -84,13 +84,13 @@ namespace Microsoft.Test.Stress
         /// e.g. 100 iterations, with NumIterationsBeforeTotalToTakeBaselineSnapshot ==4 means take a baseline at iteartion 100-4==96;
         /// </summary>
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
-        
+
         /// <summary>
         /// It's hard to tell if a test is working. Test output doesn't appear til after the test has completed.
         /// To see interim results, set this true so output is appended to a file "TestStressDataCollector.log". Note: this file is never truncated so watch it's size.
         /// </summary>
         public bool LoggerLogOutputToDestkop = false;
-        
+
         /// <summary>
         /// Apex tests use .Net remoting which has a default lease lifetime of 5 minutes: need to add delay.
         ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
@@ -130,6 +130,13 @@ namespace Microsoft.Test.Stress
 
 
         /// <summary>
+        /// R² indicates the Confidence that the trend line fits the data. Range from 0-1. 1 means perfect fit. 
+        /// The Slope of the trend line is the leak per iteration
+        /// Our confidence must be > this confidence level and the measurement value must be > threshold for value to be considered a leak
+        /// </summary>
+        public float RSquaredThreshold = 0.5f;
+
+        /// <summary>
         /// When running locally, the test outputs will be deleted on test failure, so graphs and dumps cannot be examined. 
         /// Set this to true so that even though leak statistics show no leak, the test behavior will be as if there was a leak,taking a final dump, leaving test artifacts to be examined
         /// </summary>
@@ -150,19 +157,26 @@ namespace Microsoft.Test.Stress
         public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
 
         /// <summary>
-        /// code to execute before every iteration. Parameters: the iteration number, and the measurementholder
+        /// code to execute before every iteration. (Cannot be serialized) Parameters: the iteration number, and the measurementholder
         /// Executed for each iteration (before executing test method). After each iteration, measurements are taken
         /// e.g. Can be used to analyze measurements so far to conditionally create additional dumps
+        /// Order of execution for each iteration:
+        ///     actExecuteBeforeEveryIterationAsync
+        ///     Execute test method
+        ///     Take measurements
+        ///     actExecuteAfterEveryIterationAsync
         /// </summary>
         [XmlIgnore]
-        public Action<int, MeasurementHolder> actExecuteBeforeEveryIteration;
+        public Func<int, MeasurementHolder, Task> actExecuteBeforeEveryIterationAsync;
 
         /// <summary>
         /// code to execute before every iteration. Parameters: the iteration number, and the measurementholder
-        /// Executed after each iteration
+        /// Executed after each iteration.
+        /// Return value: False means do NOT do the default action after iteration of checking iteration number and taking dumps, comparing.
+        /// If you're implementation already takes a dump and compares values, returning false means you won't get the 2 dumps (at NumIterations and at (NumIterations -NumIterationsBeforeTotalToTakeBaselineSnapshot))
         /// </summary>
         [XmlIgnore]
-        public Action<int, MeasurementHolder> actExecuteAfterEveryIteration;
+        public Func<int, MeasurementHolder, Task<bool>> actExecuteAfterEveryIterationAsync;
 
         internal object theTest;
         internal VSHandler VSHandler;
@@ -184,12 +198,14 @@ namespace Microsoft.Test.Stress
             }
             // the file settings override the passed in values, if any
             PerfCounterOverrideSettings = fileOptions.PerfCounterOverrideSettings;
+            // read each value and override the current settings, except for exemptions
+            var exemptionFromOverrides = $"{nameof(logger)},{nameof(PerfCounterOverrideSettings)},{nameof(actExecuteBeforeEveryIterationAsync)},{nameof(actExecuteAfterEveryIterationAsync)},";
             var mems = typeof(StressUtilOptions).GetMembers(BindingFlags.Public | BindingFlags.Instance);
             foreach (var mem in mems)
             {
                 if (mem is FieldInfo fldInfo)
                 {
-                    if (fldInfo.Name != nameof(logger) && fldInfo.Name != nameof(PerfCounterOverrideSettings))
+                    if (!exemptionFromOverrides.Contains(fldInfo.Name+","))
                     {
                         var newval = fldInfo.GetValue(fileOptions);
                         //                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");

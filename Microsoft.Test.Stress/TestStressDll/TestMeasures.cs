@@ -965,7 +965,7 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        public void TestXmlSerializeOptions()
+        public async Task TestXmlSerializeOptions()
         {
             var thresh = 1e6f;
             var stressUtilOptions = new StressUtilOptions()
@@ -986,11 +986,24 @@ namespace TestStressDll
             LogMessage($"Output to {filename}");
 
             LogMessage(File.ReadAllText(filename));
-
-            var newopts = new StressUtilOptions() { NumIterations = 321 };
+            var didlambda = false;
+            var newopts = new StressUtilOptions()
+            {
+                NumIterations = 321,
+                actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) => // test that lambda doesn't get overridden
+                    {
+                        await Task.Yield();
+                        didlambda = true;
+                        return false;
+                    }
+            };
 
             newopts.ReadOptionsFromFile(filename);
             Assert.AreEqual(stressUtilOptions.NumIterations, 7);
+
+            await newopts.actExecuteAfterEveryIterationAsync(0, null);
+            Assert.IsTrue(didlambda);
+
         }
 
 
