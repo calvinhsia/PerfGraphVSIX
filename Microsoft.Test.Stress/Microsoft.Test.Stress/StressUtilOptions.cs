@@ -77,17 +77,20 @@ namespace Microsoft.Test.Stress
         }
 
         public List<PerfCounterOverrideThreshold> PerfCounterOverrideSettings = null;
+
         /// <summary>
         ///  Specifies the iteration # at which to take a baseline. 
         ///   NumIterationsBeforeTotalToTakeBaselineSnapshot is subtracted from NumIterations to get the baseline iteration number
         /// e.g. 100 iterations, with NumIterationsBeforeTotalToTakeBaselineSnapshot ==4 means take a baseline at iteartion 100-4==96;
         /// </summary>
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
+        
         /// <summary>
         /// It's hard to tell if a test is working. Test output doesn't appear til after the test has completed.
         /// To see interim results, set this true so output is appended to a file "TestStressDataCollector.log". Note: this file is never truncated so watch it's size.
         /// </summary>
         public bool LoggerLogOutputToDestkop = false;
+        
         /// <summary>
         /// Apex tests use .Net remoting which has a default lease lifetime of 5 minutes: need to add delay.
         ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
@@ -116,19 +119,26 @@ namespace Microsoft.Test.Stress
 
 
         /// <summary>
-        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
+        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds. This is not multiplied by DelayMultiplier
         /// </summary>
         public int SecsToWaitForDevenv = 60;
+
+        /// <summary>
+        /// For .Net lease lifetime, we can delay # secs before doing GC and taking a dump. This is not multiplied by DelayMultiplier
+        /// </summary>
+        public int SecsDelayBeforeTakingDump = 0;
+
+
+        /// <summary>
+        /// When running locally, the test outputs will be deleted on test failure, so graphs and dumps cannot be examined. 
+        /// Set this to true so that even though leak statistics show no leak, the test behavior will be as if there was a leak,taking a final dump, leaving test artifacts to be examined
+        /// </summary>
+        public bool FailTestAsifLeaksFound = false;
 
         /// <summary>
         /// Tests can specify the devenv process to monitor instead of having the stress library try to figure out which one the test launched.
         /// </summary>
         public int TargetDevEnvProcessId = 0;
-
-        internal object theTest;
-        internal VSHandler VSHandler;
-
-        internal bool? _isApexTest;
 
         /// <summary>
         /// used internally, but has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
@@ -136,11 +146,33 @@ namespace Microsoft.Test.Stress
         [XmlIgnore]
         public ILogger logger;
 
+        [XmlIgnore]
+        public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
+
+        /// <summary>
+        /// code to execute before every iteration. Parameters: the iteration number, and the measurementholder
+        /// Executed for each iteration (before executing test method). After each iteration, measurements are taken
+        /// e.g. Can be used to analyze measurements so far to conditionally create additional dumps
+        /// </summary>
+        [XmlIgnore]
+        public Action<int, MeasurementHolder> actExecuteBeforeEveryIteration;
+
+        /// <summary>
+        /// code to execute before every iteration. Parameters: the iteration number, and the measurementholder
+        /// Executed after each iteration
+        /// </summary>
+        [XmlIgnore]
+        public Action<int, MeasurementHolder> actExecuteAfterEveryIteration;
+
+        internal object theTest;
+        internal VSHandler VSHandler;
+
+        internal bool? _isApexTest;
+
+
 
         internal TestContextWrapper testContext;
         internal MethodInfo _theTestMethod;
-        [XmlIgnore]
-        public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
 
         internal void ReadOptionsFromFile(string fileNameOptions)
         {

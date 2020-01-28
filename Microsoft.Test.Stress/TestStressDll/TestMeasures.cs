@@ -959,8 +959,8 @@ namespace TestStressDll
                 }
                 Assert.IsTrue(leakAnalysisResults[0].lstData[0].IsOutlier);
                 Assert.IsTrue(leakAnalysisResults[0].lstData[1].IsOutlier);
-                Assert.IsTrue(leakAnalysisResults[0].lstData[2].IsOutlier);
-                Assert.IsFalse(leakAnalysisResults[0].lstData[3].IsOutlier);
+                Assert.IsTrue(!leakAnalysisResults[0].lstData[2].IsOutlier);
+                Assert.IsTrue(leakAnalysisResults[0].lstData[68].IsOutlier);
             }
         }
 

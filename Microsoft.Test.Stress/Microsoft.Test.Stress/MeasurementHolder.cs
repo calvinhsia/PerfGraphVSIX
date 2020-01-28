@@ -82,7 +82,7 @@ namespace Microsoft.Test.Stress
         /// </summary>
         public int NumSamplesToUse;
 
-        internal int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
+        public int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
 
         public LeakAnalysisResult(List<uint> lst, int numSamplesToUse)
         {
@@ -124,7 +124,7 @@ namespace Microsoft.Test.Stress
             return Math.Sqrt(ErrorSquared());
         }
 
-        private void CalcSlopeAndIntercept()
+        public void CalcSlopeAndIntercept()
         {
             double SumX = 0;
             double SumY = 0;
@@ -225,12 +225,12 @@ namespace Microsoft.Test.Stress
         /// The list of perfcounters to use
         /// </summary>
         public List<PerfCounterData> LstPerfCounterData => stressUtilOptions.lstPerfCountersToUse;
-        ILogger Logger => stressUtilOptions.logger;
+        public ILogger Logger => stressUtilOptions.logger;
         readonly SampleType sampleType;
-        internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
+        public Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
         public int nSamplesTaken;
 
-        private string _ResultsFolder;
+        public string _ResultsFolder;
         /// <summary>
         /// unique folder per test.
         /// </summary>
@@ -276,7 +276,7 @@ namespace Microsoft.Test.Stress
         /// can be null when running user compiled code
         /// </summary>
         readonly TestContextWrapper testContext;
-        readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
+        public readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
 
         /// <summary>
         /// 
@@ -325,8 +325,7 @@ namespace Microsoft.Test.Stress
                 // we just finished executing the user code. The IDE might be busy executing the last request.
                 // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
-                await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
+                await DoForceGCAsync();
             }
 
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {LstPerfCounterData[0].ProcToMonitor.ProcessName} {LstPerfCounterData[0].ProcToMonitor.Id} ");
@@ -356,35 +355,31 @@ namespace Microsoft.Test.Stress
             {
                 nSamplesTaken++;
             }
+
             if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
                 if (nSamplesTaken == stressUtilOptions.NumIterations - stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
                 {
-                    Logger.LogMessage($"Taking base snapshot dump at iteration {nSamplesTaken}");
-                    baseDumpFileName = await CreateDumpAsync(
-                        LstPerfCounterData[0].ProcToMonitor.Id,
-                        desc: TestName + "_" + nSamplesTaken.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                    lstFileResults.Add(new FileResultsData() { filename = baseDumpFileName, description = $"BaselineDumpFile taken after iteration # {nSamplesTaken}" });
+                    baseDumpFileName = await DoCreateDumpAsync($"Taking base snapshot dump at iteration {nSamplesTaken}");
                 }
-                else if (nSamplesTaken == stressUtilOptions.NumIterations) // final snapshot?
+                else if (nSamplesTaken == stressUtilOptions.NumIterations) // final iteration? take snapshot
                 {
                     var filenameMeasurementResults = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameMeasurementResults}");
                     var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI))
                         .Where(r => r.IsLeak).ToList();
-                    if (lstLeakResults.Count > 0)
+                    if (lstLeakResults.Count > 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
                         foreach (var leak in lstLeakResults)
                         {
                             Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
-                        var currentDumpFile = await CreateDumpAsync(
-                            LstPerfCounterData[0].ProcToMonitor.Id,
-                            desc: TestName + "_" + stressUtilOptions.NumIterations.ToString(),
-                            memoryAnalysisType: stressUtilOptions.ShowUI ? MemoryAnalysisType.StartClrObjExplorer : MemoryAnalysisType.JustCreateDump);
-                        lstFileResults.Add(new FileResultsData() { filename = currentDumpFile, description = "CurrentDumpFile" });
+                        if (lstLeakResults.Count == 0 && stressUtilOptions.FailTestAsifLeaksFound)
+                        {
+                            Logger.LogMessage($"Failing test even though no leaks found so test artifacts");
+                        }
+                        var currentDumpFile = await DoCreateDumpAsync($"Taking final snapshot dump at iteration {nSamplesTaken}");
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
                             var oDumpAnalyzer = new DumpAnalyzer(Logger);
@@ -416,12 +411,50 @@ namespace Microsoft.Test.Stress
                         await CalculateMinimumNumberOfIterationsAsync(lstLeakResults);
                         if (this.testContext != null)
                         {
-                            throw new LeakException($"Leaks found", lstLeakResults);
+                            if (lstLeakResults.Count > 0)
+                            {
+                                throw new LeakException($"Leaks found", lstLeakResults);
+                            }
+                            if (stressUtilOptions.FailTestAsifLeaksFound)
+                            {
+                                throw new LeakException($"FailTestAsifLeaksFound", lstLeakResults);
+                            }
                         }
                     }
                 }
             }
             return sBuilderMeasurementResult.ToString();
+        }
+
+        public async Task<string> DoCreateDumpAsync(string desc)
+        {
+            if (stressUtilOptions.SecsDelayBeforeTakingDump > 0)
+            {
+                Logger.LogMessage($"Delay {stressUtilOptions.SecsDelayBeforeTakingDump} before taking dump at iteration {nSamplesTaken}");
+                await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsDelayBeforeTakingDump));
+                await DoForceGCAsync();
+            }
+
+            Logger.LogMessage(desc);
+
+            var memAnalysisType = MemoryAnalysisType.JustCreateDump;
+            if (nSamplesTaken == stressUtilOptions.NumIterations && stressUtilOptions.ShowUI)
+            {
+                memAnalysisType = MemoryAnalysisType.StartClrObjExplorer;
+            }
+            var DumpFileName = await CreateDumpAsync(
+                LstPerfCounterData[0].ProcToMonitor.Id,
+                desc: TestName + "_" + nSamplesTaken.ToString(),
+                memoryAnalysisType: memAnalysisType);
+            lstFileResults.Add(new FileResultsData() { filename = DumpFileName, description = $"DumpFile taken after iteration # {nSamplesTaken}" });
+            return DumpFileName;
+        }
+
+        public async Task DoForceGCAsync()
+        {
+            // cmdidShellForceGC GarbageCollectCLRIterative https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fappid%2FAppDomainManager%2FVsRcwCleanup.cs&version=GBmaster&_a=contents
+            stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
+            await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
         }
 
         // we know it leaks. Let's give guidance to user about recommended # of versions to get the same R² and slope

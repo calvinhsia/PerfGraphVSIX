@@ -85,6 +85,7 @@ namespace Microsoft.Test.Stress
 
                     for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                     {
+                        stressUtilOptions.actExecuteBeforeEveryIteration?.Invoke(iteration, measurementHolder);
                         var result = stressUtilOptions._theTestMethod.Invoke(test, parameters: null);
                         if (stressUtilOptions._theTestMethod.ReturnType.Name == "Task")
                         {
@@ -95,6 +96,7 @@ namespace Microsoft.Test.Stress
                         var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
                         stressUtilOptions.logger.LogMessage(res);
                         stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
+                        stressUtilOptions.actExecuteAfterEveryIteration?.Invoke(iteration, measurementHolder);
                     }
                     // note: if a leak is found an exception will be throw and this will not get called
                     // increment one last time, so test methods can check for final execution after measurements taken

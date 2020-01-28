@@ -83,6 +83,53 @@ namespace TestStressDll
             }
         }
 
+        [TestMethod]
+        public async Task TestLeakyWithCustomActions()
+        {
+            string didGetLeakException = "didGetLeakException";
+            string countActions = "countActions";
+            int numIter = 5;
+            try
+            {
+                if (!TestContext.Properties.Contains(countActions))
+                {
+                    TestContext.Properties[countActions] = 0;
+                }
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions()
+                    {
+                        NumIterations = numIter,
+                        ProcNamesToMonitor = string.Empty,
+                        ShowUI = false,
+                        Sensitivity = .001,
+                        actExecuteBeforeEveryIteration = (nIter, measurementHolder) =>
+                        {
+                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteBeforeEveryIteration)}");
+                            TestContext.Properties[countActions] = (int)TestContext.Properties[countActions] + 1;
+                        },
+                        actExecuteAfterEveryIteration = (nIter, measurementHolder) =>
+                        {
+                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteAfterEveryIteration)}");
+                            TestContext.Properties[countActions] = (int)TestContext.Properties[countActions] + 1;
+                        },
+                    }
+                    ); ;
+
+
+                if ((int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]) == numIter - 1)
+                {
+                    Assert.AreEqual((int)TestContext.Properties[countActions] + 1, numIter * 2); // we haven't finished the last iteration at this point.
+                    TestContext.WriteLine($"Got CustomActions");
+                }
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+
+        }
 
 
         [TestMethod]
