@@ -34,9 +34,10 @@ namespace Microsoft.Test.Stress
     {
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
         public const string PropNameListFileResults = "DictListFileResults";
+        public const string PropNameStartTime = "TestStartTime";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
-        internal const string PropNameVSHandler = "VSHandler";
-        internal const string PropNameLogger = "Logger";
+        public const string PropNameVSHandler = "VSHandler";
+        public const string PropNameLogger = "Logger";
 
         private static TelemetrySession telemetrySession = null;
         private static bool firstIteration = true;
@@ -80,9 +81,14 @@ namespace Microsoft.Test.Stress
                 {
                     var baseDumpFileName = string.Empty;
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
+                    stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
 
                     for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                     {
+                        if (stressUtilOptions.actExecuteBeforeEveryIterationAsync != null)
+                        {
+                            await stressUtilOptions.actExecuteBeforeEveryIterationAsync(iteration + 1, measurementHolder);
+                        }
                         var result = stressUtilOptions._theTestMethod.Invoke(test, parameters: null);
                         if (stressUtilOptions._theTestMethod.ReturnType.Name == "Task")
                         {
@@ -94,18 +100,33 @@ namespace Microsoft.Test.Stress
                         stressUtilOptions.logger.LogMessage(res);
                         stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                     }
+                    // note: if a leak is found an exception will be throw and this will not get called
                     // increment one last time, so test methods can check for final execution after measurements taken
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
-                    DisposeTelemetrySession();
+                    DoIterationsFinished(stressUtilOptions, exception: null);
                 }
             }
             catch (Exception ex)
             {
-                stressUtilOptions.logger.LogMessage(ex.ToString());
-                DisposeTelemetrySession();
+                DoIterationsFinished(stressUtilOptions, ex);
                 throw;
             }
         }
+
+        private static void DoIterationsFinished(StressUtilOptions stressUtilOptions, Exception exception)
+        {
+            var numIterExecuted = (int)stressUtilOptions.testContext.Properties[PropNameCurrentIteration];
+            var startTime = (DateTime)stressUtilOptions.testContext.Properties[PropNameStartTime];
+            var secsPerIteration = (int)((DateTime.Now - startTime).TotalSeconds / numIterExecuted);
+            stressUtilOptions.logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration}");
+            if (exception != null)
+            {
+                stressUtilOptions.logger.LogMessage(exception.ToString());
+            }
+
+            DisposeTelemetrySession();
+        }
+
 
         /// <summary>
         /// Iterate the test method the desired number of times and with the specified options.
@@ -161,7 +182,7 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
             PostTelemetryEvent("DevDivStress/StressUtil/Initialization", telemetryProperties);
         }
 
-        private static void PostTelemetryEvent(string path, Dictionary<string, string> properties)
+        public static void PostTelemetryEvent(string telemetryEventName, Dictionary<string, string> telemetryProperties)
         {
             if (telemetrySession == null)
             {
@@ -170,9 +191,9 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
                 telemetrySession.Start();
             }
 
-            TelemetryEvent telemetryEvent = new TelemetryEvent(path);
+            TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
 
-            foreach (KeyValuePair<string, string> property in properties)
+            foreach (KeyValuePair<string, string> property in telemetryProperties)
             {
                 telemetryEvent.Properties[property.Key] = property.Value;
             }

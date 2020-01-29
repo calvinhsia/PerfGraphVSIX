@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Collections;
 using Microsoft.Test.Stress;
@@ -59,6 +58,110 @@ namespace TestStressDll
                 TestContext.Properties[didGetLeakException] = 1;
                 throw;
             }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressLeakyLimitNumSamples()
+        {
+            string didGetLeakException = "didGetLeakException";
+            int numIter = 119;
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = false }
+                    );
+
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(LeakException))]
+        public async Task TestLeakyWithCustomActions()
+        {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                throw new LeakException("Throwing expected exception so test passes", null);
+            }
+            string prop_didGetLeakException = "didGetLeakException";
+            string prop_countActions = "countActions";
+            int numIter = 5;
+            try
+            {
+                if (!TestContext.Properties.Contains(prop_countActions))
+                {
+                    TestContext.Properties[prop_countActions] = 0;
+                }
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions()
+                    {
+                        NumIterations = numIter,
+                        ProcNamesToMonitor = string.Empty,
+                        ShowUI = false,
+                        Sensitivity = .001,
+                        actExecuteBeforeEveryIterationAsync = async (nIter, measurementHolder) =>
+                        {
+                            await Task.Yield();
+                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteBeforeEveryIterationAsync)}");
+                            TestContext.Properties[prop_countActions] = (int)TestContext.Properties[prop_countActions] + 1;
+                        },
+                        actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
+                        {
+                            string prop_dumpPrior = "dumpPrior";
+                            measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteAfterEveryIterationAsync)}");
+                            var desc = $"Custom dump after iter {nIter}";
+                            var dump = await measurementHolder.DoCreateDumpAsync(desc, filenamepart: "Custom");
+                            if (nIter > 1)
+                            {
+                                var dumpPrior = (string)TestContext.Properties[prop_dumpPrior];
+                                if (!string.IsNullOrEmpty(dumpPrior))
+                                {
+                                    var oDumpAnalyzer = new DumpAnalyzer(measurementHolder.Logger);
+                                    var sb = new System.Text.StringBuilder();
+                                    oDumpAnalyzer.GetDiff(sb, pathDumpBase: dumpPrior, pathDumpCurrent: dump, TotNumIterations: nIter, NumIterationsBeforeTotalToTakeBaselineSnapshot: 1);
+                                    var fname = Path.Combine(measurementHolder.ResultsFolder, $"{TestContext.TestName} {MeasurementHolder.DiffFileName}_{nIter}.txt");
+                                    File.WriteAllText(fname, sb.ToString());
+                                    measurementHolder.lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {nIter}" });
+                                    measurementHolder.Logger.LogMessage("DumpDiff Analysis " + fname);
+                                    measurementHolder.Logger.LogMessage(System.Environment.NewLine + sb.ToString());
+                                }
+                            }
+                            TestContext.Properties[prop_dumpPrior] = dump;
+
+                            // this line is needed only in StressUtil unit tests. Remove from Stress test
+                            TestContext.Properties[prop_countActions] = (int)TestContext.Properties[prop_countActions] + 1;
+
+                            if (nIter == measurementHolder.stressUtilOptions.NumIterations)
+                            {
+                                throw new LeakException("custom code throwing to cause test failure", lstRegResults: null);
+                            }
+
+                            return false; //do NOT do the default action after iteration of checking iteration number and taking dumps, comparing.
+                        },
+                    }
+                    ); ;
+
+
+                if ((int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]) == numIter - 1)
+                {
+                    Assert.AreEqual((int)TestContext.Properties[prop_countActions] + 1, numIter * 2); // we haven't finished the last iteration at this point.
+                    TestContext.WriteLine($"Got CustomActions");
+                }
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[prop_didGetLeakException] = 1;
+                throw;
+            }
+
         }
 
 
@@ -126,9 +229,12 @@ namespace TestStressDll
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         [DeploymentItem("StressLeakyWithCustomXMLSettings.settings.xml", "Assets")]
-        [Ignore]
         public async Task StressLeakyWithCustomXMLSettings()
         {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                throw new LeakException("Throwing expected exception so test passes", null);
+            }
 
             string didValidateSettingsRead = "didValidateSettingsRead";
             await StressUtil.DoIterationsAsync(this);
@@ -203,15 +309,15 @@ namespace TestStressDll
             {
                 if (ex.InnerExceptions?.Count == 1)
                 {
-                    TestContext.WriteLine($"Agg exception with 1 inner {ex.ToString()}");
+                    TestContext.WriteLine($"Agg exception with 1 inner {ex}");
                     throw ex.InnerExceptions[0];
                 }
-                TestContext.WriteLine($"Agg exception with !=1 inner {ex.ToString()}");
+                TestContext.WriteLine($"Agg exception with !=1 inner {ex}");
                 throw ex;
             }
             catch (Exception ex)
             {
-                TestContext.WriteLine($"Final exception {ex.ToString()}");
+                TestContext.WriteLine($"Final exception {ex}");
             }
         }
         public async Task ProcessAttributesAsync(object test)

@@ -77,17 +77,20 @@ namespace Microsoft.Test.Stress
         }
 
         public List<PerfCounterOverrideThreshold> PerfCounterOverrideSettings = null;
+
         /// <summary>
         ///  Specifies the iteration # at which to take a baseline. 
         ///   NumIterationsBeforeTotalToTakeBaselineSnapshot is subtracted from NumIterations to get the baseline iteration number
         /// e.g. 100 iterations, with NumIterationsBeforeTotalToTakeBaselineSnapshot ==4 means take a baseline at iteartion 100-4==96;
         /// </summary>
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
+
         /// <summary>
         /// It's hard to tell if a test is working. Test output doesn't appear til after the test has completed.
         /// To see interim results, set this true so output is appended to a file "TestStressDataCollector.log". Note: this file is never truncated so watch it's size.
         /// </summary>
         public bool LoggerLogOutputToDestkop = false;
+
         /// <summary>
         /// Apex tests use .Net remoting which has a default lease lifetime of 5 minutes: need to add delay.
         ///  Dochttps://docs.microsoft.com/en-us/dotnet/api/system.runtime.remoting.lifetime.lifetimeservices?view=netframework-4.8 
@@ -116,19 +119,33 @@ namespace Microsoft.Test.Stress
 
 
         /// <summary>
-        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
+        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds. This is not multiplied by DelayMultiplier
         /// </summary>
         public int SecsToWaitForDevenv = 60;
+
+        /// <summary>
+        /// For .Net lease lifetime, we can delay # secs before doing GC and taking a dump. This is not multiplied by DelayMultiplier
+        /// </summary>
+        public int SecsDelayBeforeTakingDump = 0;
+
+
+        /// <summary>
+        /// R² indicates the Confidence that the trend line fits the data. Range from 0-1. 1 means perfect fit. 
+        /// The Slope of the trend line is the leak per iteration
+        /// Our confidence must be > this confidence level and the measurement value must be > threshold for value to be considered a leak
+        /// </summary>
+        public float RSquaredThreshold = 0.5f;
+
+        /// <summary>
+        /// When running locally, the test outputs will be deleted on test failure, so graphs and dumps cannot be examined. 
+        /// Set this to true so that even though leak statistics show no leak, the test behavior will be as if there was a leak,taking a final dump, leaving test artifacts to be examined
+        /// </summary>
+        public bool FailTestAsifLeaksFound = false;
 
         /// <summary>
         /// Tests can specify the devenv process to monitor instead of having the stress library try to figure out which one the test launched.
         /// </summary>
         public int TargetDevEnvProcessId = 0;
-
-        internal object theTest;
-        internal VSHandler VSHandler;
-
-        internal bool? _isApexTest;
 
         /// <summary>
         /// used internally, but has to be public for user dynamically compiled ExecCode: we don't know the assembly name and it's not signed.
@@ -136,11 +153,40 @@ namespace Microsoft.Test.Stress
         [XmlIgnore]
         public ILogger logger;
 
+        [XmlIgnore]
+        public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
+
+        /// <summary>
+        /// code to execute before every iteration. (Cannot be serialized: specify in code, and it will still work even if external XML settings are used) Parameters: the iteration number, and the measurementholder
+        /// Executed for each iteration (before executing test method). After each iteration, measurements are taken
+        /// e.g. Can be used to analyze measurements so far to conditionally create additional dumps
+        /// Order of execution for each iteration:
+        ///     actExecuteBeforeEveryIterationAsync
+        ///     Execute test method
+        ///     Take measurements
+        ///     actExecuteAfterEveryIterationAsync
+        /// </summary>
+        [XmlIgnore]
+        public Func<int, MeasurementHolder, Task> actExecuteBeforeEveryIterationAsync;
+
+        /// <summary>
+        /// code to execute before every iteration. Parameters: the iteration number, and the measurementholder
+        /// Executed after each iteration.
+        /// Return value: False means do NOT do the default action after iteration of checking iteration number and taking dumps, comparing.
+        /// If you're implementation already takes a dump and compares values, returning false means you won't get the 2 dumps (at NumIterations and at (NumIterations -NumIterationsBeforeTotalToTakeBaselineSnapshot))
+        /// </summary>
+        [XmlIgnore]
+        public Func<int, MeasurementHolder, Task<bool>> actExecuteAfterEveryIterationAsync;
+
+        internal object theTest;
+        internal VSHandler VSHandler;
+
+        internal bool? _isApexTest;
+
+
 
         internal TestContextWrapper testContext;
         internal MethodInfo _theTestMethod;
-        [XmlIgnore]
-        public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
 
         internal void ReadOptionsFromFile(string fileNameOptions)
         {
@@ -152,12 +198,14 @@ namespace Microsoft.Test.Stress
             }
             // the file settings override the passed in values, if any
             PerfCounterOverrideSettings = fileOptions.PerfCounterOverrideSettings;
+            // read each value and override the current settings, except for exemptions
+            var exemptionFromOverrides = $"{nameof(logger)},{nameof(PerfCounterOverrideSettings)},{nameof(actExecuteBeforeEveryIterationAsync)},{nameof(actExecuteAfterEveryIterationAsync)},";
             var mems = typeof(StressUtilOptions).GetMembers(BindingFlags.Public | BindingFlags.Instance);
             foreach (var mem in mems)
             {
                 if (mem is FieldInfo fldInfo)
                 {
-                    if (fldInfo.Name != nameof(logger) && fldInfo.Name != nameof(PerfCounterOverrideSettings))
+                    if (!exemptionFromOverrides.Contains(fldInfo.Name+","))
                     {
                         var newval = fldInfo.GetValue(fileOptions);
                         //                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");
@@ -306,6 +354,13 @@ namespace Microsoft.Test.Stress
                 VSHandler = theVSHandler;
                 lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.vsProc, IsForStress: true);
             }
+            SetPerfCounterOverrideSettings();
+
+            return true; // not recurring
+        }
+
+        public void SetPerfCounterOverrideSettings()
+        {
             if (PerfCounterOverrideSettings != null)
             {
                 foreach (var userSettingItem in PerfCounterOverrideSettings) // for each user settings // very small list: linear search
@@ -317,7 +372,6 @@ namespace Microsoft.Test.Stress
                     }
                 }
             }
-            return true; // not recurring
         }
 
         internal bool IsTestApexTest()

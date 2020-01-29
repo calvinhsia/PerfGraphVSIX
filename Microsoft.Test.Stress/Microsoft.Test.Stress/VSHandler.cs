@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Test.Stress
 {
+    /// <summary>
+    /// Handles Visual Studio via DTE (used for Apex to do ForceGc between iterations)
+    /// </summary>
     public class VSHandler
     {
         public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
@@ -61,18 +64,19 @@ namespace Microsoft.Test.Stress
                 {
                     timeSpan = TimeSpan.FromSeconds(50);
                 }
+                var dtStartChecking = DateTime.Now;
                 await Task.Run(async () =>
                 {
                     logger.LogMessage($"{nameof(EnsureGotDTE)}");
                     await Task.Yield();
                     Process procDevenv;
-                    bool GetTargetDevenvProcess()
+                    bool GetTargetDevenvProcess() // need to find devenv that is not currently running test, but was started by test (either before or after this code is called
                     {
                         bool fGotit = false;
                         procDevenv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
-                        var dtNow = DateTime.Now;
-                        var diff = procDevenv.StartTime > dtNow - timeSpan;
-                        if (procDevenv.StartTime > dtNow - timeSpan) // the process start time must have started very recently
+                        // the process start time must have started very recently, but we need to exclude the case where user starts devenv, then immediately runs the test
+                        // IOW, it must have started at most 30 seconds ago
+                        if (procDevenv.StartTime > DateTime.Now - TimeSpan.FromSeconds(30)) 
                         {
                             logger.LogMessage($"Latest devenv PID= {procDevenv.Id} starttime = {procDevenv.StartTime}");
                             fGotit = true;
@@ -86,11 +90,11 @@ namespace Microsoft.Test.Stress
                     }
                     else
                     {
-                        if (!GetTargetDevenvProcess())
+                        while (!GetTargetDevenvProcess())
                         {
                             logger.LogMessage($"Didn't find Devenv. Waiting til it starts {timeSpan.TotalSeconds:n0} secs");
-                            await Task.Delay(timeSpan);
-                            if (!GetTargetDevenvProcess())
+                            await Task.Delay(TimeSpan.FromSeconds(5));
+                            if (DateTime.Now - dtStartChecking > timeSpan)
                             {
                                 throw new InvalidOperationException($"Couldn't find {procToFind} in {timeSpan.TotalSeconds * 2:n0} seconds {timeSpan.TotalSeconds:n0} PidLatest = {procDevenv.Id} ");
                             }
@@ -103,6 +107,10 @@ namespace Microsoft.Test.Stress
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
                     logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
+                    foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p=>p.StartTime))
+                    {
+                        logger.LogMessage($"   Other {procToFind} running on machine: ID={proc.Id} '{proc.MainWindowTitle}' {proc.MainModule.FileName} StartTime: {proc.StartTime}");
+                    }
                 });
             }
             return true;
@@ -222,7 +230,10 @@ namespace Microsoft.Test.Stress
             {
                 throw new FileNotFoundException($"Could not find devenv under " + string.Join("|", lstProgFileDirs));
             }
-            vsPath = lstFileInfos.OrderByDescending(f => f.CreationTime).First().FullName;
+            // FileVersion:      16.5.29713.161 built by: MASTER
+            // ProductVersion:   16.5.29713.161
+
+            vsPath = lstFileInfos.OrderByDescending(f => FileVersionInfo.GetVersionInfo(f.FullName).ProductVersion).First().FullName;
             return vsPath;
         }
 
@@ -237,7 +248,7 @@ namespace Microsoft.Test.Stress
             {
                 vsPath = GetVSFullPath();
             }
-            logger.LogMessage($"{ nameof(StartVSAsync)}");
+            logger.LogMessage($"{ nameof(StartVSAsync)}  VSPath= {vsPath}");
             var startOptions = new ProcessStartInfo(vsPath);
             if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeNone)
             {

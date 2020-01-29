@@ -45,7 +45,7 @@ namespace Tests
             }
             public override string ToString()
             {
-                return $"{GetTarget().ToString()}";
+                return $"{GetTarget()}";
             }
         }
 
@@ -145,7 +145,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex}");
                 throw;
             }
             //LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -201,7 +201,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex}");
                 throw;
             }
             //LogTestMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -284,7 +284,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex}");
                 throw;
             }
             LogMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -364,7 +364,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex}");
                 throw;
             }
             LogMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -430,7 +430,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogMessage($"got exception {ex.ToString()}");
+                LogMessage($"got exception {ex}");
                 throw;
             }
             LogMessage($"expect {nThreads * nIter} cnt = {cnt} CollSize={coll.Count}");
@@ -471,7 +471,7 @@ namespace Tests
             }
             catch (Exception ex)
             {
-                LogMessage($"got expected exception {ex.ToString()}");
+                LogMessage($"got expected exception {ex}");
                 throw;
             }
             Assert.Fail("Should not get here");

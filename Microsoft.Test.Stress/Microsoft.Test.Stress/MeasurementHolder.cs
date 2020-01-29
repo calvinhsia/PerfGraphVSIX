@@ -62,6 +62,10 @@ namespace Microsoft.Test.Stress
             public PointF point;
             public bool IsOutlier;
             internal double distance; // distance from line
+            public override string ToString()
+            {
+                return $"{point} IsOutlier={IsOutlier}";
+            }
         }
         public PerfCounterData perfCounterData;
         public List<DataPoint> lstData = new List<DataPoint>();
@@ -73,14 +77,25 @@ namespace Microsoft.Test.Stress
         /// </summary>
         public double slope;
         public double yintercept;
-        private int NumOutliers => (int)(lstData.Count * pctOutliersToIgnore / 100.0);
+        /// <summary>
+        /// Normally the entire range of measurements. However, we can try using fewer data points to calculate slope and R² using fewer iterations
+        /// </summary>
+        public int NumSamplesToUse;
+        internal float RSquaredThreashold;
 
-        public LeakAnalysisResult(List<uint> lst)
+        public int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
+
+        public LeakAnalysisResult(List<uint> lst, int numSamplesToUse)
         {
             int ndx = 0;
             foreach (var itm in lst)
             {
                 lstData.Add(new DataPoint() { point = new PointF() { X = ++ndx, Y = itm } });
+            }
+            this.NumSamplesToUse = numSamplesToUse != -1 ? numSamplesToUse : lst.Count;
+            if (this.NumSamplesToUse < 0 || this.NumSamplesToUse > lst.Count)
+            {
+                throw new InvalidOperationException($"@ Samples to use must be >=0 && <= {lst.Count}");
             }
         }
 
@@ -89,12 +104,13 @@ namespace Microsoft.Test.Stress
         // Return the total error.
         public double FindLinearLeastSquaresFit()
         {
-            // preliminary slope and intercept 
+            // preliminary slope and intercept with no outliers
+            lstData.ForEach(p => p.IsOutlier = false);
             CalcSlopeAndIntercept();
             if (NumOutliers > 0)
             {
                 // identify outliers by finding those with largest distance from line
-                foreach (var dp in lstData)
+                foreach (var dp in lstData.Take(NumSamplesToUse))
                 {
                     var pt = dp.point;
                     dp.distance = Math.Abs(yintercept + slope * pt.X - pt.Y) / Math.Sqrt(1 + slope * slope);
@@ -109,20 +125,21 @@ namespace Microsoft.Test.Stress
             return Math.Sqrt(ErrorSquared());
         }
 
-        private void CalcSlopeAndIntercept()
+        public void CalcSlopeAndIntercept()
         {
-            double N = lstData.Count - NumOutliers;
             double SumX = 0;
             double SumY = 0;
             double SumXX = 0;
             double SumXY = 0;
-            foreach (var dp in lstData.Where(p => !p.IsOutlier))
+            int N = 0;
+            foreach (var dp in lstData.Take(NumSamplesToUse).Where(p => !p.IsOutlier))
             {
                 var pt = dp.point;
                 SumX += pt.X;
                 SumY += pt.Y;
                 SumXX += pt.X * pt.X;
                 SumXY += pt.X * pt.Y;
+                N++;
             }
             slope = (SumXY * N - SumX * SumY) / (SumXX * N - SumX * SumX);
             yintercept = (SumXY * SumX - SumY * SumXX) / (SumX * SumX - N * SumXX);
@@ -132,7 +149,7 @@ namespace Microsoft.Test.Stress
         public double ErrorSquared()
         {
             double total = 0;
-            foreach (var dp in lstData)
+            foreach (var dp in lstData.Take(NumSamplesToUse))
             {
                 var pt = dp.point;
                 double dy = pt.Y - (slope * pt.X + yintercept);
@@ -150,10 +167,10 @@ namespace Microsoft.Test.Stress
             var SStot = 0.0;
             var SSerr = 0.0;
             double YMean = 0;
-            lstData.ForEach(t => YMean += t.point.Y);
-            YMean /= (lstData.Count - NumOutliers);
-            double xMean = (lstData.Count - NumOutliers - 1) / 2;
-            for (int i = 0; i < lstData.Count; i++)
+            lstData.Take(NumSamplesToUse).ToList().ForEach(t => YMean += t.point.Y);
+            YMean /= (NumSamplesToUse - NumOutliers);
+            double xMean = (NumSamplesToUse - NumOutliers - 1) / 2;
+            for (int i = 0; i < NumSamplesToUse; i++)
             {
                 if (!lstData[i].IsOutlier)
                 {
@@ -172,7 +189,7 @@ namespace Microsoft.Test.Stress
             get
             {
                 var isLeak = false;
-                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > 0.5)
+                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > RSquaredThreashold)
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak
@@ -189,7 +206,7 @@ namespace Microsoft.Test.Stress
         public override string ToString()
         {
             // r²= alt 253
-            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared(),8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} IsLeak={IsLeak}";
+            return $"{perfCounterData.PerfCounterName,-20} R²={RSquared(),8:n2} slope={slope,15:n3} Threshold={perfCounterData.thresholdRegression,11:n1} Sens={sensitivity:n3} N={NumSamplesToUse} IsLeak={IsLeak}";
         }
     }
 
@@ -203,18 +220,18 @@ namespace Microsoft.Test.Stress
         public const string InteractiveUser = "InteractiveUser";
         public const string DiffFileName = "String and Type Count differences";
         public string TestName;
-        internal readonly StressUtilOptions stressUtilOptions;
+        public readonly StressUtilOptions stressUtilOptions;
 
         /// <summary>
         /// The list of perfcounters to use
         /// </summary>
         public List<PerfCounterData> LstPerfCounterData => stressUtilOptions.lstPerfCountersToUse;
-        ILogger Logger => stressUtilOptions.logger;
+        public ILogger Logger => stressUtilOptions.logger;
         readonly SampleType sampleType;
-        internal Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
-        int nSamplesTaken;
+        public Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
+        public int nSamplesTaken;
 
-        private string _ResultsFolder;
+        public string _ResultsFolder;
         /// <summary>
         /// unique folder per test.
         /// </summary>
@@ -260,7 +277,7 @@ namespace Microsoft.Test.Stress
         /// can be null when running user compiled code
         /// </summary>
         readonly TestContextWrapper testContext;
-        readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
+        public readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
 
         /// <summary>
         /// 
@@ -309,8 +326,7 @@ namespace Microsoft.Test.Stress
                 // we just finished executing the user code. The IDE might be busy executing the last request.
                 // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
                 await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
-                await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
+                await DoForceGCAsync();
             }
 
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {LstPerfCounterData[0].ProcToMonitor.ProcessName} {LstPerfCounterData[0].ProcToMonitor.Id} ");
@@ -340,35 +356,49 @@ namespace Microsoft.Test.Stress
             {
                 nSamplesTaken++;
             }
+            var doCheck = true;
+            if (stressUtilOptions.actExecuteAfterEveryIterationAsync != null)
+            {
+                doCheck = await stressUtilOptions.actExecuteAfterEveryIterationAsync(nSamplesTaken, this);
+            }
+            if (doCheck)
+            {
+                await CheckIfNeedToTakeSnapshotsAsync();
+            }
+            if (stressUtilOptions.FailTestAsifLeaksFound && nSamplesTaken == stressUtilOptions.NumIterations)
+            {
+                throw new LeakException($"FailTestAsifLeaksFound", null);
+            }
+
+            return sBuilderMeasurementResult.ToString();
+        }
+
+        private async Task CheckIfNeedToTakeSnapshotsAsync()
+        {
             if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
                 if (nSamplesTaken == stressUtilOptions.NumIterations - stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
                 {
-                    Logger.LogMessage($"Taking base snapshot dump at iteration {nSamplesTaken}");
-                    baseDumpFileName = await CreateDumpAsync(
-                        LstPerfCounterData[0].ProcToMonitor.Id,
-                        desc: TestName + "_" + nSamplesTaken.ToString(),
-                        memoryAnalysisType: MemoryAnalysisType.JustCreateDump);
-                    lstFileResults.Add(new FileResultsData() { filename = baseDumpFileName, description = $"BaselineDumpFile taken after iteration # {nSamplesTaken}" });
+                    baseDumpFileName = await DoCreateDumpAsync($"Taking base snapshot dump at iteration {nSamplesTaken}");
                 }
-                else if (nSamplesTaken == stressUtilOptions.NumIterations) // final snapshot?
+                else if (nSamplesTaken == stressUtilOptions.NumIterations) // final iteration? take snapshot
                 {
                     var filenameMeasurementResults = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameMeasurementResults}");
                     var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI))
                         .Where(r => r.IsLeak).ToList();
-                    if (lstLeakResults.Count > 0)
+                    if (lstLeakResults.Count > 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
                         foreach (var leak in lstLeakResults)
                         {
                             Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
-                        var currentDumpFile = await CreateDumpAsync(
-                            LstPerfCounterData[0].ProcToMonitor.Id,
-                            desc: TestName + "_" + stressUtilOptions.NumIterations.ToString(),
-                            memoryAnalysisType: stressUtilOptions.ShowUI ? MemoryAnalysisType.StartClrObjExplorer : MemoryAnalysisType.JustCreateDump);
-                        lstFileResults.Add(new FileResultsData() { filename = currentDumpFile, description = "CurrentDumpFile" });
+                        if (lstLeakResults.Count == 0 && stressUtilOptions.FailTestAsifLeaksFound)
+                        {
+                            Logger.LogMessage($"Failing test even though no leaks found so test artifacts");
+                        }
+                        var currentDumpFile = await DoCreateDumpAsync($"Taking final snapshot dump at iteration {nSamplesTaken}");
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
                             var oDumpAnalyzer = new DumpAnalyzer(Logger);
@@ -397,15 +427,70 @@ namespace Microsoft.Test.Stress
                         {
                             Logger.LogMessage($"No baseline dump: not enough iterations");
                         }
+//                        await CalculateMinimumNumberOfIterationsAsync(lstLeakResults);
                         if (this.testContext != null)
                         {
-                            throw new LeakException($"Leaks found", lstLeakResults);
+                            if (lstLeakResults.Count > 0)
+                            {
+                                throw new LeakException($"Leaks found", lstLeakResults);
+                            }
                         }
                     }
                 }
             }
-            return sBuilderMeasurementResult.ToString();
         }
+
+        public async Task<string> DoCreateDumpAsync(string desc, string filenamepart = "")
+        {
+            if (stressUtilOptions.SecsDelayBeforeTakingDump > 0)
+            {
+                Logger.LogMessage($"Delay {stressUtilOptions.SecsDelayBeforeTakingDump} before taking dump at iteration {nSamplesTaken}");
+                await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsDelayBeforeTakingDump));
+                await DoForceGCAsync();
+            }
+
+            Logger.LogMessage(desc);
+
+            var memAnalysisType = MemoryAnalysisType.JustCreateDump;
+            if (nSamplesTaken == stressUtilOptions.NumIterations && stressUtilOptions.ShowUI)
+            {
+                memAnalysisType = MemoryAnalysisType.StartClrObjExplorer;
+            }
+            var DumpFileName = await CreateDumpAsync(
+                LstPerfCounterData[0].ProcToMonitor.Id,
+                desc: TestName + filenamepart + "_" + nSamplesTaken.ToString(),
+                memoryAnalysisType: memAnalysisType);
+            lstFileResults.Add(new FileResultsData() { filename = DumpFileName, description = $"DumpFile taken after iteration # {nSamplesTaken}" });
+            return DumpFileName;
+        }
+
+        public async Task DoForceGCAsync()
+        {
+            // cmdidShellForceGC GarbageCollectCLRIterative https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fappid%2FAppDomainManager%2FVsRcwCleanup.cs&version=GBmaster&_a=contents
+            stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
+            await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
+        }
+
+        // we know it leaks. Let's give guidance to user about recommended # of versions to get the same R² and slope
+        public async Task CalculateMinimumNumberOfIterationsAsync(List<LeakAnalysisResult> lstLeakResults)
+        {
+            if (stressUtilOptions.NumIterations > 10 && lstLeakResults.Count > 0)
+            {
+                Logger.LogMessage($"Calculating recommended # of iterations");
+                var lstItersWithSameResults = new List<int>();
+                for (int iTryNumIterations = 3; iTryNumIterations < stressUtilOptions.NumIterations; iTryNumIterations++)
+                {
+                    var testLeakResults = (await CalculateLeaksAsync(showGraph: false, NumSamplesToUse: iTryNumIterations)).Where(p => p.IsLeak);
+                    if (testLeakResults.Count() == lstLeakResults.Count)
+                    {
+                        lstItersWithSameResults.Add(iTryNumIterations);
+                        Logger.LogMessage($"Got same with {iTryNumIterations} {lstLeakResults[0]}");
+                    }
+
+                }
+            }
+        }
+
 
         //private async Task IfApexTestDelayAsync()
         //{
@@ -439,19 +524,30 @@ namespace Microsoft.Test.Stress
             return res;
         }
 
-        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="showGraph">show a graph</param>
+        /// <param name="NumSamplesToUse">-1 means use all of them. Else use the specified number: This will help figure out the min # of iterations to get the same slope and R²</param>
+        /// <returns></returns>
+        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph, int NumSamplesToUse = -1)
         {
             var lstResults = new List<LeakAnalysisResult>();
+            this.stressUtilOptions.SetPerfCounterOverrideSettings();
             foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
-                var leakAnalysis = new LeakAnalysisResult(measurements[ctr.perfCounterType])
+                var leakAnalysis = new LeakAnalysisResult(measurements[ctr.perfCounterType], NumSamplesToUse)
                 {
                     perfCounterData = ctr,
                     sensitivity = stressUtilOptions.Sensitivity,
-                    pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore
+                    pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore,
+                    RSquaredThreashold = stressUtilOptions.RSquaredThreshold
                 };
                 leakAnalysis.FindLinearLeastSquaresFit();
-                Logger.LogMessage($"{leakAnalysis}");
+                if (NumSamplesToUse == -1) // only log the real iterations, not when we're calculating the min # of iterations
+                {
+                    Logger.LogMessage($"{leakAnalysis}");
+                }
                 lstResults.Add(leakAnalysis);
             }
             if (showGraph)
@@ -490,7 +586,7 @@ namespace Microsoft.Test.Stress
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogMessage($"graph {ex.ToString()}");
+                        Logger.LogMessage($"graph {ex}");
                     }
                     tcs.SetResult(0);
                 });
@@ -503,56 +599,59 @@ namespace Microsoft.Test.Stress
                 //}
             }
             // Create graphs as files. do this after showgraph else hang
-            foreach (var item in lstResults)
+            if (NumSamplesToUse == -1)
             {
-                using (var chart = new Chart())
+                foreach (var item in lstResults)
                 {
-                    chart.Titles.Add($"{TestName} {item}");
-                    chart.Size = new System.Drawing.Size(1200, 800);
-                    chart.Series.Clear();
-                    chart.ChartAreas.Clear();
-                    ChartArea chartArea = new ChartArea("ChartArea");
-                    chartArea.AxisY.LabelStyle.Format = "{0:n0}";
-                    chartArea.AxisY.Title = item.perfCounterData.PerfCounterName;
-                    chartArea.AxisX.Title = "Iteration";
-                    chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
-                    chart.ChartAreas.Add(chartArea);
-                    chartArea.AxisY.IsStartedFromZero = false;
-                    var series = new Series
+                    using (var chart = new Chart())
                     {
-                        ChartType = SeriesChartType.Line,
-                        Name = item.perfCounterData.PerfCounterName
-                    };
-                    series.MarkerSize = 10;
-                    series.MarkerStyle = MarkerStyle.Circle;
-                    chart.Series.Add(series);
-                    for (int i = 0; i < item.lstData.Count; i++)
-                    {
-                        var dp = new DataPoint(i + 1, item.lstData[i].point.Y); // measurements taken at end of iteration
-                        if (item.lstData[i].IsOutlier)
+                        chart.Titles.Add($"{TestName} {item}");
+                        chart.Size = new System.Drawing.Size(1200, 800);
+                        chart.Series.Clear();
+                        chart.ChartAreas.Clear();
+                        ChartArea chartArea = new ChartArea("ChartArea");
+                        chartArea.AxisY.LabelStyle.Format = "{0:n0}";
+                        chartArea.AxisY.Title = item.perfCounterData.PerfCounterName;
+                        chartArea.AxisX.Title = "Iteration";
+                        chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
+                        chart.ChartAreas.Add(chartArea);
+                        chartArea.AxisY.IsStartedFromZero = false;
+                        var series = new Series
                         {
-                            dp.MarkerColor = System.Drawing.Color.Red;
-                            dp.MarkerStyle = MarkerStyle.Cross;
+                            ChartType = SeriesChartType.Line,
+                            Name = item.perfCounterData.PerfCounterName
+                        };
+                        series.MarkerSize = 10;
+                        series.MarkerStyle = MarkerStyle.Circle;
+                        chart.Series.Add(series);
+                        for (int i = 0; i < item.NumSamplesToUse; i++)
+                        {
+                            var dp = new DataPoint(i + 1, item.lstData[i].point.Y); // measurements taken at end of iteration
+                            if (item.lstData[i].IsOutlier)
+                            {
+                                dp.MarkerColor = System.Drawing.Color.Red;
+                                dp.MarkerStyle = MarkerStyle.Cross;
+                            }
+                            series.Points.Add(dp);
                         }
-                        series.Points.Add(dp);
+                        // now show trend line
+                        var seriesTrendLine = new Series()
+                        {
+                            ChartType = SeriesChartType.Line,
+                            Name = "Trend Line"
+                        };
+                        chart.Series.Add(seriesTrendLine);
+                        var dp0 = new DataPoint(1, item.yintercept + item.slope);
+                        seriesTrendLine.Points.Add(dp0);
+                        var dp1 = new DataPoint(item.NumSamplesToUse, item.NumSamplesToUse * item.slope + item.yintercept);
+                        seriesTrendLine.Points.Add(dp1);
+
+                        chart.Legends.Add(new Legend());
+
+                        var fname = Path.Combine(ResultsFolder, $"{TestName} Graph {item.perfCounterData.PerfCounterName}.png");
+                        chart.SaveImage(fname, ChartImageFormat.Png);
+                        lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Graph {item.perfCounterData}" });
                     }
-                    // now show trend line
-                    var seriesTrendLine = new Series()
-                    {
-                        ChartType = SeriesChartType.Line,
-                        Name = "Trend Line"
-                    };
-                    chart.Series.Add(seriesTrendLine);
-                    var dp0 = new DataPoint(1, item.yintercept + item.slope);
-                    seriesTrendLine.Points.Add(dp0);
-                    var dp1 = new DataPoint(item.lstData.Count, item.lstData.Count * item.slope + item.yintercept);
-                    seriesTrendLine.Points.Add(dp1);
-
-                    chart.Legends.Add(new Legend());
-
-                    var fname = Path.Combine(ResultsFolder, $"{TestName} Graph {item.perfCounterData.PerfCounterName}.png");
-                    chart.SaveImage(fname, ChartImageFormat.Png);
-                    lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Graph {item.perfCounterData}" });
                 }
             }
             return lstResults;

@@ -85,7 +85,7 @@
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
 
-        public string TipString { get; } = $"PerfGraphVSIX https://github.com/calvinhsia/PerfGraphVSIX.git Version={typeof(PerfGraphToolWindowControl).Assembly.GetName().Version}\r\n" +
+        public string TipString { get; } = $"PerfGraphVSIX https://devdiv.visualstudio.com/DefaultCollection/Engineering/_git/DevDivStress Version={typeof(PerfGraphToolWindowControl).Assembly.GetName().Version}\r\n" +
             $"{System.Reflection.Assembly.GetExecutingAssembly().Location}   CurDir={Environment.CurrentDirectory}";
 
         public FontFamily FontFamilyMono { get; set; } = new FontFamily("Consolas");
@@ -207,7 +207,7 @@
                         {
                             pctrEnum |= (PerfCounterType)Enum.Parse(typeof(PerfCounterType), itm.ToString());
                         }
-                        AddStatusMsgAsync($"Setting counters to {pctrEnum.ToString()}").Forget();
+                        AddStatusMsgAsync($"Setting counters to {pctrEnum}").Forget();
                         // wait for it to be done cancelling
                         if (_tskDoPerfMonitoring != null)
                         {
@@ -465,7 +465,7 @@
                 foreach (var entry in lstLeakedViews)
                 {
                     var sp = new StackPanel() { Orientation = Orientation.Horizontal };
-                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} Ser#={entry._serialNo,3} {entry._dtCreated.ToString("hh:mm:ss")} {entry._filename}", FontFamily = FontFamilyMono });
+                    sp.Children.Add(new TextBlock() { Text = $"{ entry._contentType,-15} Ser#={entry._serialNo,3} {entry._dtCreated:hh:mm:ss} {entry._filename}", FontFamily = FontFamilyMono });
                     LeakedViews.Add(sp);
                 }
             }
