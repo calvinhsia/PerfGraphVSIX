@@ -88,7 +88,7 @@ namespace TestStressDll
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
-                return;
+                throw new LeakException("Throwing expected exception so test passes", null);
             }
             string prop_didGetLeakException = "didGetLeakException";
             string prop_countActions = "countActions";
@@ -233,7 +233,7 @@ namespace TestStressDll
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
-                return;
+                throw new LeakException("Throwing expected exception so test passes", null);
             }
 
             string didValidateSettingsRead = "didValidateSettingsRead";

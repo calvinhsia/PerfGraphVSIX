@@ -34,7 +34,7 @@ namespace TestStressDll
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
-                return;
+                throw new LeakException("Throwing expected exception so test passes", null);
             }
             var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
             {
