@@ -86,6 +86,10 @@ namespace TestStressDll
         [ExpectedException(typeof(LeakException))]
         public async Task TestLeakyWithCustomActions()
         {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                return;
+            }
             string prop_didGetLeakException = "didGetLeakException";
             string prop_countActions = "countActions";
             int numIter = 5;
