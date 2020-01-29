@@ -83,6 +83,7 @@ namespace TestStressDll
         }
 
         [TestMethod]
+        [ExpectedException(typeof(LeakException))]
         public async Task TestLeakyWithCustomActions()
         {
             string prop_didGetLeakException = "didGetLeakException";
@@ -132,7 +133,13 @@ namespace TestStressDll
                             TestContext.Properties[prop_dumpPrior] = dump;
 
                             // this line is needed only in StressUtil unit tests. Remove from Stress test
-                            TestContext.Properties[prop_countActions] = (int)TestContext.Properties[prop_countActions] + 1; 
+                            TestContext.Properties[prop_countActions] = (int)TestContext.Properties[prop_countActions] + 1;
+
+                            if (nIter == measurementHolder.stressUtilOptions.NumIterations)
+                            {
+                                throw new LeakException("custom code throwing to cause test failure", lstRegResults: null);
+                            }
+
                             return false; //do NOT do the default action after iteration of checking iteration number and taking dumps, comparing.
                         },
                     }

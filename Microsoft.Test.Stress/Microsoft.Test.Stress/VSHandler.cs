@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Test.Stress
 {
+    /// <summary>
+    /// Handles Visual Studio via DTE (used for Apex to do ForceGc between iterations)
+    /// </summary>
     public class VSHandler
     {
         public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
@@ -106,7 +109,7 @@ namespace Microsoft.Test.Stress
                     logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
                     foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p=>p.StartTime))
                     {
-                        logger.LogMessage($"   Other {procToFind} running on machine: '{proc.MainWindowTitle}' {proc.MainModule.FileName} {proc.StartTime}");
+                        logger.LogMessage($"   Other {procToFind} running on machine: ID={proc.Id} '{proc.MainWindowTitle}' {proc.MainModule.FileName} StartTime: {proc.StartTime}");
                     }
                 });
             }
@@ -227,7 +230,10 @@ namespace Microsoft.Test.Stress
             {
                 throw new FileNotFoundException($"Could not find devenv under " + string.Join("|", lstProgFileDirs));
             }
-            vsPath = lstFileInfos.OrderByDescending(f => f.CreationTime).First().FullName;
+            // FileVersion:      16.5.29713.161 built by: MASTER
+            // ProductVersion:   16.5.29713.161
+
+            vsPath = lstFileInfos.OrderByDescending(f => FileVersionInfo.GetVersionInfo(f.FullName).ProductVersion).First().FullName;
             return vsPath;
         }
 
@@ -242,7 +248,7 @@ namespace Microsoft.Test.Stress
             {
                 vsPath = GetVSFullPath();
             }
-            logger.LogMessage($"{ nameof(StartVSAsync)}");
+            logger.LogMessage($"{ nameof(StartVSAsync)}  VSPath= {vsPath}");
             var startOptions = new ProcessStartInfo(vsPath);
             if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeNone)
             {

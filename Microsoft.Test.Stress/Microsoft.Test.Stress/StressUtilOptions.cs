@@ -157,7 +157,7 @@ namespace Microsoft.Test.Stress
         public List<PerfCounterData> lstPerfCountersToUse; // public for vsix
 
         /// <summary>
-        /// code to execute before every iteration. (Cannot be serialized) Parameters: the iteration number, and the measurementholder
+        /// code to execute before every iteration. (Cannot be serialized: specify in code, and it will still work even if external XML settings are used) Parameters: the iteration number, and the measurementholder
         /// Executed for each iteration (before executing test method). After each iteration, measurements are taken
         /// e.g. Can be used to analyze measurements so far to conditionally create additional dumps
         /// Order of execution for each iteration:

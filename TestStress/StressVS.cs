@@ -32,13 +32,24 @@ namespace TestStress
         }
 
         [TestMethod]
-        [ExpectedException(typeof(LeakException))]
+//        [ExpectedException(typeof(LeakException))]
         public async Task StressOpenCloseSln()
         {
             try
             {
                 // the only change to existing test required: call to static method
-                await StressUtil.DoIterationsAsync(this, NumIterations: 7);
+                await StressUtil.DoIterationsAsync(this, stressUtilOptions: new StressUtilOptions()
+                {
+                    NumIterations = 37,
+                    actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
+                    {
+                        await Task.Yield();
+                        var procMonitored = measurementHolder.stressUtilOptions.lstPerfCountersToUse[0].ProcToMonitor;
+                        Assert.AreNotEqual(procMonitored.Id, System.Diagnostics.Process.GetCurrentProcess().Id, "Tracing wrong process");
+                        measurementHolder.Logger.LogMessage($" {procMonitored.Id}  {procMonitored.MainModule.FileName}");
+                        return true; //do the default action after iteration of checking iteration number and taking dumps, comparing.
+                    }
+                });
 
                 await _VSHandler.OpenSolution(SolutionToLoad);
 

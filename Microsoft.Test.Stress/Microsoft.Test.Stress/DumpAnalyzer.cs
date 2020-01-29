@@ -21,6 +21,14 @@ namespace Microsoft.Test.Stress
             this.logger = logger;
         }
 
+        /// <summary>
+        /// Given a dump file, output 2 dictionaries: CLR Type name=>Count   and String=>Count
+        /// e.g. if the dump has 44 copies of the string "foobar", then dictStrings["foobar"]=44
+        ///    if the dump has 12 instances of Microsoft.VisualStudio.Type.Foobar, then  dictTypes["Microsoft.VisualStudio.Type.Foobar"] =12
+        /// </summary>
+        /// <param name="dumpFile"></param>
+        /// <param name="dictTypes"></param>
+        /// <param name="dictStrings"></param>
         public void AnalyzeDump(string dumpFile, out Dictionary<string, int> dictTypes, out Dictionary<string, int> dictStrings)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
@@ -122,7 +130,14 @@ namespace Microsoft.Test.Stress
                 logger.LogMessage($"Exception analyzing dump {ex}");
             }
         }
-
+        /// <summary>
+        /// given 2 dumps and a stringbuilder, add to the stringbuilder the diffs in both the ClrTypes and the Strings
+        /// </summary>
+        /// <param name="sb"></param>
+        /// <param name="pathDumpBase"></param>
+        /// <param name="pathDumpCurrent"></param>
+        /// <param name="TotNumIterations"></param>
+        /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"></param>
         public void GetDiff(StringBuilder sb, string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
             AnalyzeDump(pathDumpBase, out var dictTypesBaseline, out var dictStringsBaseline);
@@ -141,6 +156,15 @@ namespace Microsoft.Test.Stress
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
         }
 
+        /// <summary>
+        /// Given a stringbuilder and 2 dictionaries of the same type(e.g. 2 string->count dicts, or 2 ClrType->count dicts), but from 2 different iterations (base and current), 
+        /// add to the stringbuilder the growth in the Type (or string)
+        /// </summary>
+        /// <param name="sb"></param>
+        /// <param name="dictBase"></param>
+        /// <param name="dictCurrent"></param>
+        /// <param name="TotNumIterations"></param>
+        /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"></param>
         public void AnalyzeDiff(StringBuilder sb, Dictionary<string, int> dictBase, Dictionary<string, int> dictCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
             foreach (var entryCurrent in dictCurrent.Where(e => e.Value >= TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1).OrderBy(e => e.Value))

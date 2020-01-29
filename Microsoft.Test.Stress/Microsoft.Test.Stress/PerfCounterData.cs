@@ -199,6 +199,7 @@ namespace Microsoft.Test.Stress
             {
                 var newdata = (PerfCounterData)pc.MemberwiseClone();
                 newdata.ProcToMonitor = processToMonitor;
+                newdata.ResetCounter();
                 lst.Add(newdata);
             }
             return lst;

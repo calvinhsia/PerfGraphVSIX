@@ -363,13 +363,17 @@ namespace Microsoft.Test.Stress
             }
             if (doCheck)
             {
-                await CheckIfDoingSnapshotsAsync();
+                await CheckIfNeedToTakeSnapshotsAsync();
+            }
+            if (stressUtilOptions.FailTestAsifLeaksFound && nSamplesTaken == stressUtilOptions.NumIterations)
+            {
+                throw new LeakException($"FailTestAsifLeaksFound", null);
             }
 
             return sBuilderMeasurementResult.ToString();
         }
 
-        private async Task CheckIfDoingSnapshotsAsync()
+        private async Task CheckIfNeedToTakeSnapshotsAsync()
         {
             if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
@@ -423,16 +427,12 @@ namespace Microsoft.Test.Stress
                         {
                             Logger.LogMessage($"No baseline dump: not enough iterations");
                         }
-                        await CalculateMinimumNumberOfIterationsAsync(lstLeakResults);
+//                        await CalculateMinimumNumberOfIterationsAsync(lstLeakResults);
                         if (this.testContext != null)
                         {
                             if (lstLeakResults.Count > 0)
                             {
                                 throw new LeakException($"Leaks found", lstLeakResults);
-                            }
-                            if (stressUtilOptions.FailTestAsifLeaksFound)
-                            {
-                                throw new LeakException($"FailTestAsifLeaksFound", lstLeakResults);
                             }
                         }
                     }
