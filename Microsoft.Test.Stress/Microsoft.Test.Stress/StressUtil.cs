@@ -82,6 +82,22 @@ namespace Microsoft.Test.Stress
                     var baseDumpFileName = string.Empty;
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
                     stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
+                    var verInfo = FileVersionInfo.GetVersionInfo(typeof(StressUtil).Assembly.Location);
+                    /*
+InternalName:     Microsoft.Test.Stress.dll
+OriginalFilename: Microsoft.Test.Stress.dll
+FileVersion:      1.1.29.55167
+FileDescription:  Microsoft.Test.Stress
+Product:          Microsoft.Test.Stress
+ProductVersion:   1.1.29+g7fd76485e3
+Debug:            False
+Patched:          False
+PreRelease:       False
+PrivateBuild:     False
+SpecialBuild:     False
+Language:         Language Neutral
+                     */
+                    stressUtilOptions.logger.LogMessage($"{verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
 
                     for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                     {

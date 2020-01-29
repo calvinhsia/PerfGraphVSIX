@@ -40,9 +40,13 @@ namespace TestStressDll
         public async Task StressLeaky()
         {
             string didGetLeakException = "didGetLeakException";
-            TestContext.WriteLine($"Username=" + Environment.GetEnvironmentVariable("Username"));
-            TestContext.WriteLine($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
-            TestContext.WriteLine($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
+            if (TestContext.Properties.Contains(StressUtil.PropNameLogger))
+            {/// put these in logger rather than TestContext.WriteLine so they show in build pipeline test results
+                Logger logger = TestContext.Properties[StressUtil.PropNameLogger] as Logger;
+                logger?.LogMessage($"Username=" + Environment.GetEnvironmentVariable("Username"));
+                logger?.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
+                logger?.LogMessage($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
+            }
             int numIter = 11;
             try
             {
@@ -61,16 +65,21 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeakyLimitNumSamples()
         {
             string didGetLeakException = "didGetLeakException";
-            int numIter = 119;
+            int numIter = 23;
             try
             {
                 await StressUtil.DoIterationsAsync(
                     this,
-                    new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = false }
+                    new StressUtilOptions()
+                        {
+                            NumIterations = numIter,
+                            ProcNamesToMonitor = string.Empty,
+                            ShowUI = true
+                        }
                     );
 
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
