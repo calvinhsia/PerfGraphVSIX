@@ -69,7 +69,11 @@ namespace Microsoft.Test.Stress
              * Computername=fv-az683
              * UserDomain=fv-az683
              */
-            if (Environment.GetEnvironmentVariable("Computername") == Environment.GetEnvironmentVariable("UserDomain"))
+            //if (Environment.GetEnvironmentVariable("Computername") == Environment.GetEnvironmentVariable("UserDomain"))
+            //{
+            //    return true;
+            //}
+            if (Environment.GetEnvironmentVariable("UserName").ToLower() != "calvinh")
             {
                 return true;
             }
