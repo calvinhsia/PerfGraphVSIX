@@ -431,7 +431,7 @@ namespace Microsoft.Test.Stress
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
                                             stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);
-                            var fname = Path.Combine(ResultsFolder, $"{TestName} {DiffFileName}_{nSamplesTaken}.txt");
+                            var fname = Path.Combine(ResultsFolder, $"{DiffFileName}_{nSamplesTaken}.txt");
                             File.WriteAllText(fname, sb.ToString());
                             if (stressUtilOptions.ShowUI)
                             {
@@ -644,7 +644,7 @@ namespace Microsoft.Test.Stress
 
                         chart.Legends.Add(new Legend());
 
-                        var fname = Path.Combine(ResultsFolder, $"{TestName} Graph {item.perfCounterData.PerfCounterName}.png");
+                        var fname = Path.Combine(ResultsFolder, $"Graph {item.perfCounterData.PerfCounterName}.png");
                         chart.SaveImage(fname, ChartImageFormat.Png);
                         lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Graph {item.perfCounterData}" });
                     }
@@ -679,7 +679,7 @@ namespace Microsoft.Test.Stress
                 }
                 sb.AppendLine(string.Join(",", lst.ToArray()));
             }
-            var filename = Path.Combine(ResultsFolder, $"{TestName} Measurements.txt");
+            var filename = Path.Combine(ResultsFolder, $"Measurements.txt");
             File.WriteAllText(filename, sb.ToString());
             lstFileResults.Add(new FileResultsData() { filename = filename, description = "Raw Measuremensts as Txt File to open/graph in Excel" });
             return filename;
@@ -728,7 +728,7 @@ namespace Microsoft.Test.Stress
                     {
                         sb.AppendLine(str);
                     }
-                    var filename = Path.Combine(ResultsFolder, $"{testContext.TestName} StressTestLog.log");
+                    var filename = Path.Combine(ResultsFolder, $"StressTestLog.log");
                     File.WriteAllText(filename, sb.ToString());
                     lstFileResults.Add(new FileResultsData() { filename = filename, description = "Stress Test Log" });
                 }
