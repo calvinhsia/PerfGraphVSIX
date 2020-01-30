@@ -98,6 +98,7 @@
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
     <Compile Include="ILogger.cs" />
+    <Compile Include="LeakAnalysisResult.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />

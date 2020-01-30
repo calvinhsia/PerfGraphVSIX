@@ -33,6 +33,7 @@ namespace Microsoft.Test.Stress
     public class StressUtil
     {
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
+        public const string PropNameMinimumIteration = "MinimumIteration";
         public const string PropNameListFileResults = "DictListFileResults";
         public const string PropNameStartTime = "TestStartTime";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
@@ -82,6 +83,23 @@ namespace Microsoft.Test.Stress
                     var baseDumpFileName = string.Empty;
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
                     stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
+                    var utilFileName = typeof(StressUtil).Assembly.Location;
+                    var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
+                    /*
+InternalName:     Microsoft.Test.Stress.dll
+OriginalFilename: Microsoft.Test.Stress.dll
+FileVersion:      1.1.29.55167
+FileDescription:  Microsoft.Test.Stress
+Product:          Microsoft.Test.Stress
+ProductVersion:   1.1.29+g7fd76485e3
+Debug:            False
+Patched:          False
+PreRelease:       False
+PrivateBuild:     False
+SpecialBuild:     False
+Language:         Language Neutral
+                     */
+                    stressUtilOptions.logger.LogMessage($"{utilFileName} {verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
 
                     for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                     {
@@ -117,8 +135,8 @@ namespace Microsoft.Test.Stress
         {
             var numIterExecuted = (int)stressUtilOptions.testContext.Properties[PropNameCurrentIteration];
             var startTime = (DateTime)stressUtilOptions.testContext.Properties[PropNameStartTime];
-            var secsPerIteration = (int)((DateTime.Now - startTime).TotalSeconds / numIterExecuted);
-            stressUtilOptions.logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration}");
+            var secsPerIteration = (DateTime.Now - startTime).TotalSeconds / numIterExecuted;
+            stressUtilOptions.logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
             if (exception != null)
             {
                 stressUtilOptions.logger.LogMessage(exception.ToString());

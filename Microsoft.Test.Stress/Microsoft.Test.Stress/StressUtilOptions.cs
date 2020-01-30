@@ -87,7 +87,7 @@ namespace Microsoft.Test.Stress
 
         /// <summary>
         /// It's hard to tell if a test is working. Test output doesn't appear til after the test has completed.
-        /// To see interim results, set this true so output is appended to a file "TestStressDataCollector.log". Note: this file is never truncated so watch it's size.
+        /// To see interim results, set this true so output is appended to a file on the Desktop "TestStressDataCollector.log". Note: this file is never truncated so watch it's size.
         /// </summary>
         public bool LoggerLogOutputToDestkop = false;
 
