@@ -32,7 +32,7 @@ namespace TestStress
         }
 
         [TestMethod]
-        //        [ExpectedException(typeof(LeakException))]
+        [ExpectedException(typeof(LeakException))]
         public async Task StressOpenCloseSln()
         {
             try
@@ -41,7 +41,7 @@ namespace TestStress
                 await StressUtil.DoIterationsAsync(this, stressUtilOptions: new StressUtilOptions()
                 {
                     FailTestAsifLeaksFound = true,
-                    NumIterations = 37,
+                    NumIterations = 17,
                     actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
                     {
                         await Task.Yield();

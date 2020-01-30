@@ -65,7 +65,7 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeakyLimitNumSamples()
         {
             string didGetLeakException = "didGetLeakException";
@@ -75,14 +75,24 @@ namespace TestStressDll
                 await StressUtil.DoIterationsAsync(
                     this,
                     new StressUtilOptions()
-                        {
-                            NumIterations = numIter,
-                            ProcNamesToMonitor = string.Empty,
-                            ShowUI = true
-                        }
+                    {
+                        NumIterations = numIter,
+                        ProcNamesToMonitor = string.Empty,
+                        ShowUI = false
+                    }
                     );
 
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+                var curIter = (int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]);
+                if (curIter < 11)
+                {
+                    Assert.IsFalse(TestContext.Properties.Contains(StressUtil.PropNameMinimumIteration));
+                }
+                else
+                {
+                    var min = (int)(TestContext.Properties[StressUtil.PropNameMinimumIteration]);
+                    Assert.AreEqual(11, min, "minimum iteration not found");
+                }
             }
             catch (LeakException)
             {

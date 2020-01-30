@@ -273,6 +273,8 @@ namespace Microsoft.Test.Stress
             }
         }
         private string baseDumpFileName;
+        public int _ReportedMinimumNumberOfIterations =-1;
+
         /// <summary>
         /// can be null when running user compiled code
         /// </summary>
@@ -356,6 +358,21 @@ namespace Microsoft.Test.Stress
             {
                 nSamplesTaken++;
             }
+
+            if (_ReportedMinimumNumberOfIterations == -1 && nSamplesTaken > 10)
+            {
+                var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, NumSamplesToUse: nSamplesTaken)).Where(r => r.IsLeak);
+                if (lstLeaksSoFar.Any())
+                {
+                    Logger.LogMessage($"Earliest Iteration at which leak detected: {nSamplesTaken}");
+                    foreach (var leak in lstLeaksSoFar)
+                    {
+                        Logger.LogMessage($"    {leak}");
+                    }
+                    testContext.Properties[StressUtil.PropNameMinimumIteration] = nSamplesTaken; // so unit test can verify
+                    _ReportedMinimumNumberOfIterations = nSamplesTaken;
+                }
+            }
             var doCheck = true;
             if (stressUtilOptions.actExecuteAfterEveryIterationAsync != null)
             {
@@ -427,7 +444,6 @@ namespace Microsoft.Test.Stress
                         {
                             Logger.LogMessage($"No baseline dump: not enough iterations");
                         }
-//                        await CalculateMinimumNumberOfIterationsAsync(lstLeakResults);
                         if (this.testContext != null)
                         {
                             if (lstLeakResults.Count > 0)
@@ -469,26 +485,6 @@ namespace Microsoft.Test.Stress
             // cmdidShellForceGC GarbageCollectCLRIterative https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fappid%2FAppDomainManager%2FVsRcwCleanup.cs&version=GBmaster&_a=contents
             stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
             await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
-        }
-
-        // we know it leaks. Let's give guidance to user about recommended # of versions to get the same R² and slope
-        public async Task CalculateMinimumNumberOfIterationsAsync(List<LeakAnalysisResult> lstLeakResults)
-        {
-            if (stressUtilOptions.NumIterations > 10 && lstLeakResults.Count > 0)
-            {
-                Logger.LogMessage($"Calculating recommended # of iterations");
-                var lstItersWithSameResults = new List<int>();
-                for (int iTryNumIterations = 3; iTryNumIterations < stressUtilOptions.NumIterations; iTryNumIterations++)
-                {
-                    var testLeakResults = (await CalculateLeaksAsync(showGraph: false, NumSamplesToUse: iTryNumIterations)).Where(p => p.IsLeak);
-                    if (testLeakResults.Count() == lstLeakResults.Count)
-                    {
-                        lstItersWithSameResults.Add(iTryNumIterations);
-                        Logger.LogMessage($"Got same with {iTryNumIterations} {lstLeakResults[0]}");
-                    }
-
-                }
-            }
         }
 
 
