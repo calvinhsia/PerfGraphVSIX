@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using Microsoft.Test.Stress;
 using System.IO;
+using System.Text;
 
 namespace TestStressDll
 {
@@ -63,6 +64,99 @@ namespace TestStressDll
                 throw;
             }
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressMultiSample()
+        {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                throw new LeakException("Throwing expected exception so test passes", null);
+            }
+            string didGetLeakException = "didGetLeakException";
+            int numIter = 11;
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions()
+                    {
+                        LoggerLogOutputToDestkop = true,
+                        NumIterations = numIter,
+                        ProcNamesToMonitor = string.Empty,
+                        ShowUI = false,
+                        actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
+                        {
+                            // this method yields a very nice stairstep in unit tests (where there's much less noise)
+                            int numAdditaionalSamplesPerIteration = 5; // Since we're called after a sample, add 1 to get the actual # of samples/iteration
+                            var sb = new StringBuilder($"{nIter} ExtraIterations: {numAdditaionalSamplesPerIteration}");
+                            async Task CheckASampleAsync()
+                            {
+                                if (measurementHolder.nSamplesTaken == numAdditaionalSamplesPerIteration * (measurementHolder.stressUtilOptions.NumIterations - measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot))
+                                {
+                                    measurementHolder.baseDumpFileName = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking base snapshot dump at Iter # {nIter} sample # {measurementHolder.nSamplesTaken}"); ;
+                                }
+                                if (measurementHolder.nSamplesTaken == numAdditaionalSamplesPerIteration * measurementHolder.stressUtilOptions.NumIterations)
+                                {
+                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI))
+                                        .Where(r => r.IsLeak).ToList();
+                                    var currentDumpFile = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking final snapshot dump at iteration {measurementHolder.nSamplesTaken}");
+                                    if (!string.IsNullOrEmpty(measurementHolder.baseDumpFileName))
+                                    {
+                                        var oDumpAnalyzer = new DumpAnalyzer(measurementHolder.Logger);
+                                        foreach (var leak in lstLeakResults)
+                                        {
+                                            sb.AppendLine($"Custom code Leak Detected: {leak}");
+                                        }
+                                        sb.AppendLine();
+                                        oDumpAnalyzer.GetDiff(sb,
+                                                        measurementHolder.baseDumpFileName,
+                                                        currentDumpFile,
+                                                        measurementHolder.stressUtilOptions.NumIterations,
+                                                        measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                                        var fname = Path.Combine(measurementHolder.ResultsFolder, $"{MeasurementHolder.DiffFileName}_{measurementHolder.nSamplesTaken}.txt");
+                                        File.WriteAllText(fname, sb.ToString());
+                                        if (measurementHolder.stressUtilOptions.ShowUI)
+                                        {
+                                            System.Diagnostics.Process.Start(fname);
+                                        }
+                                        measurementHolder.lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {measurementHolder.nSamplesTaken}" });
+                                        measurementHolder.Logger.LogMessage("Custom Code DumpDiff Analysis " + fname);
+                                    }
+                                    throw new LeakException($"Custom Code Leaks found: " + string.Join(",", lstLeakResults.Select(t => t.perfCounterData.perfCounterType).ToList()), lstLeakResults); //Leaks found: GCBytesInAllHeaps,ProcessorPrivateBytes,ProcessorVirtualBytes,KernelHandleCount
+                                }
+                            }
+                            await CheckASampleAsync();
+                            for (int i = 0; i < numAdditaionalSamplesPerIteration; i++)
+                            {
+                                if (measurementHolder.LstPerfCounterData[0].ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
+                                {
+                                    GC.Collect();
+                                }
+                                else
+                                {
+                                    // we just finished executing the user code. The IDE might be busy executing the last request.
+                                    // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                                    await measurementHolder.DoForceGCAsync();
+                                }
+                                measurementHolder.TakeRawMeasurement(sb);
+                                await CheckASampleAsync();
+                            }
+                            return false;
+                        }
+                    }
+                    ); ;
+
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+        }
+
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
@@ -134,6 +228,7 @@ namespace TestStressDll
                         },
                         actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
                         {
+                            // this code will take a dump at every iteration and compare/find diffs with prior iteration dump, dumping to log
                             string prop_dumpPrior = "dumpPrior";
                             measurementHolder.Logger.LogMessage($"{nIter} {nameof(StressUtilOptions.actExecuteAfterEveryIterationAsync)}");
                             var desc = $"Custom dump after iter {nIter}";
