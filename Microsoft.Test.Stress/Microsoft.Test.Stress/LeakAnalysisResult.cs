@@ -29,19 +29,18 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// Normally the entire range of measurements. However, we can try using fewer data points to calculate slope and R² using fewer iterations
         /// </summary>
-        public int NumSamplesToUse;
+        public int NumSamplesToUse =>lstData.Count;
         internal float RSquaredThreashold;
 
         public int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
 
-        public LeakAnalysisResult(List<uint> lst, int numSamplesToUse)
+        public LeakAnalysisResult(List<uint> lst)
         {
             int ndx = 0;
             foreach (var itm in lst)
             {
                 lstData.Add(new DataPoint() { point = new PointF() { X = ++ndx, Y = itm } });
             }
-            this.NumSamplesToUse = numSamplesToUse != -1 ? numSamplesToUse : lst.Count;
             if (this.NumSamplesToUse < 0 || this.NumSamplesToUse > lst.Count)
             {
                 throw new InvalidOperationException($"@ Samples to use must be >=0 && <= {lst.Count}");

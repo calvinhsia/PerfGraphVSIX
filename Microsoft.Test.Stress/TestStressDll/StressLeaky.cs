@@ -8,6 +8,7 @@ using System.Collections;
 using Microsoft.Test.Stress;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
 
 namespace TestStressDll
 {
@@ -88,17 +89,17 @@ namespace TestStressDll
                         actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
                         {
                             // this method yields a very nice stairstep in unit tests (where there's much less noise)
-                            int numAdditaionalSamplesPerIteration = 5; // Since we're called after a sample, add 1 to get the actual # of samples/iteration
-                            var sb = new StringBuilder($"{nIter} ExtraIterations: {numAdditaionalSamplesPerIteration}");
+                            int numAdditionalSamplesPerIteration = 5; // Since we're called after a sample, add 1 to get the actual # of samples/iteration
+                            var sb = new StringBuilder($"{nIter} ExtraIterations: {numAdditionalSamplesPerIteration}");
                             async Task CheckASampleAsync()
                             {
-                                if (measurementHolder.nSamplesTaken == numAdditaionalSamplesPerIteration * (measurementHolder.stressUtilOptions.NumIterations - measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot))
+                                if (measurementHolder.nSamplesTaken == numAdditionalSamplesPerIteration * (measurementHolder.stressUtilOptions.NumIterations - measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot))
                                 {
                                     measurementHolder.baseDumpFileName = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking base snapshot dump at Iter # {nIter} sample # {measurementHolder.nSamplesTaken}"); ;
                                 }
-                                if (measurementHolder.nSamplesTaken == numAdditaionalSamplesPerIteration * measurementHolder.stressUtilOptions.NumIterations)
+                                if (measurementHolder.nSamplesTaken == numAdditionalSamplesPerIteration * measurementHolder.stressUtilOptions.NumIterations)
                                 {
-                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI))
+                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI, CreateGraphsAsFiles: true))
                                         .Where(r => r.IsLeak).ToList();
                                     var currentDumpFile = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking final snapshot dump at iteration {measurementHolder.nSamplesTaken}");
                                     if (!string.IsNullOrEmpty(measurementHolder.baseDumpFileName))
@@ -127,7 +128,7 @@ namespace TestStressDll
                                 }
                             }
                             await CheckASampleAsync();
-                            for (int i = 0; i < numAdditaionalSamplesPerIteration; i++)
+                            for (int i = 0; i < numAdditionalSamplesPerIteration; i++)
                             {
                                 if (measurementHolder.LstPerfCounterData[0].ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
                                 {
@@ -156,6 +157,53 @@ namespace TestStressDll
                 throw;
             }
         }
+
+        [TestMethod]
+        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressWaitTilQuiet()
+        {
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                throw new LeakException("Throwing expected exception so test passes", null);
+            }
+            string didGetLeakException = "didGetLeakException";
+            int numIter = 11;
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions()
+                    {
+                        LoggerLogOutputToDestkop = true,
+                        NumIterations = numIter,
+                        ProcNamesToMonitor = string.Empty,
+                        ShowUI = false,
+                        actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
+                        {
+                            await Task.Yield();
+                            var quietMeasure = new MeasurementHolder(
+                                "Quiet",
+                                new StressUtilOptions()
+                                {
+                                }, SampleType.SampleTypeIteration
+                            );
+                            var sb = new StringBuilder($"Measure for Quiet");
+                            quietMeasure.TakeRawMeasurement(sb);
+                            var lk = quietMeasure.CalculateLeaksAsync(showGraph: false, CreateGraphsAsFiles: true);
+
+                            return false;
+                        }
+                    });
+
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+        }
+
 
 
         [TestMethod]

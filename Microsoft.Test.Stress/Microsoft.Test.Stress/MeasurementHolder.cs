@@ -191,7 +191,7 @@ namespace Microsoft.Test.Stress
 
             if (_ReportedMinimumNumberOfIterations == -1 && nSamplesTaken > 10) // if we haven't reported min yet
             {
-                var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, NumSamplesToUse: nSamplesTaken)).Where(r => r.IsLeak);
+                var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, CreateGraphsAsFiles: false)).Where(r => r.IsLeak);
                 if (lstLeaksSoFar.Any())
                 {
                     Logger.LogMessage($"Earliest Iteration at which leak detected: {nSamplesTaken}");
@@ -264,7 +264,7 @@ namespace Microsoft.Test.Stress
                 {
                     var filenameMeasurementResults = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameMeasurementResults}");
-                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI))
+                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, CreateGraphsAsFiles: true))
                         .Where(r => r.IsLeak).ToList();
                     if (lstLeakResults.Count > 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
@@ -384,16 +384,16 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="showGraph">show a graph</param>
-        /// <param name="NumSamplesToUse">-1 means use all of them. Else use the specified number: This will help figure out the min # of iterations to get the same slope and R²</param>
+        /// <param name="showGraph">show a graph interactively</param>
+        /// <param name="CreateGraphsAsFiles">Create graphs as files and test attachments</param>
         /// <returns></returns>
-        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph, int NumSamplesToUse = -1)
+        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph, bool CreateGraphsAsFiles)
         {
             var lstResults = new List<LeakAnalysisResult>();
             this.stressUtilOptions.SetPerfCounterOverrideSettings();
             foreach (var ctr in LstPerfCounterData.Where(pctr => pctr.IsEnabledForMeasurement))
             {
-                var leakAnalysis = new LeakAnalysisResult(measurements[ctr.perfCounterType], NumSamplesToUse)
+                var leakAnalysis = new LeakAnalysisResult(measurements[ctr.perfCounterType])
                 {
                     perfCounterData = ctr,
                     sensitivity = stressUtilOptions.Sensitivity,
@@ -401,10 +401,8 @@ namespace Microsoft.Test.Stress
                     RSquaredThreashold = stressUtilOptions.RSquaredThreshold
                 };
                 leakAnalysis.FindLinearLeastSquaresFit();
-                if (NumSamplesToUse == -1) // only log the real iterations, not when we're calculating the min # of iterations
-                {
-                    Logger.LogMessage($"{leakAnalysis}");
-                }
+
+                Logger.LogMessage($"{leakAnalysis}");
                 lstResults.Add(leakAnalysis);
             }
             if (showGraph)
@@ -456,7 +454,7 @@ namespace Microsoft.Test.Stress
                 //}
             }
             // Create graphs as files. do this after showgraph else hang
-            if (NumSamplesToUse == -1)
+            if (CreateGraphsAsFiles)
             {
                 foreach (var item in lstResults)
                 {

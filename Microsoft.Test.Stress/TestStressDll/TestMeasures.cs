@@ -152,7 +152,7 @@ namespace TestStressDll
                         measurementHolder.measurements[ctr.perfCounterType].Add(testData[iter]);
                     }
                 }
-                var leakAnalysisResults = await measurementHolder.CalculateLeaksAsync(showGraph: false);
+                var leakAnalysisResults = await measurementHolder.CalculateLeaksAsync(showGraph: false, CreateGraphsAsFiles: true);
                 LogMessage($"Yint = {leakAnalysisResults[0].yintercept:n0}");
                 foreach (var res in leakAnalysisResults[0].lstData)
                 {
@@ -232,7 +232,7 @@ namespace TestStressDll
                         measurementHolder.measurements[ctr.perfCounterType].Add(val);
                     }
                 }
-                var res = await measurementHolder.CalculateLeaksAsync(showGraph: true);
+                var res = await measurementHolder.CalculateLeaksAsync(showGraph: true, CreateGraphsAsFiles: true);
             }
             var strHtml = @"
 <a href=""file:\\C:\Users\calvinh\Source\repos\PerfGraphVSIX\TestResults\Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
@@ -349,7 +349,7 @@ namespace TestStressDll
                 }
                 var filename = measurementHolder.DumpOutMeasurementsToTxtFile();
                 LogMessage($"Results file name = {filename}");
-                lstRegResults = (await measurementHolder.CalculateLeaksAsync(showGraph: false)).Where(r => r.IsLeak).ToList();
+                lstRegResults = (await measurementHolder.CalculateLeaksAsync(showGraph: false, CreateGraphsAsFiles: true)).Where(r => r.IsLeak).ToList();
             }
             return lstRegResults.Count > 0;
         }
