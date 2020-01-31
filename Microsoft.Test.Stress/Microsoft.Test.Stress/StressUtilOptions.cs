@@ -37,7 +37,7 @@ namespace Microsoft.Test.Stress
         /// The percent of iterations for which outlier measurements are ignored
         /// If there are a few outliers, they will be ignored for calculating the slope and R²
         /// </summary>
-        public int pctOutliersToIgnore = 5;
+        public int pctOutliersToIgnore = 15;
         /// <summary>
         /// '|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. Defaults to 'devenv'
         /// Set this to '' when measuring leaks in current process (like the testhost proess)

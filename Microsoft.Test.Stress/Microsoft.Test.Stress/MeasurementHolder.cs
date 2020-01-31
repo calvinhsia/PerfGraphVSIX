@@ -253,7 +253,6 @@ namespace Microsoft.Test.Stress
 
         public async Task CheckIfNeedToTakeSnapshotsAsync()
         {
-            Logger.LogMessage($"{nameof(CheckIfNeedToTakeSnapshotsAsync)} {nSamplesTaken}");
             if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
