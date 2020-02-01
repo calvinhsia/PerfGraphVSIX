@@ -99,7 +99,7 @@ namespace TestStressDll
                                 }
                                 if (measurementHolder.nSamplesTaken == numAdditionalSamplesPerIteration * measurementHolder.stressUtilOptions.NumIterations)
                                 {
-                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI, CreateGraphsAsFiles: true))
+                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"))
                                         .Where(r => r.IsLeak).ToList();
                                     var currentDumpFile = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking final snapshot dump at iteration {measurementHolder.nSamplesTaken}");
                                     if (!string.IsNullOrEmpty(measurementHolder.baseDumpFileName))
@@ -130,17 +130,7 @@ namespace TestStressDll
                             await CheckASampleAsync();
                             for (int i = 0; i < numAdditionalSamplesPerIteration; i++)
                             {
-                                if (measurementHolder.LstPerfCounterData[0].ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
-                                {
-                                    GC.Collect();
-                                }
-                                else
-                                {
-                                    // we just finished executing the user code. The IDE might be busy executing the last request.
-                                    // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
-                                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                                    await measurementHolder.DoForceGCAsync();
-                                }
+                                await measurementHolder.DoForceGCAsync();
                                 measurementHolder.TakeRawMeasurement(sb);
                                 await CheckASampleAsync();
                             }
@@ -157,53 +147,6 @@ namespace TestStressDll
                 throw;
             }
         }
-
-        [TestMethod]
-        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        public async Task StressWaitTilQuiet()
-        {
-            if (StressUtilOptions.IsRunningOnBuildMachine())
-            {
-                throw new LeakException("Throwing expected exception so test passes", null);
-            }
-            string didGetLeakException = "didGetLeakException";
-            int numIter = 11;
-            try
-            {
-                await StressUtil.DoIterationsAsync(
-                    this,
-                    new StressUtilOptions()
-                    {
-                        LoggerLogOutputToDestkop = true,
-                        NumIterations = numIter,
-                        ProcNamesToMonitor = string.Empty,
-                        ShowUI = false,
-                        actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
-                        {
-                            await Task.Yield();
-                            var quietMeasure = new MeasurementHolder(
-                                "Quiet",
-                                new StressUtilOptions()
-                                {
-                                }, SampleType.SampleTypeIteration
-                            );
-                            var sb = new StringBuilder($"Measure for Quiet");
-                            quietMeasure.TakeRawMeasurement(sb);
-                            var lk = quietMeasure.CalculateLeaksAsync(showGraph: false, CreateGraphsAsFiles: true);
-
-                            return false;
-                        }
-                    });
-
-                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
-            }
-            catch (LeakException)
-            {
-                TestContext.Properties[didGetLeakException] = 1;
-                throw;
-            }
-        }
-
 
 
         [TestMethod]

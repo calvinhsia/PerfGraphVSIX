@@ -133,6 +133,7 @@ namespace Microsoft.Test.Stress
         /// </summary>
         readonly TestContextWrapper testContext;
         public readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
+        public readonly bool IsMeasuringCurrentProcess;
 
         /// <summary>
         /// 
@@ -162,6 +163,7 @@ namespace Microsoft.Test.Stress
             {
                 measurements[entry.perfCounterType] = new List<uint>();
             }
+            IsMeasuringCurrentProcess = LstPerfCounterData[0].ProcToMonitor.Id == Process.GetCurrentProcess().Id;
         }
 
         public async Task<string> TakeMeasurementAsync(string desc, bool IsForInteractiveGraph = false)
@@ -172,26 +174,21 @@ namespace Microsoft.Test.Stress
             }
             await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsBetweenIterations));
 
-            if (LstPerfCounterData[0].ProcToMonitor.Id == Process.GetCurrentProcess().Id)
-            {
-                GC.Collect();
-            }
-            else
-            {
-                // we just finished executing the user code. The IDE might be busy executing the last request.
-                // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
-                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                await DoForceGCAsync();
-            }
+            await DoForceGCAsync();
 
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {LstPerfCounterData[0].ProcToMonitor.ProcessName} {LstPerfCounterData[0].ProcToMonitor.Id} ");
 
             TakeRawMeasurement(sBuilderMeasurementResult, IsForInteractiveGraph);
 
+            if (stressUtilOptions.WaitTilVSQuiet)
+            {
+                await WaitTilVSQuietAsync();
+            }
 
             if (_ReportedMinimumNumberOfIterations == -1 && nSamplesTaken > 10) // if we haven't reported min yet
             {
-                var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, CreateGraphsAsFiles: false)).Where(r => r.IsLeak);
+                var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, GraphsAsFilePrefix: null));
+
                 if (lstLeaksSoFar.Any())
                 {
                     Logger.LogMessage($"Earliest Iteration at which leak detected: {nSamplesTaken}");
@@ -264,8 +261,13 @@ namespace Microsoft.Test.Stress
                 {
                     var filenameMeasurementResults = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameMeasurementResults}");
-                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, CreateGraphsAsFiles: true))
-                        .Where(r => r.IsLeak).ToList();
+                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"));
+                    foreach (var itm in lstLeakResults)
+                    {
+                        Logger.LogMessage(itm.ToString());
+                    }
+                    lstLeakResults = lstLeakResults.Where(r => r.IsLeak).ToList();
+
                     if (lstLeakResults.Count > 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
                         foreach (var leak in lstLeakResults)
@@ -317,6 +319,81 @@ namespace Microsoft.Test.Stress
             }
         }
 
+        public async Task WaitTilVSQuietAsync(int circBufferSize = 5, int numTimesToGetQuiet=50)
+        {
+            var measurementHolder = this;
+            // we want to take measures in a circular buffer and wait til those are quiet
+            var quietMeasure = new MeasurementHolder(
+                "Quiet",
+                new StressUtilOptions()
+                {
+                    NumIterations = 1, // we'll do 1 iteration 
+                                    pctOutliersToIgnore = 0,
+                    logger = measurementHolder.Logger,
+                    VSHandler = measurementHolder.stressUtilOptions.VSHandler,
+                    lstPerfCountersToUse = measurementHolder.stressUtilOptions.lstPerfCountersToUse,
+                }, SampleType.SampleTypeIteration
+            );
+            // We just took a measurement, so copy those values to init our buffer
+            foreach (var pctrMeasure in measurementHolder.measurements.Keys)
+            {
+                var lastVal = measurementHolder.measurements[pctrMeasure][measurementHolder.nSamplesTaken - 1];
+                quietMeasure.measurements[pctrMeasure].Add(lastVal);
+            }
+            quietMeasure.nSamplesTaken++;
+
+            var isQuiet = false;
+            int nMeasurementsForQuiet = 0;
+            while (!isQuiet && nMeasurementsForQuiet < numTimesToGetQuiet)
+            {
+                await quietMeasure.DoForceGCAsync();
+                await Task.Delay(TimeSpan.FromSeconds(1 * measurementHolder.stressUtilOptions.DelayMultiplier)); // after GC, wait 1 before taking measurements
+                var sb = new StringBuilder($"Measure for Quiet iter = {measurementHolder.nSamplesTaken} QuietSamp#= {nMeasurementsForQuiet}");
+                quietMeasure.TakeRawMeasurement(sb);
+                //measurementHolder.Logger.LogMessage(sb.ToString());//xxxremove
+                if (quietMeasure.nSamplesTaken == circBufferSize)
+                {
+                    var lk = await quietMeasure.CalculateLeaksAsync(
+                        showGraph: false,
+                        GraphsAsFilePrefix:
+#if DEBUG
+                                    "Graph"
+#else
+                                    null
+#endif
+                                    );
+                    isQuiet = true;
+                    foreach (var k in lk.Where(p => !p.IsQuiet()))
+                    {
+                        //measurementHolder.Logger.LogMessage($"  !quiet {k}"); //xxxremove
+                        isQuiet = false;
+                    }
+                    //                                    isQuiet = !lk.Where(k => !k.IsQuiet()).Any();
+
+                    foreach (var pctrMeasure in quietMeasure.measurements.Keys) // circular buffer: remove 1st item
+                    {
+                        quietMeasure.measurements[pctrMeasure].RemoveAt(0);
+                    }
+                    quietMeasure.nSamplesTaken--;
+                }
+                nMeasurementsForQuiet++;
+            }
+            if (isQuiet) // the counters have stabilized. We'll use the stabilized numbers as the sample value for the iteration
+            {
+                measurementHolder.Logger.LogMessage($"Gone quiet in {nMeasurementsForQuiet} measures");
+            }
+            else
+            {
+                measurementHolder.Logger.LogMessage($"Didn't go quiet in {numTimesToGetQuiet}");
+            }
+            // Whether or not it's quiet, we'll take the most recent measure as the iteration sample
+            foreach (var pctrMeasure in measurementHolder.measurements.Keys)
+            {
+                var lastVal = quietMeasure.measurements[pctrMeasure][quietMeasure.nSamplesTaken - 1];
+                measurementHolder.measurements[pctrMeasure][measurementHolder.nSamplesTaken - 1] = lastVal;
+            }
+        }
+
         public async Task<string> DoCreateDumpAsync(string desc, string filenamepart = "")
         {
             if (stressUtilOptions.SecsDelayBeforeTakingDump > 0)
@@ -343,9 +420,19 @@ namespace Microsoft.Test.Stress
 
         public async Task DoForceGCAsync()
         {
-            // cmdidShellForceGC GarbageCollectCLRIterative https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fappid%2FAppDomainManager%2FVsRcwCleanup.cs&version=GBmaster&_a=contents
-            stressUtilOptions.VSHandler?.DteExecuteCommand("Tools.ForceGC");
-            await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
+            if (IsMeasuringCurrentProcess)
+            {
+                GC.Collect();
+            }
+            else
+            {
+                // we just finished executing the user code. The IDE might be busy executing the last request.
+                // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                //await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
+                // cmdidShellForceGC GarbageCollectCLRIterative https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fappid%2FAppDomainManager%2FVsRcwCleanup.cs&version=GBmaster&_a=contents
+                await stressUtilOptions.VSHandler.DteExecuteCommand("Tools.ForceGC");
+                //await Task.Delay(TimeSpan.FromSeconds(1 * stressUtilOptions.DelayMultiplier)).ConfigureAwait(false);
+            }
         }
 
 
@@ -385,9 +472,9 @@ namespace Microsoft.Test.Stress
         /// 
         /// </summary>
         /// <param name="showGraph">show a graph interactively</param>
-        /// <param name="CreateGraphsAsFiles">Create graphs as files and test attachments</param>
+        /// <param name="GraphsAsFilePrefix">Create graphs as files and test attachments. Null means none</param>
         /// <returns></returns>
-        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph, bool CreateGraphsAsFiles)
+        public async Task<List<LeakAnalysisResult>> CalculateLeaksAsync(bool showGraph, string GraphsAsFilePrefix)
         {
             var lstResults = new List<LeakAnalysisResult>();
             this.stressUtilOptions.SetPerfCounterOverrideSettings();
@@ -402,7 +489,6 @@ namespace Microsoft.Test.Stress
                 };
                 leakAnalysis.FindLinearLeastSquaresFit();
 
-                Logger.LogMessage($"{leakAnalysis}");
                 lstResults.Add(leakAnalysis);
             }
             if (showGraph)
@@ -454,7 +540,7 @@ namespace Microsoft.Test.Stress
                 //}
             }
             // Create graphs as files. do this after showgraph else hang
-            if (CreateGraphsAsFiles)
+            if (!string.IsNullOrEmpty(GraphsAsFilePrefix))
             {
                 foreach (var item in lstResults)
                 {
@@ -503,9 +589,9 @@ namespace Microsoft.Test.Stress
 
                         chart.Legends.Add(new Legend());
 
-                        var fname = Path.Combine(ResultsFolder, $"Graph {item.perfCounterData.PerfCounterName}.png");
+                        var fname = Path.Combine(ResultsFolder, $"{GraphsAsFilePrefix} {item.perfCounterData.PerfCounterName}.png");
                         chart.SaveImage(fname, ChartImageFormat.Png);
-                        lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Graph {item.perfCounterData}" });
+                        lstFileResults.Add(new FileResultsData() { filename = fname, description = $"{GraphsAsFilePrefix} {item.perfCounterData}" });
                     }
                 }
             }
