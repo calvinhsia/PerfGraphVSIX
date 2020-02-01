@@ -37,12 +37,19 @@ namespace Microsoft.Test.Stress
         /// The percent of iterations for which outlier measurements are ignored
         /// If there are a few outliers, they will be ignored for calculating the slope and R²
         /// </summary>
-        public int pctOutliersToIgnore = 5;
+        public int pctOutliersToIgnore = 15;
         /// <summary>
         /// '|' separated list of processes to monitor VS, use 'devenv' To monitor the current process, use ''. Defaults to 'devenv'
         /// Set this to '' when measuring leaks in current process (like the testhost proess)
         /// </summary>
         public string ProcNamesToMonitor = "devenv";
+
+        
+        /// <summary>
+        /// At the end of each iteration, monitor perf counters til quiet for measurement
+        /// </summary>
+        public bool WaitTilVSQuiet = false;
+
         private bool _ShowUI = false;
         /// <summary>
         /// Show results automatically, like the Graph of Measurements, the Dump in ClrObjExplorer, the Diff Analysis
@@ -179,7 +186,8 @@ namespace Microsoft.Test.Stress
         public Func<int, MeasurementHolder, Task<bool>> actExecuteAfterEveryIterationAsync;
 
         internal object theTest;
-        internal VSHandler VSHandler;
+        [XmlIgnore]
+        public VSHandler VSHandler; // public so can be called from lambda
 
         internal bool? _isApexTest;
 
@@ -259,7 +267,7 @@ namespace Microsoft.Test.Stress
             _theTestMethod = testType.GetMethod(testContext.TestName);
             if (logger == null)
             {
-                var loggerFld = testType.GetField("logger");
+                var loggerFld = testType.GetField("logger", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 if (loggerFld != null)
                 {
                     logger = loggerFld.GetValue(test) as ILogger;
@@ -267,10 +275,10 @@ namespace Microsoft.Test.Stress
                 if (logger == null)
                 {
                     logger = new Logger(testContext);
-                    if (logger is Logger mylogger)
-                    {
-                        mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
-                    }
+                }
+                if (logger is Logger mylogger)
+                {
+                    mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
                 }
             }
             testContext.Properties[StressUtil.PropNameLogger] = logger;

@@ -52,7 +52,7 @@ namespace Microsoft.Test.Stress
         public async Task DoitAsync()
         {
             await SendTelemetryAsync($"{nameof(DumperViewerMain)}");
-            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger.ToString()} args = '{string.Join(" ", args)}'");
+            _logger.LogMessage($"in {nameof(DumperViewerMain)}  LoggerObj={_logger} args = '{string.Join(" ", args)}'");
 
             if (args.Length == 0)
             {
@@ -185,7 +185,7 @@ namespace Microsoft.Test.Stress
             }
             catch (Exception ex)
             {
-                _logger.LogMessage($"exception creating dump {ex.ToString()}");
+                _logger.LogMessage($"exception creating dump {ex}");
             }
         }
 

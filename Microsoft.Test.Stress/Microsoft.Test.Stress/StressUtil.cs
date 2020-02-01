@@ -35,6 +35,7 @@ namespace Microsoft.Test.Stress
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
         public const string PropNameMinimumIteration = "MinimumIteration";
         public const string PropNameListFileResults = "DictListFileResults";
+        public const string PropNameMeasurementHolder = "MeasurementHolder";
         public const string PropNameStartTime = "TestStartTime";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
         public const string PropNameVSHandler = "VSHandler";
@@ -83,6 +84,7 @@ namespace Microsoft.Test.Stress
                     var baseDumpFileName = string.Empty;
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
                     stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
+                    stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = measurementHolder;
                     var utilFileName = typeof(StressUtil).Assembly.Location;
                     var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
                     /*
@@ -123,6 +125,7 @@ Language:         Language Neutral
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                     DoIterationsFinished(stressUtilOptions, exception: null);
                 }
+                stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = null;
             }
             catch (Exception ex)
             {

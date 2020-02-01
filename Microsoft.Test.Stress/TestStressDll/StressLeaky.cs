@@ -8,6 +8,7 @@ using System.Collections;
 using Microsoft.Test.Stress;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
 
 namespace TestStressDll
 {
@@ -88,17 +89,17 @@ namespace TestStressDll
                         actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
                         {
                             // this method yields a very nice stairstep in unit tests (where there's much less noise)
-                            int numAdditaionalSamplesPerIteration = 5; // Since we're called after a sample, add 1 to get the actual # of samples/iteration
-                            var sb = new StringBuilder($"{nIter} ExtraIterations: {numAdditaionalSamplesPerIteration}");
+                            int numAdditionalSamplesPerIteration = 5; // Since we're called after a sample, add 1 to get the actual # of samples/iteration
+                            var sb = new StringBuilder($"{nIter} ExtraIterations: {numAdditionalSamplesPerIteration}");
                             async Task CheckASampleAsync()
                             {
-                                if (measurementHolder.nSamplesTaken == numAdditaionalSamplesPerIteration * (measurementHolder.stressUtilOptions.NumIterations - measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot))
+                                if (measurementHolder.nSamplesTaken == numAdditionalSamplesPerIteration * (measurementHolder.stressUtilOptions.NumIterations - measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot))
                                 {
                                     measurementHolder.baseDumpFileName = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking base snapshot dump at Iter # {nIter} sample # {measurementHolder.nSamplesTaken}"); ;
                                 }
-                                if (measurementHolder.nSamplesTaken == numAdditaionalSamplesPerIteration * measurementHolder.stressUtilOptions.NumIterations)
+                                if (measurementHolder.nSamplesTaken == numAdditionalSamplesPerIteration * measurementHolder.stressUtilOptions.NumIterations)
                                 {
-                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI))
+                                    var lstLeakResults = (await measurementHolder.CalculateLeaksAsync(showGraph: measurementHolder.stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"))
                                         .Where(r => r.IsLeak).ToList();
                                     var currentDumpFile = await measurementHolder.DoCreateDumpAsync($"Custom Code Taking final snapshot dump at iteration {measurementHolder.nSamplesTaken}");
                                     if (!string.IsNullOrEmpty(measurementHolder.baseDumpFileName))
@@ -127,19 +128,9 @@ namespace TestStressDll
                                 }
                             }
                             await CheckASampleAsync();
-                            for (int i = 0; i < numAdditaionalSamplesPerIteration; i++)
+                            for (int i = 0; i < numAdditionalSamplesPerIteration; i++)
                             {
-                                if (measurementHolder.LstPerfCounterData[0].ProcToMonitor.Id == System.Diagnostics.Process.GetCurrentProcess().Id)
-                                {
-                                    GC.Collect();
-                                }
-                                else
-                                {
-                                    // we just finished executing the user code. The IDE might be busy executing the last request.
-                                    // we need to delay some or else System.Runtime.InteropServices.COMException (0x8001010A): The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
-                                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-                                    await measurementHolder.DoForceGCAsync();
-                                }
+                                await measurementHolder.DoForceGCAsync();
                                 measurementHolder.TakeRawMeasurement(sb);
                                 await CheckASampleAsync();
                             }

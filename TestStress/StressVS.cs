@@ -61,6 +61,121 @@ namespace TestStress
         }
 
 
+        [TestMethod]
+        //[Ignore]
+        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressVSOpenCloseWaitTilQuiet()
+        {
+            // we can't measure for quiet on the current process because the current process will be actively doing stuff.
+            if (StressUtilOptions.IsRunningOnBuildMachine())
+            {
+                throw new LeakException("Throwing expected exception so test passes", null);
+            }
+            string didGetLeakException = "didGetLeakException";
+            int numIter = 11;
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    new StressUtilOptions()
+                    {
+                        LoggerLogOutputToDestkop = true,
+                        NumIterations = numIter,
+                        ShowUI = false,
+                        actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
+                        {
+                            // we want to take measures in a circular buffer and wait til those are quiet
+                            var circBufferSize = 5;
+                            var numTimesToGetQuiet = 50;
+                            var quietMeasure = new MeasurementHolder(
+                                "Quiet",
+                                new StressUtilOptions()
+                                {
+                                    NumIterations = 1, // we'll do 1 iteration 
+                                    pctOutliersToIgnore = 0,
+                                    logger = measurementHolder.Logger,
+                                    VSHandler = measurementHolder.stressUtilOptions.VSHandler,
+                                    lstPerfCountersToUse = measurementHolder.stressUtilOptions.lstPerfCountersToUse,
+                                }, SampleType.SampleTypeIteration
+                            );
+                            // We just took a measurement, so copy those values to init our buffer
+                            foreach (var pctrMeasure in measurementHolder.measurements.Keys)
+                            {
+                                var lastVal = measurementHolder.measurements[pctrMeasure][measurementHolder.nSamplesTaken - 1];
+                                quietMeasure.measurements[pctrMeasure].Add(lastVal);
+                            }
+                            quietMeasure.nSamplesTaken++;
+
+                            var isQuiet = false;
+                            int nMeasurementsForQuiet = 0;
+                            while (!isQuiet && nMeasurementsForQuiet < numTimesToGetQuiet)
+                            {
+                                await quietMeasure.DoForceGCAsync();
+                                await Task.Delay(TimeSpan.FromSeconds(1 * measurementHolder.stressUtilOptions.DelayMultiplier)); // after GC, wait 1 before taking measurements
+                                var sb = new StringBuilder($"Measure for Quiet iter = {nIter} QuietSamp#= {nMeasurementsForQuiet}");
+                                quietMeasure.TakeRawMeasurement(sb);
+                                measurementHolder.Logger.LogMessage(sb.ToString());///xxxremove
+                                if (quietMeasure.nSamplesTaken == circBufferSize)
+                                {
+                                    var lk = await quietMeasure.CalculateLeaksAsync(
+                                        showGraph: false,
+                                        GraphsAsFilePrefix:
+#if DEBUG
+                                    "Graph"
+#else
+                                    null
+#endif
+                                    );
+                                    isQuiet = true;
+                                    foreach (var k in lk.Where(p => !p.IsQuiet()))
+                                    {
+                                        measurementHolder.Logger.LogMessage($"  !quiet {k}"); ///xxxremove
+                                        isQuiet = false;
+                                    }
+                                    //                                    isQuiet = !lk.Where(k => !k.IsQuiet()).Any();
+
+                                    foreach (var pctrMeasure in quietMeasure.measurements.Keys) // circular buffer: remove 1st item
+                                    {
+                                        quietMeasure.measurements[pctrMeasure].RemoveAt(0);
+                                    }
+                                    quietMeasure.nSamplesTaken--;
+                                }
+                                nMeasurementsForQuiet++;
+                            }
+                            if (isQuiet) // the counters have stabilized. We'll use the stabilized numbers as the sample value for the iteration
+                            {
+                                measurementHolder.Logger.LogMessage($"Gone quiet in {nMeasurementsForQuiet} measures");
+                            }
+                            else
+                            {
+                                measurementHolder.Logger.LogMessage($"Didn't go quiet in {numTimesToGetQuiet}");
+                            }
+                            // Whether or not it's quiet, we'll take the most recent measure as the iteration sample
+                            foreach (var pctrMeasure in measurementHolder.measurements.Keys)
+                            {
+                                var lastVal = quietMeasure.measurements[pctrMeasure][quietMeasure.nSamplesTaken - 1];
+                                measurementHolder.measurements[pctrMeasure][measurementHolder.nSamplesTaken - 1] = lastVal;
+                            }
+
+                            return true; // continue with normal iteration processing
+                        }
+                    });
+
+                await _VSHandler.OpenSolution(SolutionToLoad);
+
+                await _VSHandler.CloseSolution();
+            }
+            catch (LeakException)
+            {
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+        }
+
+
+
+
+
         [TestCleanup]
         public void TestCleanup()
         {
