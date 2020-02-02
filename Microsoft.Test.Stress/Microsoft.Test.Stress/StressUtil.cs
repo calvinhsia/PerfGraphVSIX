@@ -56,6 +56,7 @@ namespace Microsoft.Test.Stress
             StressUtilOptions stressUtilOptions = null,
             int NumIterations = 71)
         {
+            MeasurementHolder measurementHolder = null;
             try
             {
                 if (firstIteration)
@@ -76,18 +77,18 @@ namespace Microsoft.Test.Stress
                     return;
                 }
 
-                using (var measurementHolder = new MeasurementHolder(
+                measurementHolder = new MeasurementHolder(
                     stressUtilOptions.testContext,
                     stressUtilOptions,
-                    SampleType.SampleTypeIteration))
-                {
-                    var baseDumpFileName = string.Empty;
-                    stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
-                    stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
-                    stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = measurementHolder;
-                    var utilFileName = typeof(StressUtil).Assembly.Location;
-                    var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
-                    /*
+                    SampleType.SampleTypeIteration);
+
+                var baseDumpFileName = string.Empty;
+                stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
+                stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
+                stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = measurementHolder;
+                var utilFileName = typeof(StressUtil).Assembly.Location;
+                var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
+                /*
 InternalName:     Microsoft.Test.Stress.dll
 OriginalFilename: Microsoft.Test.Stress.dll
 FileVersion:      1.1.29.55167
@@ -100,51 +101,57 @@ PreRelease:       False
 PrivateBuild:     False
 SpecialBuild:     False
 Language:         Language Neutral
-                     */
-                    stressUtilOptions.logger.LogMessage($"{utilFileName} {verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
+                 */
+                stressUtilOptions.logger.LogMessage($"{utilFileName} {verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
 
-                    for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
+                for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
+                {
+                    if (stressUtilOptions.actExecuteBeforeEveryIterationAsync != null)
                     {
-                        if (stressUtilOptions.actExecuteBeforeEveryIterationAsync != null)
-                        {
-                            await stressUtilOptions.actExecuteBeforeEveryIterationAsync(iteration + 1, measurementHolder);
-                        }
-                        var result = stressUtilOptions._theTestMethod.Invoke(test, parameters: null);
-                        if (stressUtilOptions._theTestMethod.ReturnType.Name == "Task")
-                        {
-                            var resultTask = (Task)result;
-                            await resultTask;
-                        }
-
-                        var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
-                        stressUtilOptions.logger.LogMessage(res);
-                        stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
+                        await stressUtilOptions.actExecuteBeforeEveryIterationAsync(iteration + 1, measurementHolder);
                     }
-                    // note: if a leak is found an exception will be throw and this will not get called
-                    // increment one last time, so test methods can check for final execution after measurements taken
+                    var result = stressUtilOptions._theTestMethod.Invoke(test, parameters: null);
+                    if (stressUtilOptions._theTestMethod.ReturnType.Name == "Task")
+                    {
+                        var resultTask = (Task)result;
+                        await resultTask;
+                    }
+
+                    var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
+                    stressUtilOptions.logger.LogMessage(res);
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
-                    DoIterationsFinished(stressUtilOptions, exception: null);
                 }
-                stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = null;
+                // note: if a leak is found an exception will be throw and this will not get called
+                // increment one last time, so test methods can check for final execution after measurements taken
+                stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
+                DoIterationsFinished(measurementHolder, exception: null);
+
             }
             catch (Exception ex)
             {
-                DoIterationsFinished(stressUtilOptions, ex);
+                DoIterationsFinished(measurementHolder, ex);
                 throw;
             }
         }
 
-        private static void DoIterationsFinished(StressUtilOptions stressUtilOptions, Exception exception)
+        private static void DoIterationsFinished(MeasurementHolder measurementHolder, Exception exception)
         {
-            var numIterExecuted = (int)stressUtilOptions.testContext.Properties[PropNameCurrentIteration];
-            var startTime = (DateTime)stressUtilOptions.testContext.Properties[PropNameStartTime];
-            var secsPerIteration = (DateTime.Now - startTime).TotalSeconds / numIterExecuted;
-            stressUtilOptions.logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
-            if (exception != null)
+            if (measurementHolder != null)
             {
-                stressUtilOptions.logger.LogMessage(exception.ToString());
+                if (measurementHolder.testContext != null)
+                {
+                    measurementHolder.testContext.Properties[PropNameMeasurementHolder] = null;
+                    var numIterExecuted = (int)measurementHolder.testContext.Properties[PropNameCurrentIteration];
+                    var startTime = (DateTime)measurementHolder.testContext.Properties[PropNameStartTime];
+                    var secsPerIteration = (DateTime.Now - startTime).TotalSeconds / numIterExecuted;
+                    measurementHolder.Logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
+                }
+                if (exception != null)
+                {
+                    measurementHolder.Logger.LogMessage(exception.ToString());
+                }
+                measurementHolder.Dispose(); // write test results
             }
-
             DisposeTelemetrySession();
         }
 

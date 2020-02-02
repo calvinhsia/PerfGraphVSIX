@@ -131,7 +131,7 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// can be null when running user compiled code
         /// </summary>
-        readonly TestContextWrapper testContext;
+        internal readonly TestContextWrapper testContext;
         public readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
         public readonly bool IsMeasuringCurrentProcess;
 

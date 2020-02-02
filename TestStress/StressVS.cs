@@ -62,8 +62,8 @@ namespace TestStress
 
 
         [TestMethod]
-        //[Ignore]
-        //        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        [Ignore]
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressVSOpenCloseWaitTilQuiet()
         {
             // we can't measure for quiet on the current process because the current process will be actively doing stuff.
