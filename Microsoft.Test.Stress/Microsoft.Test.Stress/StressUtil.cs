@@ -5,7 +5,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using Microsoft.VisualStudio.Telemetry;
 
 namespace Microsoft.Test.Stress
 {
@@ -41,7 +40,6 @@ namespace Microsoft.Test.Stress
         public const string PropNameVSHandler = "VSHandler";
         public const string PropNameLogger = "Logger";
 
-        private static TelemetrySession telemetrySession = null;
 
         /// <summary>
         /// Iterate the test method the desired number of times
@@ -146,18 +144,17 @@ Language:         Language Neutral
                 if (exception != null)
                 {
                     measurementHolder.Logger.LogMessage(exception.ToString());
-                    if (exception is LeakException leakException)
+                    if (exception is LeakException)
                     {
-                        measurementHolder.dictTelemetryProperties["Exception"] = exception.Message;
+                        measurementHolder.dictTelemetryProperties["LeakException"] = exception.Message;
                     }
                     else
                     {
-                        measurementHolder.dictTelemetryProperties["Exception"] = exception.Message;
+                        measurementHolder.dictTelemetryProperties["TestException"] = exception.ToString();
                     }
                 }
                 measurementHolder.Dispose(); // write test results
             }
-            DisposeTelemetrySession();
         }
 
 
@@ -198,36 +195,6 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
             { //todo
                 //var MemSpectInitFile = Path.Combine(Path.GetDirectoryName(pathMemSpectDll), "MemSpect.ini");
                 // need to WritePrivateProfileString  "TrackClrObjects"  "fTrackHeap" "EnableAsserts"
-            }
-
-        }
-
-        public static void PostTelemetryEvent(string telemetryEventName, Dictionary<string, object> telemetryProperties)
-        {
-            if (telemetrySession == null)
-            {
-                telemetrySession = TelemetryService.DefaultSession;
-                telemetrySession.IsOptedIn = true;
-                telemetrySession.Start();
-            }
-            var prefix = telemetryEventName.Replace("/", ".") + ".";
-
-            TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
-
-            foreach (var property in telemetryProperties)
-            {
-                telemetryEvent.Properties[prefix + property.Key] = property.Value;
-            }
-
-            telemetrySession.PostEvent(telemetryEvent);
-        }
-
-        private static void DisposeTelemetrySession()
-        {
-            if (telemetrySession != null)
-            {
-                telemetrySession.Dispose();
-                telemetrySession = null;
             }
         }
     }

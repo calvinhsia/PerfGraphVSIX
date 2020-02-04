@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.Telemetry;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -131,6 +132,7 @@ namespace Microsoft.Test.Stress
         /// A leak can be detected before all iterations are complete. When >0, this indicates the 1st iteration at which a leak was detected
         /// </summary>
         public int _ReportedMinimumNumberOfIterations = -1;
+        private TelemetrySession telemetrySession;
 
         /// <summary>
         /// can be null when running user compiled code
@@ -276,9 +278,9 @@ namespace Microsoft.Test.Stress
                     }
                     lstLeakResults = lstLeakResults.Where(r => r.IsLeak).ToList();
 
-                    if (lstLeakResults.Count > 0 || stressUtilOptions.FailTestAsifLeaksFound)
+                    if (lstLeakResults.Count >= 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
-                        foreach (var leak in lstLeakResults)
+                        foreach (var leak in lstLeakResults.Where(p=>p.IsLeak))
                         {
                             Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
@@ -697,10 +699,36 @@ namespace Microsoft.Test.Stress
                     dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
                     dictTelemetryProperties["TestName"] = testContext.TestName;
                     dictTelemetryProperties[Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName)] = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
-                    StressUtil.PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+                    PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
                 }
             }
+            if (telemetrySession != null)
+            {
+                telemetrySession.Dispose();
+                telemetrySession = null;
+            }
         }
+        public void PostTelemetryEvent(string telemetryEventName, Dictionary<string, object> telemetryProperties)
+        {
+            if (telemetrySession == null)
+            {
+                telemetrySession = TelemetryService.DefaultSession;
+                telemetrySession.IsOptedIn = true;
+                telemetrySession.Start();
+            }
+            var prefix = telemetryEventName.Replace("/", ".") + ".";
+
+            TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
+
+            foreach (var property in telemetryProperties)
+            {
+                telemetryEvent.Properties[prefix + property.Key] = property.Value;
+            }
+
+            telemetrySession.PostEvent(telemetryEvent);
+        }
+
+
     }
     public struct PointF
     {
