@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.Telemetry;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -76,6 +77,10 @@ namespace Microsoft.Test.Stress
         public ILogger Logger => stressUtilOptions.logger;
         readonly SampleType sampleType;
         public Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
+
+        public Dictionary<string, object> dictTelemetryProperties = new Dictionary<string, object>();
+
+
         public int nSamplesTaken;
 
         public string _ResultsFolder;
@@ -127,11 +132,12 @@ namespace Microsoft.Test.Stress
         /// A leak can be detected before all iterations are complete. When >0, this indicates the 1st iteration at which a leak was detected
         /// </summary>
         public int _ReportedMinimumNumberOfIterations = -1;
+        private TelemetrySession telemetrySession;
 
         /// <summary>
         /// can be null when running user compiled code
         /// </summary>
-        readonly TestContextWrapper testContext;
+        internal readonly TestContextWrapper testContext;
         public readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
         public readonly bool IsMeasuringCurrentProcess;
 
@@ -198,6 +204,7 @@ namespace Microsoft.Test.Stress
                     }
                     testContext.Properties[StressUtil.PropNameMinimumIteration] = nSamplesTaken; // so unit test can verify
                     _ReportedMinimumNumberOfIterations = nSamplesTaken;
+                    dictTelemetryProperties["MinIterationLeakDetected"] = _ReportedMinimumNumberOfIterations;
                 }
             }
             var doCheck = true;
@@ -265,12 +272,15 @@ namespace Microsoft.Test.Stress
                     foreach (var itm in lstLeakResults)
                     {
                         Logger.LogMessage(itm.ToString());
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}rsquared"] = itm.RSquared(); // can't use perfcounter name: invalid property name. so use enum name
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}slope"] = itm.slope;
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}IsLeak"] = itm.IsLeak;
                     }
                     lstLeakResults = lstLeakResults.Where(r => r.IsLeak).ToList();
 
-                    if (lstLeakResults.Count > 0 || stressUtilOptions.FailTestAsifLeaksFound)
+                    if (lstLeakResults.Count >= 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
-                        foreach (var leak in lstLeakResults)
+                        foreach (var leak in lstLeakResults.Where(p => p.IsLeak))
                         {
                             Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
@@ -319,7 +329,7 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        public async Task WaitTilVSQuietAsync(int circBufferSize = 5, int numTimesToGetQuiet=50)
+        public async Task WaitTilVSQuietAsync(int circBufferSize = 5, int numTimesToGetQuiet = 50)
         {
             var measurementHolder = this;
             // we want to take measures in a circular buffer and wait til those are quiet
@@ -327,8 +337,9 @@ namespace Microsoft.Test.Stress
                 "Quiet",
                 new StressUtilOptions()
                 {
+                    SendTelemetry = false, // we don't want the inner MeasurementHolder to send telemetry
                     NumIterations = 1, // we'll do 1 iteration 
-                                    pctOutliersToIgnore = 0,
+                    pctOutliersToIgnore = 0,
                     logger = measurementHolder.Logger,
                     VSHandler = measurementHolder.stressUtilOptions.VSHandler,
                     lstPerfCountersToUse = measurementHolder.stressUtilOptions.lstPerfCountersToUse,
@@ -510,11 +521,11 @@ namespace Microsoft.Test.Stress
                                 Interval = timeout
                             };
                             timer.Tick += (o, e) =>
-                              {
-                                  Logger.LogMessage($"Timedout showing graph");
-                                  timer.Stop();
-                                  graphWin.Close();
-                              };
+                            {
+                                Logger.LogMessage($"Timedout showing graph");
+                                timer.Stop();
+                                graphWin.Close();
+                            };
                             timer.Start();
                         }
                         graphWin.AddGraph(lstResults);
@@ -681,28 +692,58 @@ namespace Microsoft.Test.Stress
                 foreach (var fileresult in lstFileResults)
                 {
                     this.testContext.AddResultFile(fileresult.filename);
-                    //switch (Path.GetExtension(fileresult.filename))
-                    //{
-                    //    case ".dmp":
-                    //        //            var strHtml = @"
-                    //        //<a href=""file://C:/Users/calvinh/Source/repos/PerfGraphVSIX/TestResults/Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
-                    //        //            ";
-                    //        //            var fileHtml = Path.Combine(resultsFolder, "Index.html");
-                    //        //            File.WriteAllText(fileHtml, strHtml);
-                    //        //            TestContext.AddResultFile(fileHtml);
-                    //        sbHtml.AppendLine($@"<p><a href=""file://{DumpAnalyzer.GetClrObjExplorerPath()} -m {fileresult.filename}"">Start ClrObjExplorer with dump {Path.GetFileName(fileresult.filename)} </a>");
-                    //        break;
-                    //    default:
-                    //        sbHtml.AppendLine($@"<p><a href=""file://{fileresult.filename}"">{Path.GetFileName(fileresult.filename)}</a>");
-                    //        break;
-                    //}
-
                 }
-                //var filenameHtml = Path.Combine(ResultsFolder, "Index.html");
-                //File.WriteAllText(filenameHtml, sbHtml.ToString());
-                //this.testContext.AddResultFile(filenameHtml);
+                if (stressUtilOptions.SendTelemetry)
+                {
+
+                    dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
+                    dictTelemetryProperties["TestName"] = testContext.TestName;
+                    dictTelemetryProperties[Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName)] = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
+                    PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+                }
+            }
+            if (telemetrySession != null)
+            {
+                telemetrySession.Dispose();
+                telemetrySession = null;
             }
         }
+        // The TelemetryService.DefaultSession cannot be used after being disposed. It's static per process. 
+        // The telemetry session's lifetime is meant to match the process lifetime, not the test lifetime.
+        // The test process may run multiple tests, and a given test doesn't know if it's the last test to run, so it doesn't know to dispse the session
+        // The dispose must be called to send the telemetry.
+        // So we dispose/recreate the session from serialized settings
+        static string SerializedTelemetrySession = string.Empty;
+        public void PostTelemetryEvent(string telemetryEventName, Dictionary<string, object> telemetryProperties)
+        {
+            if (telemetrySession == null)
+            {
+                if (string.IsNullOrEmpty(SerializedTelemetrySession))
+                {
+                    telemetrySession = TelemetryService.DefaultSession;
+                    telemetrySession.IsOptedIn = true;
+                    telemetrySession.Start();
+                    SerializedTelemetrySession = telemetrySession.SerializeSettings();
+                }
+                else
+                {
+                    telemetrySession = new TelemetrySession(SerializedTelemetrySession);
+                    telemetrySession.Start();
+                }
+            }
+            var prefix = telemetryEventName.Replace("/", ".") + ".";
+
+            TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
+
+            foreach (var property in telemetryProperties)
+            {
+                telemetryEvent.Properties[prefix + property.Key] = property.Value;
+            }
+
+            telemetrySession.PostEvent(telemetryEvent);
+        }
+
+
     }
     public struct PointF
     {

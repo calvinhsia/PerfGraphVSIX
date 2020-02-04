@@ -5,7 +5,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using Microsoft.VisualStudio.Telemetry;
 
 namespace Microsoft.Test.Stress
 {
@@ -41,8 +40,6 @@ namespace Microsoft.Test.Stress
         public const string PropNameVSHandler = "VSHandler";
         public const string PropNameLogger = "Logger";
 
-        private static TelemetrySession telemetrySession = null;
-        private static bool firstIteration = true;
 
         /// <summary>
         /// Iterate the test method the desired number of times
@@ -56,14 +53,9 @@ namespace Microsoft.Test.Stress
             StressUtilOptions stressUtilOptions = null,
             int NumIterations = 71)
         {
+            MeasurementHolder measurementHolder = null;
             try
             {
-                if (firstIteration)
-                {
-                    PostInitialTelemetry();
-                    firstIteration = false;
-                }
-
                 if (stressUtilOptions == null)
                 {
                     stressUtilOptions = new StressUtilOptions()
@@ -76,18 +68,18 @@ namespace Microsoft.Test.Stress
                     return;
                 }
 
-                using (var measurementHolder = new MeasurementHolder(
+                measurementHolder = new MeasurementHolder(
                     stressUtilOptions.testContext,
                     stressUtilOptions,
-                    SampleType.SampleTypeIteration))
-                {
-                    var baseDumpFileName = string.Empty;
-                    stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
-                    stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
-                    stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = measurementHolder;
-                    var utilFileName = typeof(StressUtil).Assembly.Location;
-                    var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
-                    /*
+                    SampleType.SampleTypeIteration);
+
+                var baseDumpFileName = string.Empty;
+                stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
+                stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
+                stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = measurementHolder;
+                var utilFileName = typeof(StressUtil).Assembly.Location;
+                var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
+                /*
 InternalName:     Microsoft.Test.Stress.dll
 OriginalFilename: Microsoft.Test.Stress.dll
 FileVersion:      1.1.29.55167
@@ -100,52 +92,69 @@ PreRelease:       False
 PrivateBuild:     False
 SpecialBuild:     False
 Language:         Language Neutral
-                     */
-                    stressUtilOptions.logger.LogMessage($"{utilFileName} {verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
+                 */
+                stressUtilOptions.logger.LogMessage($"{utilFileName} {verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
+                measurementHolder.dictTelemetryProperties["StressLibVersion"] = verInfo.FileVersion;
 
-                    for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
+                for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
+                {
+                    if (stressUtilOptions.actExecuteBeforeEveryIterationAsync != null)
                     {
-                        if (stressUtilOptions.actExecuteBeforeEveryIterationAsync != null)
-                        {
-                            await stressUtilOptions.actExecuteBeforeEveryIterationAsync(iteration + 1, measurementHolder);
-                        }
-                        var result = stressUtilOptions._theTestMethod.Invoke(test, parameters: null);
-                        if (stressUtilOptions._theTestMethod.ReturnType.Name == "Task")
-                        {
-                            var resultTask = (Task)result;
-                            await resultTask;
-                        }
-
-                        var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
-                        stressUtilOptions.logger.LogMessage(res);
-                        stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
+                        await stressUtilOptions.actExecuteBeforeEveryIterationAsync(iteration + 1, measurementHolder);
                     }
-                    // note: if a leak is found an exception will be throw and this will not get called
-                    // increment one last time, so test methods can check for final execution after measurements taken
+                    var result = stressUtilOptions._theTestMethod.Invoke(test, parameters: null);
+                    if (stressUtilOptions._theTestMethod.ReturnType.Name == "Task")
+                    {
+                        var resultTask = (Task)result;
+                        await resultTask;
+                    }
+
+                    var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
+                    stressUtilOptions.logger.LogMessage(res);
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
-                    DoIterationsFinished(stressUtilOptions, exception: null);
                 }
-                stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = null;
+                // note: if a leak is found an exception will be throw and this will not get called
+                // increment one last time, so test methods can check for final execution after measurements taken
+                stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
+                DoIterationsFinished(measurementHolder, exception: null);
+
             }
             catch (Exception ex)
             {
-                DoIterationsFinished(stressUtilOptions, ex);
+                DoIterationsFinished(measurementHolder, ex);
                 throw;
             }
         }
 
-        private static void DoIterationsFinished(StressUtilOptions stressUtilOptions, Exception exception)
+        private static void DoIterationsFinished(MeasurementHolder measurementHolder, Exception exception)
         {
-            var numIterExecuted = (int)stressUtilOptions.testContext.Properties[PropNameCurrentIteration];
-            var startTime = (DateTime)stressUtilOptions.testContext.Properties[PropNameStartTime];
-            var secsPerIteration = (DateTime.Now - startTime).TotalSeconds / numIterExecuted;
-            stressUtilOptions.logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
-            if (exception != null)
+            if (measurementHolder != null)
             {
-                stressUtilOptions.logger.LogMessage(exception.ToString());
+                if (measurementHolder.testContext != null)
+                {
+                    measurementHolder.testContext.Properties[PropNameMeasurementHolder] = null;
+                    var numIterExecuted = (int)measurementHolder.testContext.Properties[PropNameCurrentIteration];
+                    var startTime = (DateTime)measurementHolder.testContext.Properties[PropNameStartTime];
+                    var duration = (DateTime.Now - startTime);
+                    var secsPerIteration = duration.TotalSeconds / numIterExecuted;
+                    measurementHolder.Logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
+                    measurementHolder.dictTelemetryProperties["IterationsPerSecond"] = secsPerIteration;
+                    measurementHolder.dictTelemetryProperties["Duration"] = duration.TotalSeconds;
+                }
+                if (exception != null)
+                {
+                    measurementHolder.Logger.LogMessage(exception.ToString());
+                    if (exception is LeakException)
+                    {
+                        measurementHolder.dictTelemetryProperties["LeakException"] = exception.Message;
+                    }
+                    else
+                    {
+                        measurementHolder.dictTelemetryProperties["TestException"] = exception.ToString();
+                    }
+                }
+                measurementHolder.Dispose(); // write test results
             }
-
-            DisposeTelemetrySession();
         }
 
 
@@ -186,48 +195,6 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
             { //todo
                 //var MemSpectInitFile = Path.Combine(Path.GetDirectoryName(pathMemSpectDll), "MemSpect.ini");
                 // need to WritePrivateProfileString  "TrackClrObjects"  "fTrackHeap" "EnableAsserts"
-            }
-
-        }
-
-        private static void PostInitialTelemetry()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-
-            Dictionary<string, string> telemetryProperties = new Dictionary<string, string>()
-            {
-                { "DevDivStress.StressUtil.Initialization.FileVersion",  fileVersionInfo.FileVersion},
-            };
-
-            PostTelemetryEvent("DevDivStress/StressUtil/Initialization", telemetryProperties);
-        }
-
-        public static void PostTelemetryEvent(string telemetryEventName, Dictionary<string, string> telemetryProperties)
-        {
-            if (telemetrySession == null)
-            {
-                telemetrySession = TelemetryService.DefaultSession;
-                telemetrySession.IsOptedIn = true;
-                telemetrySession.Start();
-            }
-
-            TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
-
-            foreach (KeyValuePair<string, string> property in telemetryProperties)
-            {
-                telemetryEvent.Properties[property.Key] = property.Value;
-            }
-
-            telemetrySession.PostEvent(telemetryEvent);
-        }
-
-        private static void DisposeTelemetrySession()
-        {
-            if (telemetrySession != null)
-            {
-                telemetrySession.Dispose();
-                telemetrySession = null;
             }
         }
     }

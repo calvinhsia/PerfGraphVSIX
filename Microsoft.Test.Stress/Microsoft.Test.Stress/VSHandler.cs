@@ -109,7 +109,10 @@ namespace Microsoft.Test.Stress
                     logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
                     foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p=>p.StartTime))
                     {
-                        logger.LogMessage($"   All {procToFind} instances running on machine: ID={proc.Id} '{proc.MainWindowTitle}' {proc.MainModule.FileName} StartTime: {proc.StartTime}");
+                        if (proc.Id != vsProc.Id)
+                        {
+                            logger.LogMessage($"   Other {procToFind} instances running on machine: ID={proc.Id} '{proc.MainWindowTitle}' {proc.MainModule.FileName} StartTime: {proc.StartTime}");
+                        }
                     }
                 });
             }
