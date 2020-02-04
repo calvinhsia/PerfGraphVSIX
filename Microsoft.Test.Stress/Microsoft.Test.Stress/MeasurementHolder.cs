@@ -76,6 +76,10 @@ namespace Microsoft.Test.Stress
         public ILogger Logger => stressUtilOptions.logger;
         readonly SampleType sampleType;
         public Dictionary<PerfCounterType, List<uint>> measurements = new Dictionary<PerfCounterType, List<uint>>(); // PerfCounterType=> measurements per iteration
+
+        public Dictionary<string, object> dictTelemetryProperties = new Dictionary<string, object>();
+
+
         public int nSamplesTaken;
 
         public string _ResultsFolder;
@@ -198,6 +202,7 @@ namespace Microsoft.Test.Stress
                     }
                     testContext.Properties[StressUtil.PropNameMinimumIteration] = nSamplesTaken; // so unit test can verify
                     _ReportedMinimumNumberOfIterations = nSamplesTaken;
+                    dictTelemetryProperties["MinIterationLeakDetected"] = _ReportedMinimumNumberOfIterations;
                 }
             }
             var doCheck = true;
@@ -265,6 +270,9 @@ namespace Microsoft.Test.Stress
                     foreach (var itm in lstLeakResults)
                     {
                         Logger.LogMessage(itm.ToString());
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}rsquared"] = itm.RSquared(); // can't use perfcounter name: invalid property name. so use enum name
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}slope"] = itm.slope;
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}IsLeak"] = itm.IsLeak;
                     }
                     lstLeakResults = lstLeakResults.Where(r => r.IsLeak).ToList();
 
@@ -319,7 +327,7 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        public async Task WaitTilVSQuietAsync(int circBufferSize = 5, int numTimesToGetQuiet=50)
+        public async Task WaitTilVSQuietAsync(int circBufferSize = 5, int numTimesToGetQuiet = 50)
         {
             var measurementHolder = this;
             // we want to take measures in a circular buffer and wait til those are quiet
@@ -327,8 +335,9 @@ namespace Microsoft.Test.Stress
                 "Quiet",
                 new StressUtilOptions()
                 {
+                    SendTelemetry = false, // we don't want the inner MeasurementHolder to send telemetry
                     NumIterations = 1, // we'll do 1 iteration 
-                                    pctOutliersToIgnore = 0,
+                    pctOutliersToIgnore = 0,
                     logger = measurementHolder.Logger,
                     VSHandler = measurementHolder.stressUtilOptions.VSHandler,
                     lstPerfCountersToUse = measurementHolder.stressUtilOptions.lstPerfCountersToUse,
@@ -681,26 +690,15 @@ namespace Microsoft.Test.Stress
                 foreach (var fileresult in lstFileResults)
                 {
                     this.testContext.AddResultFile(fileresult.filename);
-                    //switch (Path.GetExtension(fileresult.filename))
-                    //{
-                    //    case ".dmp":
-                    //        //            var strHtml = @"
-                    //        //<a href=""file://C:/Users/calvinh/Source/repos/PerfGraphVSIX/TestResults/Deploy_calvinh 2019-11-19 11_00_13/Out/TestMeasureRegressionVerifyGraph/Graph Handle Count.png"">gr </a>
-                    //        //            ";
-                    //        //            var fileHtml = Path.Combine(resultsFolder, "Index.html");
-                    //        //            File.WriteAllText(fileHtml, strHtml);
-                    //        //            TestContext.AddResultFile(fileHtml);
-                    //        sbHtml.AppendLine($@"<p><a href=""file://{DumpAnalyzer.GetClrObjExplorerPath()} -m {fileresult.filename}"">Start ClrObjExplorer with dump {Path.GetFileName(fileresult.filename)} </a>");
-                    //        break;
-                    //    default:
-                    //        sbHtml.AppendLine($@"<p><a href=""file://{fileresult.filename}"">{Path.GetFileName(fileresult.filename)}</a>");
-                    //        break;
-                    //}
-
                 }
-                //var filenameHtml = Path.Combine(ResultsFolder, "Index.html");
-                //File.WriteAllText(filenameHtml, sbHtml.ToString());
-                //this.testContext.AddResultFile(filenameHtml);
+                if (stressUtilOptions.SendTelemetry)
+                {
+
+                    dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
+                    dictTelemetryProperties["TestName"] = testContext.TestName;
+                    dictTelemetryProperties[Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName)] = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
+                    StressUtil.PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+                }
             }
         }
     }

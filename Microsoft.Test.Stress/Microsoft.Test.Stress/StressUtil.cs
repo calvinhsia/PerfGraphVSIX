@@ -42,7 +42,6 @@ namespace Microsoft.Test.Stress
         public const string PropNameLogger = "Logger";
 
         private static TelemetrySession telemetrySession = null;
-        private static bool firstIteration = true;
 
         /// <summary>
         /// Iterate the test method the desired number of times
@@ -59,12 +58,6 @@ namespace Microsoft.Test.Stress
             MeasurementHolder measurementHolder = null;
             try
             {
-                if (firstIteration)
-                {
-                    PostInitialTelemetry();
-                    firstIteration = false;
-                }
-
                 if (stressUtilOptions == null)
                 {
                     stressUtilOptions = new StressUtilOptions()
@@ -103,6 +96,7 @@ SpecialBuild:     False
 Language:         Language Neutral
                  */
                 stressUtilOptions.logger.LogMessage($"{utilFileName} {verInfo.OriginalFilename}  FileVersion:{verInfo.FileVersion}  ProductVesion:{verInfo.ProductVersion}");
+                measurementHolder.dictTelemetryProperties["StressLibVersion"] = verInfo.FileVersion;
 
                 for (int iteration = 0; iteration < stressUtilOptions.NumIterations; iteration++)
                 {
@@ -143,12 +137,23 @@ Language:         Language Neutral
                     measurementHolder.testContext.Properties[PropNameMeasurementHolder] = null;
                     var numIterExecuted = (int)measurementHolder.testContext.Properties[PropNameCurrentIteration];
                     var startTime = (DateTime)measurementHolder.testContext.Properties[PropNameStartTime];
-                    var secsPerIteration = (DateTime.Now - startTime).TotalSeconds / numIterExecuted;
+                    var duration = (DateTime.Now - startTime);
+                    var secsPerIteration = duration.TotalSeconds / numIterExecuted;
                     measurementHolder.Logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
+                    measurementHolder.dictTelemetryProperties["IterationsPerSecond"] = secsPerIteration;
+                    measurementHolder.dictTelemetryProperties["Duration"] = duration.TotalSeconds;
                 }
                 if (exception != null)
                 {
                     measurementHolder.Logger.LogMessage(exception.ToString());
+                    if (exception is LeakException leakException)
+                    {
+                        measurementHolder.dictTelemetryProperties["Exception"] = exception.Message;
+                    }
+                    else
+                    {
+                        measurementHolder.dictTelemetryProperties["Exception"] = exception.Message;
+                    }
                 }
                 measurementHolder.Dispose(); // write test results
             }
@@ -197,20 +202,7 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
 
         }
 
-        private static void PostInitialTelemetry()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-
-            Dictionary<string, string> telemetryProperties = new Dictionary<string, string>()
-            {
-                { "DevDivStress.StressUtil.Initialization.FileVersion",  fileVersionInfo.FileVersion},
-            };
-
-            PostTelemetryEvent("DevDivStress/StressUtil/Initialization", telemetryProperties);
-        }
-
-        public static void PostTelemetryEvent(string telemetryEventName, Dictionary<string, string> telemetryProperties)
+        public static void PostTelemetryEvent(string telemetryEventName, Dictionary<string, object> telemetryProperties)
         {
             if (telemetrySession == null)
             {
@@ -218,12 +210,13 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
                 telemetrySession.IsOptedIn = true;
                 telemetrySession.Start();
             }
+            var prefix = telemetryEventName.Replace("/", ".") + ".";
 
             TelemetryEvent telemetryEvent = new TelemetryEvent(telemetryEventName);
 
-            foreach (KeyValuePair<string, string> property in telemetryProperties)
+            foreach (var property in telemetryProperties)
             {
-                telemetryEvent.Properties[property.Key] = property.Value;
+                telemetryEvent.Properties[prefix + property.Key] = property.Value;
             }
 
             telemetrySession.PostEvent(telemetryEvent);

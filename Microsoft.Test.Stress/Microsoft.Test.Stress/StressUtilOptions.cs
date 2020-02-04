@@ -186,6 +186,9 @@ namespace Microsoft.Test.Stress
         public Func<int, MeasurementHolder, Task<bool>> actExecuteAfterEveryIterationAsync;
 
         internal object theTest;
+
+        internal bool SendTelemetry = true;
+
         [XmlIgnore]
         public VSHandler VSHandler; // public so can be called from lambda
 
