@@ -280,7 +280,7 @@ namespace Microsoft.Test.Stress
 
                     if (lstLeakResults.Count >= 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
-                        foreach (var leak in lstLeakResults.Where(p=>p.IsLeak))
+                        foreach (var leak in lstLeakResults.Where(p => p.IsLeak))
                         {
                             Logger.LogMessage($"Leak Detected!!!!! {leak}");
                         }
@@ -521,11 +521,11 @@ namespace Microsoft.Test.Stress
                                 Interval = timeout
                             };
                             timer.Tick += (o, e) =>
-                              {
-                                  Logger.LogMessage($"Timedout showing graph");
-                                  timer.Stop();
-                                  graphWin.Close();
-                              };
+                            {
+                                Logger.LogMessage($"Timedout showing graph");
+                                timer.Stop();
+                                graphWin.Close();
+                            };
                             timer.Start();
                         }
                         graphWin.AddGraph(lstResults);
@@ -708,13 +708,28 @@ namespace Microsoft.Test.Stress
                 telemetrySession = null;
             }
         }
+        // The TelemetryService.DefaultSession cannot be used after being disposed. It's static per process. 
+        // The telemetry session's lifetime is meant to match the process lifetime, not the test lifetime.
+        // The test process may run multiple tests, and a given test doesn't know if it's the last test to run, so it doesn't know to dispse the session
+        // The dispose must be called to send the telemetry.
+        // So we dispose/recreate the session from serialized settings
+        static string SerializedTelemetrySession = string.Empty;
         public void PostTelemetryEvent(string telemetryEventName, Dictionary<string, object> telemetryProperties)
         {
             if (telemetrySession == null)
             {
-                telemetrySession = TelemetryService.DefaultSession;
-                telemetrySession.IsOptedIn = true;
-                telemetrySession.Start();
+                if (string.IsNullOrEmpty(SerializedTelemetrySession))
+                {
+                    telemetrySession = TelemetryService.DefaultSession;
+                    telemetrySession.IsOptedIn = true;
+                    telemetrySession.Start();
+                    SerializedTelemetrySession = telemetrySession.SerializeSettings();
+                }
+                else
+                {
+                    telemetrySession = new TelemetrySession(SerializedTelemetrySession);
+                    telemetrySession.Start();
+                }
             }
             var prefix = telemetryEventName.Replace("/", ".") + ".";
 
