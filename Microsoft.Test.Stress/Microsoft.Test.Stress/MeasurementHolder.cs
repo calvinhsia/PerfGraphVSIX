@@ -695,6 +695,26 @@ namespace Microsoft.Test.Stress
                 }
                 if (stressUtilOptions.SendTelemetry)
                 {
+#if false
+                    // for flow.microsoft.com, sample
+                    // Clustername: "Kustolab"  DatabaseName: "Calvinh"  //cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEventsRaw
+.append MemWatsonPipelineEventsRaw  <|
+let DTMax = MemWatsonPipelineEventsRaw | summarize max(AdvancedServerTimestampUtc);
+cluster("Ddtelvsraw.kusto.windows.net").database("VS").RawEventsVS
+| where EventName startswith "perfwatsonbackend/memwatson"
+| where AdvancedServerTimestampUtc >toscalar(DTMax)
+                    Chart Type: HTML Table
+
+cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEventsRaw
+| where EventName == "perfwatsonbackend/memwatsondumpprocessor/cabfailed"
+| where AdvancedServerTimestampUtc > ago(7d)
+| extend CabType = tostring(Properties["perfwatsonbackend.memwatsondumpprocessor.cabfailed.cabp1"])
+| where CabType == "perfwatsonlowmem"
+| extend FailureReason = tostring(Properties["perfwatsonbackend.memwatsondumpprocessor.cabfailed.failurereason"])
+| summarize count() by FailureReason , bin(AdvancedServerTimestampUtc, 1d)
+                    Chart Type: Time Chart
+
+#endif
 
                     dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
                     dictTelemetryProperties["TestName"] = testContext.TestName;
