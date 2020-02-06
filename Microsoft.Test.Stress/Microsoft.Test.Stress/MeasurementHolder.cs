@@ -141,6 +141,15 @@ namespace Microsoft.Test.Stress
         public readonly List<FileResultsData> lstFileResults = new List<FileResultsData>();
         public readonly bool IsMeasuringCurrentProcess;
 
+        // The TelemetryService.DefaultSession cannot be used after being disposed. It's static per process. 
+        // The telemetry session's lifetime is meant to match the process lifetime, not the test lifetime.
+        // The test process may run multiple tests, and a given test doesn't know if it's the last test to run, so it doesn't know to dispse the session
+        // The dispose must be called to send the telemetry.
+        // So we dispose/recreate the session from serialized settings
+        static string SerializedTelemetrySession = string.Empty;
+        private int _GoneQuietSamplesTaken = 0;
+        private int _IterationsGoneQuiet = 0;
+
         /// <summary>
         /// 
         /// </summary>
@@ -389,6 +398,8 @@ namespace Microsoft.Test.Stress
                 }
                 nMeasurementsForQuiet++;
             }
+            this._GoneQuietSamplesTaken += nMeasurementsForQuiet; // for avg calc
+            this._IterationsGoneQuiet++; // for total # gone quiet
             if (isQuiet) // the counters have stabilized. We'll use the stabilized numbers as the sample value for the iteration
             {
                 measurementHolder.Logger.LogMessage($"Gone quiet in {nMeasurementsForQuiet} measures");
@@ -714,8 +725,25 @@ cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEvent
 | summarize count() by FailureReason , bin(AdvancedServerTimestampUtc, 1d)
                     Chart Type: Time Chart
 
+
+From: Brad White <brad.white@microsoft.com> 
+Sent: Wednesday, February 5, 2020 6:08 PM
+To: Calvin Hsia <calvinh@microsoft.com>
+Subject: RE: Get Run ID from test
+
+	From within an Apex/DTE test how do I get something like “Release-800” from the screenshot below?
+I would advise against adding dependencies on Azure DevOps to test code. 
+
+We push our telemetry in one of two ways:
+1.	Service hook that calls an Azure Function
+2.	Script in the release that runs after test execution
+
+For you, I’d recommend #2. Add a script that runs after the tests complete. To get the run ID, you can use $(testrunid), which gets set by the Visual Studio Test task after the run has completed.
+
 #endif
 
+                    dictTelemetryProperties["GoneQuietAvg"] = this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
+                    dictTelemetryProperties["IterationsGoneQuiet"] = this._IterationsGoneQuiet;
                     dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
                     dictTelemetryProperties["TestName"] = testContext.TestName;
                     dictTelemetryProperties[Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName)] = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
@@ -728,12 +756,7 @@ cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEvent
                 telemetrySession = null;
             }
         }
-        // The TelemetryService.DefaultSession cannot be used after being disposed. It's static per process. 
-        // The telemetry session's lifetime is meant to match the process lifetime, not the test lifetime.
-        // The test process may run multiple tests, and a given test doesn't know if it's the last test to run, so it doesn't know to dispse the session
-        // The dispose must be called to send the telemetry.
-        // So we dispose/recreate the session from serialized settings
-        static string SerializedTelemetrySession = string.Empty;
+
         public void PostTelemetryEvent(string telemetryEventName, Dictionary<string, object> telemetryProperties)
         {
             if (telemetrySession == null)
