@@ -153,6 +153,7 @@ Language:         Language Neutral
                         measurementHolder.dictTelemetryProperties["TestException"] = exception.ToString();
                     }
                 }
+                measurementHolder.dictTelemetryProperties["TestPassed"] = exception == null ? true : false;
                 measurementHolder.Dispose(); // write test results
             }
         }
