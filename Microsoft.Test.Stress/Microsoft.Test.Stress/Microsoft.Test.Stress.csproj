@@ -196,5 +196,5 @@
     <Error Condition="!Exists('..\..\packages\Nerdbank.GitVersioning.2.1.7\build\Nerdbank.GitVersioning.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Nerdbank.GitVersioning.2.1.7\build\Nerdbank.GitVersioning.targets'))" />
     <Error Condition="!Exists('..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets'))" />
   </Target>
-  <Import Project="..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets" Condition="Exists('..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets')" />
+  <Import Project="..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets" Condition="Exists('..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets') And '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "/>
 </Project>
