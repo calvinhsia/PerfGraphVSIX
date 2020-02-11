@@ -211,7 +211,10 @@ namespace Microsoft.Test.Stress
                     {
                         Logger.LogMessage($"    {leak}");
                     }
-                    testContext.Properties[StressUtil.PropNameMinimumIteration] = nSamplesTaken; // so unit test can verify
+                    if (testContext != null)
+                    {
+                        testContext.Properties[StressUtil.PropNameMinimumIteration] = nSamplesTaken; // so unit test can verify
+                    }
                     _ReportedMinimumNumberOfIterations = nSamplesTaken;
                     dictTelemetryProperties["MinIterationLeakDetected"] = _ReportedMinimumNumberOfIterations;
                 }
