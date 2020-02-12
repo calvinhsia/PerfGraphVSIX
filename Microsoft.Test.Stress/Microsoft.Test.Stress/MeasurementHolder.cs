@@ -751,7 +751,15 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
                     dictTelemetryProperties["TestName"] = testContext.TestName;
                     dictTelemetryProperties["MachineName"] = Environment.GetEnvironmentVariable("COMPUTERNAME");
                     dictTelemetryProperties["TargetProcessName"] = Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName);
-                    dictTelemetryProperties["TargetProcessVersion"] = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
+                    var fileVersion = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
+                    var lastSpace = fileVersion.LastIndexOf(" ");
+                    var branchName = string.Empty;
+                    if (lastSpace > 0)
+                    {
+                        branchName = fileVersion.Substring(lastSpace + 1);
+                    }
+                    dictTelemetryProperties["TargetProcessVersion"] = fileVersion;
+                    dictTelemetryProperties["BranchName"] = branchName;
 
                     PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
                 }
