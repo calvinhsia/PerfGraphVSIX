@@ -247,6 +247,8 @@
 
                 _ = Task.Run(async () =>
                 {
+                    await AddStatusMsgAsync("Waiting 15 seconds to initialize graph");
+                    await Task.Delay(TimeSpan.FromSeconds(15));// delay samples til VS started
                     await ResetPerfCounterMonitorAsync();
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");

@@ -317,6 +317,7 @@ namespace Microsoft.Test.Stress
             logger.LogMessage($@"TestName = {testContext.TestName} 
                                         IsApexTest={IsTestApexTest()}
                                         NumIterations = {NumIterations}
+                                        DateTime = {DateTime.Now}
                                         Sensitivity = {Sensitivity}
                                         CurDir = '{Environment.CurrentDirectory}'
                                         TestDeploymentDir = '{testContext.TestDeploymentDir}'
