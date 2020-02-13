@@ -76,7 +76,7 @@ namespace Microsoft.Test.Stress
                         procDevenv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
                         // the process start time must have started very recently, but we need to exclude the case where user starts devenv, then immediately runs the test
                         // IOW, it must have started at most 30 seconds ago
-                        if (procDevenv.StartTime > DateTime.Now - TimeSpan.FromSeconds(30)) 
+                        if (procDevenv.StartTime > DateTime.Now - TimeSpan.FromSeconds(30))
                         {
                             logger.LogMessage($"Latest devenv PID= {procDevenv.Id} starttime = {procDevenv.StartTime}");
                             fGotit = true;
@@ -107,7 +107,7 @@ namespace Microsoft.Test.Stress
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
                     logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
-                    foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p=>p.StartTime))
+                    foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime))
                     {
                         if (proc.Id != vsProc.Id)
                         {
@@ -252,12 +252,15 @@ namespace Microsoft.Test.Stress
                 vsPath = GetVSFullPath();
             }
             logger.LogMessage($"{ nameof(StartVSAsync)}  VSPath= {vsPath}");
-            var startOptions = new ProcessStartInfo(vsPath);
+            var startOptions = new ProcessStartInfo(vsPath)
+            {
+                UseShellExecute = false // must be false to use env
+            };
             if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeNone)
             {
-                startOptions.UseShellExecute = false; // must be calse to use env
                 StressUtil.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags, MemSpectDllPath);
             }
+            startOptions.Environment["__VSDisableStartWindow"] = "1"; // Pull Request 187145: Fix #859144: Use environment variables instead of registry for Apex StartWindowStartupOption
             vsProc = Process.Start(startOptions);
             logger.LogMessage($"Started VS PID= {vsProc.Id}");
             await EnsureGotDTE(timeSpan: default);
