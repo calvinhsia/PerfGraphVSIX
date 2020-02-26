@@ -110,8 +110,7 @@ namespace Microsoft.Test.Stress
         {
             var SStot = 0.0;
             var SSerr = 0.0;
-            double YMean = 0;
-            lstData.Take(NumSamplesToUse).ToList().ForEach(t => YMean += t.point.Y);
+            var YMean = lstData.Where(t => !t.IsOutlier).Sum(t => t.point.Y);
             YMean /= (NumSamplesToUse - NumOutliers);
             double xMean = (NumSamplesToUse - NumOutliers - 1) / 2;
             for (int i = 0; i < NumSamplesToUse; i++)
