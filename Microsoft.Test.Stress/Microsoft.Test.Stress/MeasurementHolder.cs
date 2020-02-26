@@ -613,6 +613,15 @@ namespace Microsoft.Test.Stress
                         seriesTrendLine.Points.Add(dp1);
 
                         chart.Legends.Add(new Legend());
+                        chart.Legends[0].CustomItems.Add(new LegendItem()
+                        {
+                            Name = "IsOutlier",
+                            ImageStyle = LegendImageStyle.Marker,
+                            MarkerColor = System.Drawing.Color.Red,
+                            MarkerStyle = MarkerStyle.Cross,
+                            MarkerBorderWidth = 0,
+                            MarkerSize = 10
+                        });
 
                         var fname = Path.Combine(ResultsFolder, $"{GraphsAsFilePrefix} {item.perfCounterData.PerfCounterName}.png");
                         chart.SaveImage(fname, ChartImageFormat.Png);
