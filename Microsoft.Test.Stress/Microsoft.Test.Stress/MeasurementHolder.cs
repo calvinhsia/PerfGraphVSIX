@@ -510,7 +510,7 @@ namespace Microsoft.Test.Stress
                     perfCounterData = ctr,
                     sensitivity = stressUtilOptions.Sensitivity,
                     pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore,
-                    RSquaredThreashold = stressUtilOptions.RSquaredThreshold
+                    RSquaredThreshold = stressUtilOptions.RSquaredThreshold
                 };
                 leakAnalysis.FindLinearLeastSquaresFit();
 
