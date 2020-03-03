@@ -204,7 +204,7 @@ namespace Microsoft.Test.Stress
             {
                 var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, GraphsAsFilePrefix: null));
 
-                if (lstLeaksSoFar.Any())
+                if (lstLeaksSoFar.Where(lk => lk.IsLeak).Any())
                 {
                     Logger.LogMessage($"Earliest Iteration at which leak detected: {nSamplesTaken}");
                     foreach (var leak in lstLeaksSoFar)
@@ -754,7 +754,7 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
 
 #endif
 
-                    dictTelemetryProperties["GoneQuietAvg"] = this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
+                    dictTelemetryProperties["GoneQuietAvg"] = (double)this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
                     dictTelemetryProperties["IterationsGoneQuiet"] = this._IterationsGoneQuiet;
                     dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
                     dictTelemetryProperties["TestName"] = testContext.TestName;
