@@ -149,6 +149,9 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
+            <TabItem x:Name="inProcLeakTracerTabItem" Visibility="Collapsed" Header = "MemoryLeakService Tracker" ToolTip="Track Object instances using the IMemoryLeakTrackerServices for objects that support it. The objects claimed to leak here are probable leaks as per the developers of those object.">
+                <UserControl x:Name="inProcLeakTracker"/>
+            </TabItem>
         </TabControl>
         <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
         <StackPanel Grid.Row="2" Orientation="Vertical">

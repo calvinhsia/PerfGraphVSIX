@@ -28,6 +28,7 @@
     using System.Windows.Forms.Integration;
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
+    using Microsoft.VisualStudio.Utilities;
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
@@ -119,6 +120,12 @@
             this.InitializeComponent();
             try
             {
+                if (this.IsLeakTrackerServiceSupported())
+                {
+                    this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
+                    this.inProcLeakTracker.Content = new InProcLeakTracker();
+                }
+
                 LogMessage($"Starting {TipString}");
                 var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
                 var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime;
@@ -285,6 +292,20 @@
             catch (Exception ex)
             {
                 this.Content = ex.ToString();
+            }
+        }
+        
+        private bool IsLeakTrackerServiceSupported()
+        {
+            try
+            {
+                var leakService = PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
+                return leakService != null;
+            }
+            catch
+            {
+                LogMessage("Leak tracker service not supported. Inproc Leak Tracker wont be shown");
+                return false;
             }
         }
 
