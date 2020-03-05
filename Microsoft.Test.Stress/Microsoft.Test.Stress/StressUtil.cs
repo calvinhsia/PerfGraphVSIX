@@ -177,6 +177,19 @@ Language:         Language Neutral
         public static void SetEnvironmentForMemSpect(IDictionary<string, string> environment, MemSpectModeFlags memSpectModeFlags, string MemSpectDllPath)
         {
             /*
+for all tests: 
+    try to use fewer iterations, e.g. 7
+    try to use smaller data to repro, e.g. a smaller solution
+    make sure to set DelayMultiplier to e.g. 10
+    make sure it doesn't close VS in the Cleanup... closing VS also closes the attached MemSpect, so just let VS be idle.
+    you can configure what MemSpect tracks via the MemSpect.ini file in the same folder. (e.g. native heap, managed heap, etc.)
+
+for apex tests, 
+    set env before start process: 
+            visualStudio = Operations.CreateHost<VisualStudioHost>();
+            StressUtil.SetEnvironmentForMemSpect(visualStudio.Configuration.Environment, MemSpectModeFlags.MemSpectModeFull, @"C:\MemSpect\MemSpectDll.dll");
+            visualStudio.Start();
+
 Set COR_ENABLE_PROFILING=1
 Set COR_PROFILER={01673DDC-46F5-454F-84BC-F2F34564C2AD}
 Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll

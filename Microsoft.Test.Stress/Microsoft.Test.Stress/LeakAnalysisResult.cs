@@ -30,7 +30,7 @@ namespace Microsoft.Test.Stress
         /// Normally the entire range of measurements. However, we can try using fewer data points to calculate slope and R² using fewer iterations
         /// </summary>
         public int NumSamplesToUse => lstData.Count;
-        internal float RSquaredThreashold;
+        internal float RSquaredThreshold;
 
         public int NumOutliers => (int)((NumSamplesToUse) * pctOutliersToIgnore / 100.0);
 
@@ -132,7 +132,7 @@ namespace Microsoft.Test.Stress
             get
             {
                 var isLeak = false;
-                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > RSquaredThreashold)
+                if (slope >= perfCounterData.thresholdRegression / sensitivity && RSquared() > RSquaredThreshold)
                 {
                     // if there are N iterations, the diff between last and first value must be >= N
                     // e.g. if there are 10 iterations and the handle count goes from 4 to 5, it's not a leak

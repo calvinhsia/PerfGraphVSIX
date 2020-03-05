@@ -141,6 +141,11 @@ namespace MyCodeToExecute
                         ShowUI = true,
                         logger = logger,
                         Sensitivity = Sensitivity,
+                        //actExecuteAfterEveryIterationAsync = async (nIter, mHolder) => // uncomment to suppress dump taking/processing.
+                        //{
+                        //    await Task.Yield();
+                        //    return false;
+                        //},
                         lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(System.Diagnostics.Process.GetCurrentProcess(), IsForStress: false)
                     },
                     SampleType.SampleTypeIteration))

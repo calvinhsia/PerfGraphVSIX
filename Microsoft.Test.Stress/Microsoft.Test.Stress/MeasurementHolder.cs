@@ -204,7 +204,7 @@ namespace Microsoft.Test.Stress
             {
                 var lstLeaksSoFar = (await CalculateLeaksAsync(showGraph: false, GraphsAsFilePrefix: null));
 
-                if (lstLeaksSoFar.Any())
+                if (lstLeaksSoFar.Where(lk => lk.IsLeak).Any())
                 {
                     Logger.LogMessage($"Earliest Iteration at which leak detected: {nSamplesTaken}");
                     foreach (var leak in lstLeaksSoFar)
@@ -510,7 +510,7 @@ namespace Microsoft.Test.Stress
                     perfCounterData = ctr,
                     sensitivity = stressUtilOptions.Sensitivity,
                     pctOutliersToIgnore = stressUtilOptions.pctOutliersToIgnore,
-                    RSquaredThreashold = stressUtilOptions.RSquaredThreshold
+                    RSquaredThreshold = stressUtilOptions.RSquaredThreshold
                 };
                 leakAnalysis.FindLinearLeastSquaresFit();
 
@@ -613,6 +613,15 @@ namespace Microsoft.Test.Stress
                         seriesTrendLine.Points.Add(dp1);
 
                         chart.Legends.Add(new Legend());
+                        chart.Legends[0].CustomItems.Add(new LegendItem()
+                        {
+                            Name = "IsOutlier",
+                            ImageStyle = LegendImageStyle.Marker,
+                            MarkerColor = System.Drawing.Color.Red,
+                            MarkerStyle = MarkerStyle.Cross,
+                            MarkerBorderWidth = 0,
+                            MarkerSize = 10
+                        });
 
                         var fname = Path.Combine(ResultsFolder, $"{GraphsAsFilePrefix} {item.perfCounterData.PerfCounterName}.png");
                         chart.SaveImage(fname, ChartImageFormat.Png);
@@ -745,7 +754,7 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
 
 #endif
 
-                    dictTelemetryProperties["GoneQuietAvg"] = this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
+                    dictTelemetryProperties["GoneQuietAvg"] = (double)this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
                     dictTelemetryProperties["IterationsGoneQuiet"] = this._IterationsGoneQuiet;
                     dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
                     dictTelemetryProperties["TestName"] = testContext.TestName;
