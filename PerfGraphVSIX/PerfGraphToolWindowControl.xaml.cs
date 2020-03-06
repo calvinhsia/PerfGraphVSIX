@@ -29,6 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
     using Microsoft.VisualStudio.Utilities;
+    using System.Reflection;
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
@@ -299,8 +300,8 @@
         {
             try
             {
-                var leakService = PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
-                return leakService != null;
+                DoTryTypeLoadException();
+                return true;
             }
             catch
             {
@@ -308,6 +309,10 @@
                 return false;
             }
         }
+
+        // Types get loaded before the method that uses them, so it can't be caught in the same method as the Catch: must be in a method below the Catch
+        [ MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
+        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
 
         // use a circular buffer to store samples. 
         // dictionary of sample # (int from 0 to NumDataPoints) =>( List (PerfCtrValues in order)
