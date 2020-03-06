@@ -29,7 +29,6 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
     using Microsoft.VisualStudio.Utilities;
-    using System.Reflection;
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
