@@ -13,6 +13,8 @@ using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
 using System.Windows.Threading;
+using System.Xaml;
+using System.Xml.Linq;
 
 namespace Microsoft.Test.Stress
 {
@@ -149,6 +151,7 @@ namespace Microsoft.Test.Stress
         static string SerializedTelemetrySession = string.Empty;
         private int _GoneQuietSamplesTaken = 0;
         private int _IterationsGoneQuiet = 0;
+        private List<LeakAnalysisResult> _lstAllLeakResults;
 
         /// <summary>
         /// 
@@ -280,15 +283,15 @@ namespace Microsoft.Test.Stress
                 {
                     var filenameMeasurementResults = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameMeasurementResults}");
-                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"));
-                    foreach (var itm in lstLeakResults)
+                    _lstAllLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"));
+                    foreach (var itm in _lstAllLeakResults)
                     {
                         Logger.LogMessage(itm.ToString());
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}rsquared"] = itm.RSquared(); // can't use perfcounter name: invalid property name. so use enum name
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}slope"] = itm.slope;
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}IsLeak"] = itm.IsLeak;
                     }
-                    lstLeakResults = lstLeakResults.Where(r => r.IsLeak).ToList();
+                    var lstLeakResults = _lstAllLeakResults.Where(r => r.IsLeak).ToList();
 
                     if (lstLeakResults.Count >= 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
@@ -338,6 +341,44 @@ namespace Microsoft.Test.Stress
                         }
                     }
                 }
+            }
+        }
+
+        private void WriteLeakResultsToXML()
+        {
+            var outputXMLFile = Path.Combine(ResultsFolder, "StressResults.xml");
+            try
+            {
+                XElement xmlDom = new XElement("StressResults");
+                xmlDom.Add(new XAttribute("TestName", stressUtilOptions.testContext.TestName));
+                xmlDom.Add(new XAttribute("TargetProcessName", (string)(dictTelemetryProperties["TargetProcessName"])));
+                xmlDom.Add(new XAttribute("TargetProcessVersion", (string)(dictTelemetryProperties["TargetProcessVersion"])));
+                xmlDom.Add(new XAttribute("BranchName", (string)(dictTelemetryProperties["BranchName"])));
+                xmlDom.Add(new XAttribute("NumIterations", stressUtilOptions.NumIterations));
+                xmlDom.Add(new XAttribute("Duration", ((double)(dictTelemetryProperties["Duration"])).ToString("0.00")));
+                xmlDom.Add(new XAttribute("GoneQuietAvg", ((double)(dictTelemetryProperties["GoneQuietAvg"])).ToString("0.00")));
+                xmlDom.Add(new XAttribute("IterationsGoneQuiet", ((int)dictTelemetryProperties["IterationsGoneQuiet"]).ToString("0")));
+
+
+
+                foreach (var result in _lstAllLeakResults)
+                {
+                    var xmlResult = new XElement("LeakResult");
+                    xmlResult.Add(new XAttribute("Name", result.perfCounterData.PerfCounterName));
+                    var fmt = (result.perfCounterData.PerfCounterName.IndexOf("ytes") > 0) ? "0" : "0.000";
+                    xmlResult.Add(new XAttribute("Slope", result.slope.ToString(fmt)));
+                    xmlResult.Add(new XAttribute("RSquared", result.RSquared().ToString("0.000")));
+                    xmlResult.Add(new XAttribute("IsLeak", result.IsLeak));
+                    xmlResult.Add(new XAttribute("Threshold", result.perfCounterData.thresholdRegression.ToString(fmt)));
+                    xmlDom.Add(xmlResult);
+                }
+                xmlDom.Save(outputXMLFile);
+                Process.Start(outputXMLFile);
+                lstFileResults.Add(new FileResultsData() { filename = outputXMLFile, description = "XML Results" });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogMessage($"Exception writing XML file results {outputXMLFile} " + ex.ToString());
             }
         }
 
@@ -719,23 +760,6 @@ namespace Microsoft.Test.Stress
                 if (stressUtilOptions.SendTelemetry)
                 {
 #if false
-                    // for flow.microsoft.com, sample
-                    // Clustername: "Kustolab"  DatabaseName: "Calvinh"  //cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEventsRaw
-.append MemWatsonPipelineEventsRaw  <|
-let DTMax = MemWatsonPipelineEventsRaw | summarize max(AdvancedServerTimestampUtc);
-cluster("Ddtelvsraw.kusto.windows.net").database("VS").RawEventsVS
-| where EventName startswith "perfwatsonbackend/memwatson"
-| where AdvancedServerTimestampUtc >toscalar(DTMax)
-                    Chart Type: HTML Table
-
-cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEventsRaw
-| where EventName == "perfwatsonbackend/memwatsondumpprocessor/cabfailed"
-| where AdvancedServerTimestampUtc > ago(7d)
-| extend CabType = tostring(Properties["perfwatsonbackend.memwatsondumpprocessor.cabfailed.cabp1"])
-| where CabType == "perfwatsonlowmem"
-| extend FailureReason = tostring(Properties["perfwatsonbackend.memwatsondumpprocessor.cabfailed.failurereason"])
-| summarize count() by FailureReason , bin(AdvancedServerTimestampUtc, 1d)
-                    Chart Type: Time Chart
 
 
 From: Brad White <brad.white@microsoft.com> 
@@ -771,6 +795,7 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
                     dictTelemetryProperties["BranchName"] = branchName;
 
                     PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+                    WriteLeakResultsToXML();
                 }
             }
             if (telemetrySession != null)

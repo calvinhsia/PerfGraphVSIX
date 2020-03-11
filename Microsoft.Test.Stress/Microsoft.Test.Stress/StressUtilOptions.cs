@@ -187,6 +187,9 @@ namespace Microsoft.Test.Stress
 
         internal object theTest;
 
+        /// <summary>
+        /// Sends telemetry and also generates XML results file
+        /// </summary>
         internal bool SendTelemetry = true;
 
         [XmlIgnore]
