@@ -35,7 +35,6 @@ namespace Microsoft.Test.Stress
         public const string PropNameMinimumIteration = "MinimumIteration";
         public const string PropNameListFileResults = "DictListFileResults";
         public const string PropNameMeasurementHolder = "MeasurementHolder";
-        public const string PropNameStartTime = "TestStartTime";
         internal const string PropNameRecursionPrevention = "RecursionPrevention";
         public const string PropNameVSHandler = "VSHandler";
         public const string PropNameLogger = "Logger";
@@ -75,7 +74,6 @@ namespace Microsoft.Test.Stress
 
                 var baseDumpFileName = string.Empty;
                 stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = 0;
-                stressUtilOptions.testContext.Properties[PropNameStartTime] = DateTime.Now;
                 stressUtilOptions.testContext.Properties[PropNameMeasurementHolder] = measurementHolder;
                 var utilFileName = typeof(StressUtil).Assembly.Location;
                 var verInfo = FileVersionInfo.GetVersionInfo(utilFileName);
@@ -133,13 +131,6 @@ Language:         Language Neutral
                 if (measurementHolder.testContext != null)
                 {
                     measurementHolder.testContext.Properties[PropNameMeasurementHolder] = null;
-                    var numIterExecuted = (int)measurementHolder.testContext.Properties[PropNameCurrentIteration];
-                    var startTime = (DateTime)measurementHolder.testContext.Properties[PropNameStartTime];
-                    var duration = (DateTime.Now - startTime);
-                    var secsPerIteration = duration.TotalSeconds / numIterExecuted;
-                    measurementHolder.Logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
-                    measurementHolder.dictTelemetryProperties["IterationsPerSecond"] = secsPerIteration;
-                    measurementHolder.dictTelemetryProperties["Duration"] = duration.TotalSeconds;
                 }
                 if (exception != null)
                 {
