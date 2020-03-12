@@ -152,6 +152,12 @@ namespace Microsoft.Test.Stress
         private int _GoneQuietSamplesTaken = 0;
         private int _IterationsGoneQuiet = 0;
         private List<LeakAnalysisResult> _lstAllLeakResults;
+        private DumpAnalyzer _oDumpAnalyzer;
+
+        /// <summary>
+        /// Same as RPS so uploading results works
+        /// </summary>
+        public const string _xmlResultFileName = "ConsumptionTempResults.xml";
 
         /// <summary>
         /// 
@@ -306,7 +312,7 @@ namespace Microsoft.Test.Stress
                         var currentDumpFile = await DoCreateDumpAsync($"Taking final snapshot dump at iteration {nSamplesTaken}");
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
-                            var oDumpAnalyzer = new DumpAnalyzer(Logger);
+                            _oDumpAnalyzer = new DumpAnalyzer(Logger);
                             var sb = new StringBuilder();
                             sb.AppendLine($"'{TestName}' Leaks Found");
                             foreach (var leak in lstLeakResults)
@@ -314,7 +320,7 @@ namespace Microsoft.Test.Stress
                                 sb.AppendLine($"Leak Detected: {leak}");
                             }
                             sb.AppendLine();
-                            oDumpAnalyzer.GetDiff(sb,
+                            _oDumpAnalyzer.GetDiff(sb,
                                             baseDumpFileName,
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
@@ -346,7 +352,7 @@ namespace Microsoft.Test.Stress
 
         private void WriteLeakResultsToXML()
         {
-            var outputXMLFile = Path.Combine(ResultsFolder, "StressResults.xml");
+            var outputXMLFile = Path.Combine(ResultsFolder, _xmlResultFileName);
             try
             {
                 XElement xmlDom = new XElement("StressResults");
@@ -359,12 +365,10 @@ namespace Microsoft.Test.Stress
                 xmlDom.Add(new XAttribute("GoneQuietAvg", ((double)(dictTelemetryProperties["GoneQuietAvg"])).ToString("0.00")));
                 xmlDom.Add(new XAttribute("IterationsGoneQuiet", ((int)dictTelemetryProperties["IterationsGoneQuiet"]).ToString("0")));
 
-
-
                 foreach (var result in _lstAllLeakResults)
                 {
                     var xmlResult = new XElement("LeakResult");
-                    xmlResult.Add(new XAttribute("Name", result.perfCounterData.PerfCounterName));
+                    xmlResult.Add(new XAttribute("Name", result.perfCounterData.perfCounterType.ToString()));// use enum (with no embedded spaces) rather than name
                     var fmt = (result.perfCounterData.PerfCounterName.IndexOf("ytes") > 0) ? "0" : "0.000";
                     xmlResult.Add(new XAttribute("Slope", result.slope.ToString(fmt)));
                     xmlResult.Add(new XAttribute("RSquared", result.RSquared().ToString("0.000")));
@@ -372,8 +376,41 @@ namespace Microsoft.Test.Stress
                     xmlResult.Add(new XAttribute("Threshold", result.perfCounterData.thresholdRegression.ToString(fmt)));
                     xmlDom.Add(xmlResult);
                 }
+
+                var measResult = new XElement("MeasurementResult");
+                xmlDom.Add(measResult);
+                foreach (var kvp in measurements)
+                {
+                    var measnode = new XElement(kvp.Key.ToString());
+                    measResult.Add(measnode);
+                    foreach (var val in kvp.Value)
+                    {
+                        measnode.Add(new XElement("Value", val));
+                    }
+                }
+                if (_oDumpAnalyzer != null)
+                {
+                    void AddDiffNode(string kind, Dictionary<string, Tuple<int, int>> dict)
+                    {
+                        var node = new XElement(kind + "s");
+                        xmlDom.Add(node);
+                        foreach (var kvp in dict)
+                        {
+                            var child = new XElement(kind, kvp.Key);// + @"</\\test>"
+                            child.Add(new XAttribute("BaseCnt", kvp.Value.Item1));
+                            child.Add(new XAttribute("CurrCnt", kvp.Value.Item2));
+                            node.Add(child);
+                        }
+                    }
+                    AddDiffNode("Type", _oDumpAnalyzer._dictTypeDiffs);
+                    AddDiffNode("String", _oDumpAnalyzer._dictStringDiffs);
+                }
+
                 xmlDom.Save(outputXMLFile);
-                Process.Start(outputXMLFile);
+                if (stressUtilOptions.ShowUI)
+                {
+                    Process.Start(outputXMLFile);
+                }
                 lstFileResults.Add(new FileResultsData() { filename = outputXMLFile, description = "XML Results" });
             }
             catch (Exception ex)

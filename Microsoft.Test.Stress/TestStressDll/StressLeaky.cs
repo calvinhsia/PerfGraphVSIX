@@ -84,7 +84,7 @@ $"StressLeaky_{numIter}_0.dmp",
 $"StressLeaky_{numIter-4}_0.dmp",
 "StressTestLog.log",
 $"String and Type Count differences_{numIter}.txt",
-$"StressResults.xml",
+MeasurementHolder._xmlResultFileName,
 };
                 foreach (var itm in expectedFiles)
                 {
