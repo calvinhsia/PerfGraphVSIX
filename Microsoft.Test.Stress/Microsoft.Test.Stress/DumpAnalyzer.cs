@@ -139,10 +139,10 @@ namespace Microsoft.Test.Stress
         /// <param name="TotNumIterations"></param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"></param>
         public void GetDiff(
-            StringBuilder sb, 
-            string pathDumpBase, 
-            string pathDumpCurrent, 
-            int TotNumIterations, 
+            StringBuilder sb,
+            string pathDumpBase,
+            string pathDumpCurrent,
+            int TotNumIterations,
             int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
             _dictTypeDiffs = new Dictionary<string, Tuple<int, int>>();
@@ -181,25 +181,21 @@ namespace Microsoft.Test.Stress
         /// add to the stringbuilder the growth in the Type (or string)
         /// </summary>
         public void AnalyzeDiff(
-            Dictionary<string, int> dictBase, 
-            Dictionary<string, int> dictCurrent, 
-            int TotNumIterations, 
+            Dictionary<string, int> dictBase,
+            Dictionary<string, int> dictCurrent,
+            int TotNumIterations,
             int NumIterationsBeforeTotalToTakeBaselineSnapshot,
             Action<string, int, int> actionDiff)
         {
             foreach (var entryCurrent in dictCurrent
-                .Where(e => e.Value >= TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                .Where(e => e.Value >= TotNumIterations)// there must be at least NumIterations
                 .OrderBy(e => e.Value))
             {
-                if (dictBase.ContainsKey(entryCurrent.Key))
+                if (dictBase.TryGetValue(entryCurrent.Key, out var baseCnt)) // if it's also in the basedump
                 {
-                    var baseCnt = dictBase[entryCurrent.Key];
-                    if (baseCnt > TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value) // value has increased by at least 1 per iteration
                     {
-                        if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value)
-                        {
-                            actionDiff(entryCurrent.Key, baseCnt, entryCurrent.Value);
-                        }
+                        actionDiff(entryCurrent.Key, baseCnt, entryCurrent.Value);
                     }
                 }
             }

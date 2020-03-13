@@ -749,7 +749,7 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
             dictTelemetryProperties["TargetProcessVersion"] = fileVersion;
             dictTelemetryProperties["BranchName"] = branchName;
 
-            WriteLeakResultsToXML();
+            WriteResultsToXML(Path.Combine(ResultsFolder, _xmlResultFileName));
             if (this.testContext != null)
             {
                 if (Logger is Logger myLogger)
@@ -778,9 +778,8 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
                 }
             }
         }
-        private void WriteLeakResultsToXML()
+        private void WriteResultsToXML(string outputXMLFile)
         {
-            var outputXMLFile = Path.Combine(ResultsFolder, _xmlResultFileName);
             try
             {
                 XElement xmlDom = new XElement("StressResults");
