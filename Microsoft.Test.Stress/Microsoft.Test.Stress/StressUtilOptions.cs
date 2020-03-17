@@ -323,6 +323,7 @@ namespace Microsoft.Test.Stress
                                         DateTime = {DateTime.Now}
                                         Sensitivity = {Sensitivity}
                                         CurDir = '{Environment.CurrentDirectory}'
+                                        CurProcId = {Process.GetCurrentProcess().Id}
                                         TestDeploymentDir = '{testContext.TestDeploymentDir}'
                                         TestRunDirectory = '{testContext.TestRunDirectory}'  
                                         TestResultsDirectory='{testContext.TestResultsDirectory}' 
