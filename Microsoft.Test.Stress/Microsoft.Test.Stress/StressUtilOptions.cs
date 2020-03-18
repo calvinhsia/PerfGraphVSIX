@@ -322,8 +322,9 @@ namespace Microsoft.Test.Stress
                                         NumIterations = {NumIterations}
                                         DateTime = {DateTime.Now}
                                         Sensitivity = {Sensitivity}
-                                        CurDir = '{Environment.CurrentDirectory}'
+                                        COMPUTERNAME = {Environment.GetEnvironmentVariable("COMPUTERNAME")}
                                         CurProcId = {Process.GetCurrentProcess().Id}
+                                        CurDir = '{Environment.CurrentDirectory}'
                                         TestDeploymentDir = '{testContext.TestDeploymentDir}'
                                         TestRunDirectory = '{testContext.TestRunDirectory}'  
                                         TestResultsDirectory='{testContext.TestResultsDirectory}' 
