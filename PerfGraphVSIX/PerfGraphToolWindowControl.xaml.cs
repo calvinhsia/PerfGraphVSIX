@@ -304,7 +304,7 @@
             }
             catch
             {
-                LogMessage("Leak tracker service not supported. Inproc Leak Tracker wont be shown");
+                LogMessage("Leak tracker service not supported. Inproc Leak Tracker will not be shown");
                 return false;
             }
         }

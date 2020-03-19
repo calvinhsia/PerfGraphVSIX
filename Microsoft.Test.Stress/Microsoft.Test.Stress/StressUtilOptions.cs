@@ -187,6 +187,9 @@ namespace Microsoft.Test.Stress
 
         internal object theTest;
 
+        /// <summary>
+        /// Sends telemetry and also generates XML results file
+        /// </summary>
         internal bool SendTelemetry = true;
 
         [XmlIgnore]
@@ -319,6 +322,8 @@ namespace Microsoft.Test.Stress
                                         NumIterations = {NumIterations}
                                         DateTime = {DateTime.Now}
                                         Sensitivity = {Sensitivity}
+                                        COMPUTERNAME = {Environment.GetEnvironmentVariable("COMPUTERNAME")}
+                                        CurProcId = {Process.GetCurrentProcess().Id}
                                         CurDir = '{Environment.CurrentDirectory}'
                                         TestDeploymentDir = '{testContext.TestDeploymentDir}'
                                         TestRunDirectory = '{testContext.TestRunDirectory}'  

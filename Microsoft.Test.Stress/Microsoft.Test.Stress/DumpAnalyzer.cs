@@ -138,8 +138,16 @@ namespace Microsoft.Test.Stress
         /// <param name="pathDumpCurrent"></param>
         /// <param name="TotNumIterations"></param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"></param>
-        public void GetDiff(StringBuilder sb, string pathDumpBase, string pathDumpCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        public void GetDiff(
+            StringBuilder sb,
+            string pathDumpBase,
+            string pathDumpCurrent,
+            int TotNumIterations,
+            int NumIterationsBeforeTotalToTakeBaselineSnapshot)
         {
+            _dictTypeDiffs = new Dictionary<string, Tuple<int, int>>();
+            _dictStringDiffs = new Dictionary<string, Tuple<int, int>>();
+
             AnalyzeDump(pathDumpBase, out var dictTypesBaseline, out var dictStringsBaseline);
             AnalyzeDump(pathDumpCurrent, out var dictTypesCurrent, out var dictStringsCurrent);
             sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
@@ -148,10 +156,22 @@ namespace Microsoft.Test.Stress
             sb.AppendLine($"TypesAndStrings { Path.GetFileName(pathDumpBase)} {Path.GetFileName(pathDumpCurrent)}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             sb.AppendLine();
             sb.AppendLine("Types:");
-            AnalyzeDiff(sb, dictTypesBaseline, dictTypesCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+            AnalyzeDiff(dictTypesBaseline, dictTypesCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot,
+                (key, baseCnt, currentCnt) =>
+                {
+                    _dictTypeDiffs[key] = Tuple.Create(baseCnt, currentCnt);
+                    var msg = string.Format("{0,5} {1,5} {2}", baseCnt, currentCnt, key); // can't use "$" because can contain embedded "{"
+                    sb.AppendLine(msg);
+                });
             sb.AppendLine();
             sb.AppendLine("Strings:");
-            AnalyzeDiff(sb, dictStringsBaseline, dictStringsCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot);
+            AnalyzeDiff(dictStringsBaseline, dictStringsCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot,
+                (key, baseCnt, currentCnt) =>
+                {
+                    _dictStringDiffs[key] = Tuple.Create(baseCnt, currentCnt);
+                    var msg = string.Format("{0,5} {1,5} {2}", baseCnt, currentCnt, key); // can't use "$" because can contain embedded "{"
+                    sb.AppendLine(msg);
+                });
             logger.LogMessage($"analyzed types and strings {pathDumpBase} {pathDumpCurrent}");
             //            var fname = DumperViewerMain.GetNewFileName(measurementHolder.TestName, "");
         }
@@ -160,25 +180,24 @@ namespace Microsoft.Test.Stress
         /// Given a stringbuilder and 2 dictionaries of the same type(e.g. 2 string->count dicts, or 2 ClrType->count dicts), but from 2 different iterations (base and current), 
         /// add to the stringbuilder the growth in the Type (or string)
         /// </summary>
-        /// <param name="sb"></param>
-        /// <param name="dictBase"></param>
-        /// <param name="dictCurrent"></param>
-        /// <param name="TotNumIterations"></param>
-        /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"></param>
-        public void AnalyzeDiff(StringBuilder sb, Dictionary<string, int> dictBase, Dictionary<string, int> dictCurrent, int TotNumIterations, int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+        public void AnalyzeDiff(
+            Dictionary<string, int> dictBase,
+            Dictionary<string, int> dictCurrent,
+            int TotNumIterations,
+            int NumIterationsBeforeTotalToTakeBaselineSnapshot,
+            Action<string, int, int> actionDiff)
         {
-            foreach (var entryCurrent in dictCurrent.Where(e => e.Value >= TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1).OrderBy(e => e.Value))
+            foreach (var entryCurrent in dictCurrent
+                .Where(e => e.Value >= TotNumIterations)// there must be at least NumIterations
+                .OrderBy(e => e.Value))
             {
-                if (dictBase.ContainsKey(entryCurrent.Key))
+                if (dictBase.TryGetValue(entryCurrent.Key, out var baseCnt)) // if it's also in the basedump
                 {
-                    var baseCnt = dictBase[entryCurrent.Key];
-                    if (baseCnt > TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot - 1)
+                    if (baseCnt >= TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot) // base must have grown at least 1 per iteration
                     {
-                        if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value)
+                        if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value) // value has increased by at least 1 per iteration
                         {
-                            var msg = string.Format("{0,5} {1,5} {2}", baseCnt, entryCurrent.Value, entryCurrent.Key); // can't use "$" because can contain embedded "{"
-                            sb.AppendLine(msg);
-                            //                        logger.LogMessage("{0}", msg); // can't use "$" because can contain embedded "{"
+                            actionDiff(entryCurrent.Key, baseCnt, entryCurrent.Value);
                         }
                     }
                 }
@@ -186,6 +205,9 @@ namespace Microsoft.Test.Stress
         }
 
         static string _ClrObjExplorerExe = null;
+        public Dictionary<string, Tuple<int, int>> _dictTypeDiffs;
+        public Dictionary<string, Tuple<int, int>> _dictStringDiffs;
+
         public string GetClrObjExplorerPath()
         {
             if (_ClrObjExplorerExe == null)

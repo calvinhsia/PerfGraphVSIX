@@ -42,12 +42,16 @@ namespace TestStressDll
         public async Task StressLeaky()
         {
             string didGetLeakException = "didGetLeakException";
-            if (TestContext.Properties.Contains(StressUtil.PropNameLogger))
-            {/// put these in logger rather than TestContext.WriteLine so they show in build pipeline test results
-                Logger logger = TestContext.Properties[StressUtil.PropNameLogger] as Logger;
-                logger?.LogMessage($"Username=" + Environment.GetEnvironmentVariable("Username"));
-                logger?.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
-                logger?.LogMessage($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
+            if (TestContext.Properties.Contains(StressUtil.PropNameCurrentIteration) && // only do once, but after logger has been set
+                (int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]) == 0)
+            {
+                if (TestContext.Properties.Contains(StressUtil.PropNameLogger))
+                {/// put these in logger rather than TestContext.WriteLine so they show in build pipeline test results
+                    Logger logger = TestContext.Properties[StressUtil.PropNameLogger] as Logger;
+                    logger?.LogMessage($"Username=" + Environment.GetEnvironmentVariable("Username"));
+                    logger?.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
+                    logger?.LogMessage($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
+                }
             }
             int numIter = 11;
             try
@@ -59,8 +63,41 @@ namespace TestStressDll
 
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
             }
-            catch (LeakException)
+            catch (LeakException ex)
             {
+                TestContext.WriteLine($"Caught exception {ex.Message}");
+                var lstFileResults = (List<FileResultsData>)TestContext.Properties[StressUtil.PropNameListFileResults];
+                foreach (var result in lstFileResults.OrderBy(r => r.filename))
+                {
+                    TestContext.WriteLine($"File result {Path.GetFileName(result.filename)}");
+                }
+                var expectedFiles = new[] {
+                "Graph # Bytes in all Heaps.png",
+"Graph GDIHandles.png",
+"Graph Handle Count.png",
+"Graph Private Bytes.png",
+"Graph Thread Count.png",
+"Graph UserHandles.png",
+"Graph Virtual Bytes.png",
+"Measurements.txt",
+$"StressLeaky_{numIter}_0.dmp",
+$"StressLeaky_{numIter-4}_0.dmp",
+"StressTestLog.log",
+$"String and Type Count differences_{numIter}.txt",
+MeasurementHolder._xmlResultFileName,
+};
+                foreach (var itm in expectedFiles)
+                {
+                    Assert.IsTrue(lstFileResults.Where(r => Path.GetFileName(r.filename) == itm).Count() == 1, $"Expected File attachment {itm}");
+                }
+
+                var strAndTypeDiff = File.ReadAllText(lstFileResults.Where(r => Path.GetFileName(r.filename) == $"String and Type Count differences_{numIter}.txt").First().filename);
+                TestContext.WriteLine($"String and Type Count differences_{numIter}.txt");
+                TestContext.WriteLine(strAndTypeDiff);
+                Assert.IsTrue(strAndTypeDiff.Contains(nameof(BigStuffWithLongNameSoICanSeeItBetter)),$"Type must be in StringandTypeDiff");
+                Assert.IsTrue(strAndTypeDiff.Contains("leaking string"), $"'leaking string' must be in StringandTypeDiff");
+                Assert.AreEqual(13, lstFileResults.Count, $"# file results");
+                //                Assert.IsTrue(TestContext.at)
                 TestContext.Properties[didGetLeakException] = 1;
                 throw;
             }

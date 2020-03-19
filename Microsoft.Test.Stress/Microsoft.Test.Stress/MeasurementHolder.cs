@@ -13,6 +13,8 @@ using System.Windows;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Windows.Forms.Integration;
 using System.Windows.Threading;
+using System.Xaml;
+using System.Xml.Linq;
 
 namespace Microsoft.Test.Stress
 {
@@ -149,6 +151,14 @@ namespace Microsoft.Test.Stress
         static string SerializedTelemetrySession = string.Empty;
         private int _GoneQuietSamplesTaken = 0;
         private int _IterationsGoneQuiet = 0;
+        private List<LeakAnalysisResult> _lstAllLeakResults;
+        private DumpAnalyzer _oDumpAnalyzer;
+        private readonly DateTime _startTime = DateTime.Now;
+
+        /// <summary>
+        /// Same as RPS so uploading results works
+        /// </summary>
+        public const string _xmlResultFileName = "ConsumptionTempResults.xml";
 
         /// <summary>
         /// 
@@ -280,15 +290,15 @@ namespace Microsoft.Test.Stress
                 {
                     var filenameMeasurementResults = DumpOutMeasurementsToTxtFile();
                     Logger.LogMessage($"Measurement Results {filenameMeasurementResults}");
-                    var lstLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"));
-                    foreach (var itm in lstLeakResults)
+                    _lstAllLeakResults = (await CalculateLeaksAsync(showGraph: stressUtilOptions.ShowUI, GraphsAsFilePrefix: "Graph"));
+                    foreach (var itm in _lstAllLeakResults)
                     {
                         Logger.LogMessage(itm.ToString());
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}rsquared"] = itm.RSquared(); // can't use perfcounter name: invalid property name. so use enum name
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}slope"] = itm.slope;
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}IsLeak"] = itm.IsLeak;
                     }
-                    lstLeakResults = lstLeakResults.Where(r => r.IsLeak).ToList();
+                    var lstLeakResults = _lstAllLeakResults.Where(r => r.IsLeak).ToList();
 
                     if (lstLeakResults.Count >= 0 || stressUtilOptions.FailTestAsifLeaksFound)
                     {
@@ -303,7 +313,7 @@ namespace Microsoft.Test.Stress
                         var currentDumpFile = await DoCreateDumpAsync($"Taking final snapshot dump at iteration {nSamplesTaken}");
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
-                            var oDumpAnalyzer = new DumpAnalyzer(Logger);
+                            _oDumpAnalyzer = new DumpAnalyzer(Logger);
                             var sb = new StringBuilder();
                             sb.AppendLine($"'{TestName}' Leaks Found");
                             foreach (var leak in lstLeakResults)
@@ -311,7 +321,7 @@ namespace Microsoft.Test.Stress
                                 sb.AppendLine($"Leak Detected: {leak}");
                             }
                             sb.AppendLine();
-                            oDumpAnalyzer.GetDiff(sb,
+                            _oDumpAnalyzer.GetDiff(sb,
                                             baseDumpFileName,
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
@@ -698,44 +708,7 @@ namespace Microsoft.Test.Stress
 
         public void Dispose()
         {
-            if (this.testContext != null)
-            {
-                if (Logger is Logger myLogger)
-                {
-                    var sb = new StringBuilder();
-                    foreach (var str in myLogger._lstLoggedStrings)
-                    {
-                        sb.AppendLine(str);
-                    }
-                    var filename = Path.Combine(ResultsFolder, $"StressTestLog.log");
-                    File.WriteAllText(filename, sb.ToString());
-                    lstFileResults.Add(new FileResultsData() { filename = filename, description = "Stress Test Log" });
-                }
-                //var sbHtml = new StringBuilder("");
-                foreach (var fileresult in lstFileResults)
-                {
-                    this.testContext.AddResultFile(fileresult.filename);
-                }
-                if (stressUtilOptions.SendTelemetry)
-                {
 #if false
-                    // for flow.microsoft.com, sample
-                    // Clustername: "Kustolab"  DatabaseName: "Calvinh"  //cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEventsRaw
-.append MemWatsonPipelineEventsRaw  <|
-let DTMax = MemWatsonPipelineEventsRaw | summarize max(AdvancedServerTimestampUtc);
-cluster("Ddtelvsraw.kusto.windows.net").database("VS").RawEventsVS
-| where EventName startswith "perfwatsonbackend/memwatson"
-| where AdvancedServerTimestampUtc >toscalar(DTMax)
-                    Chart Type: HTML Table
-
-cluster("Kustolab.kusto.windows.net").database("CalvinH").MemWatsonPipelineEventsRaw
-| where EventName == "perfwatsonbackend/memwatsondumpprocessor/cabfailed"
-| where AdvancedServerTimestampUtc > ago(7d)
-| extend CabType = tostring(Properties["perfwatsonbackend.memwatsondumpprocessor.cabfailed.cabp1"])
-| where CabType == "perfwatsonlowmem"
-| extend FailureReason = tostring(Properties["perfwatsonbackend.memwatsondumpprocessor.cabfailed.failurereason"])
-| summarize count() by FailureReason , bin(AdvancedServerTimestampUtc, 1d)
-                    Chart Type: Time Chart
 
 
 From: Brad White <brad.white@microsoft.com> 
@@ -754,29 +727,122 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
 
 #endif
 
-                    dictTelemetryProperties["GoneQuietAvg"] = (double)this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
-                    dictTelemetryProperties["IterationsGoneQuiet"] = this._IterationsGoneQuiet;
-                    dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
-                    dictTelemetryProperties["TestName"] = testContext.TestName;
-                    dictTelemetryProperties["MachineName"] = Environment.GetEnvironmentVariable("COMPUTERNAME");
-                    dictTelemetryProperties["TargetProcessName"] = Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName);
-                    var fileVersion = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
-                    var lastSpace = fileVersion.LastIndexOf(" ");
-                    var branchName = string.Empty;
-                    if (lastSpace > 0)
-                    {
-                        branchName = fileVersion.Substring(lastSpace + 1);
-                    }
-                    dictTelemetryProperties["TargetProcessVersion"] = fileVersion;
-                    dictTelemetryProperties["BranchName"] = branchName;
+            var duration = (DateTime.Now - _startTime);
+            var secsPerIteration = duration.TotalSeconds / stressUtilOptions.NumIterations;
+            Logger.LogMessage($"Number of Seconds/Iteration = {secsPerIteration:n1}");
+            dictTelemetryProperties["IterationsPerSecond"] = secsPerIteration;
+            dictTelemetryProperties["Duration"] = duration.TotalSeconds;
 
-                    PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+            dictTelemetryProperties["GoneQuietAvg"] = (double)this._GoneQuietSamplesTaken / stressUtilOptions.NumIterations;
+            dictTelemetryProperties["IterationsGoneQuiet"] = this._IterationsGoneQuiet;
+            dictTelemetryProperties["NumIterations"] = stressUtilOptions.NumIterations;
+            dictTelemetryProperties["TestName"] = this.TestName;
+            dictTelemetryProperties["MachineName"] = Environment.GetEnvironmentVariable("COMPUTERNAME");
+            dictTelemetryProperties["TargetProcessName"] = Path.GetFileNameWithoutExtension(LstPerfCounterData[0].ProcToMonitor.MainModule.FileName);
+            var fileVersion = LstPerfCounterData[0].ProcToMonitor.MainModule.FileVersionInfo.FileVersion;
+            var lastSpace = fileVersion.LastIndexOf(" ");
+            var branchName = string.Empty;
+            if (lastSpace > 0)
+            {
+                branchName = fileVersion.Substring(lastSpace + 1);
+            }
+            dictTelemetryProperties["TargetProcessVersion"] = fileVersion;
+            dictTelemetryProperties["BranchName"] = branchName;
+
+            WriteResultsToXML(Path.Combine(ResultsFolder, _xmlResultFileName));
+            if (this.testContext != null)
+            {
+                if (Logger is Logger myLogger)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var str in myLogger._lstLoggedStrings)
+                    {
+                        sb.AppendLine(str);
+                    }
+                    var filename = Path.Combine(ResultsFolder, $"StressTestLog.log");
+                    File.WriteAllText(filename, sb.ToString());
+                    lstFileResults.Add(new FileResultsData() { filename = filename, description = "Stress Test Log" });
+                }
+                foreach (var fileresult in lstFileResults)
+                {
+                    this.testContext.AddResultFile(fileresult.filename);
                 }
             }
-            if (telemetrySession != null)
+            if (stressUtilOptions.SendTelemetry)
             {
-                telemetrySession.Dispose();
-                telemetrySession = null;
+                PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+                if (telemetrySession != null)
+                {
+                    telemetrySession.Dispose();
+                    telemetrySession = null;
+                }
+            }
+        }
+        private void WriteResultsToXML(string outputXMLFile)
+        {
+            try
+            {
+                XElement xmlDom = new XElement("StressResults");
+                xmlDom.Add(new XAttribute("TestName", this.TestName));
+                xmlDom.Add(new XAttribute("TargetProcessName", (string)(dictTelemetryProperties["TargetProcessName"])));
+                xmlDom.Add(new XAttribute("TargetProcessVersion", (string)(dictTelemetryProperties["TargetProcessVersion"])));
+                xmlDom.Add(new XAttribute("BranchName", (string)(dictTelemetryProperties["BranchName"])));
+                xmlDom.Add(new XAttribute("NumIterations", stressUtilOptions.NumIterations));
+                xmlDom.Add(new XAttribute("Duration", ((double)(dictTelemetryProperties["Duration"])).ToString("0.00")));
+                xmlDom.Add(new XAttribute("GoneQuietAvg", ((double)(dictTelemetryProperties["GoneQuietAvg"])).ToString("0.00")));
+                xmlDom.Add(new XAttribute("IterationsGoneQuiet", ((int)dictTelemetryProperties["IterationsGoneQuiet"]).ToString("0")));
+
+                foreach (var result in _lstAllLeakResults)
+                {
+                    var xmlResult = new XElement("LeakResult");
+                    xmlResult.Add(new XAttribute("Name", result.perfCounterData.perfCounterType.ToString()));// use enum (with no embedded spaces) rather than name
+                    var fmt = (result.perfCounterData.PerfCounterName.IndexOf("ytes") > 0) ? "0" : "0.000";
+                    xmlResult.Add(new XAttribute("Slope", result.slope.ToString(fmt)));
+                    xmlResult.Add(new XAttribute("RSquared", result.RSquared().ToString("0.000")));
+                    xmlResult.Add(new XAttribute("IsLeak", result.IsLeak));
+                    xmlResult.Add(new XAttribute("Threshold", result.perfCounterData.thresholdRegression.ToString(fmt)));
+                    xmlDom.Add(xmlResult);
+                }
+
+                var measResult = new XElement("MeasurementResult");
+                xmlDom.Add(measResult);
+                foreach (var kvp in measurements)
+                {
+                    var measnode = new XElement(kvp.Key.ToString());
+                    measResult.Add(measnode);
+                    foreach (var val in kvp.Value)
+                    {
+                        measnode.Add(new XElement("Value", val));
+                    }
+                }
+                if (_oDumpAnalyzer != null)
+                {
+                    void AddDiffNode(string kind, Dictionary<string, Tuple<int, int>> dict)
+                    {
+                        var node = new XElement(kind + "s");
+                        xmlDom.Add(node);
+                        foreach (var kvp in dict)
+                        {
+                            var child = new XElement(kind, kvp.Key);// + @"</\\test>"
+                            child.Add(new XAttribute("BaseCnt", kvp.Value.Item1));
+                            child.Add(new XAttribute("CurrCnt", kvp.Value.Item2));
+                            node.Add(child);
+                        }
+                    }
+                    AddDiffNode("Type", _oDumpAnalyzer._dictTypeDiffs);
+                    AddDiffNode("String", _oDumpAnalyzer._dictStringDiffs);
+                }
+
+                xmlDom.Save(outputXMLFile);
+                if (stressUtilOptions.ShowUI)
+                {
+                    Process.Start(outputXMLFile);
+                }
+                lstFileResults.Add(new FileResultsData() { filename = outputXMLFile, description = "XML Results" });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogMessage($"Exception writing XML file results {outputXMLFile} " + ex.ToString());
             }
         }
 
