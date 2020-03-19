@@ -193,9 +193,12 @@ namespace Microsoft.Test.Stress
             {
                 if (dictBase.TryGetValue(entryCurrent.Key, out var baseCnt)) // if it's also in the basedump
                 {
-                    if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value) // value has increased by at least 1 per iteration
+                    if (baseCnt >= TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot) // base must have grown at least 1 per iteration
                     {
-                        actionDiff(entryCurrent.Key, baseCnt, entryCurrent.Value);
+                        if (baseCnt + NumIterationsBeforeTotalToTakeBaselineSnapshot <= entryCurrent.Value) // value has increased by at least 1 per iteration
+                        {
+                            actionDiff(entryCurrent.Key, baseCnt, entryCurrent.Value);
+                        }
                     }
                 }
             }

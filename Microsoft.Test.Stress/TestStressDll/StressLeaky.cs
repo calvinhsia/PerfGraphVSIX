@@ -90,6 +90,12 @@ MeasurementHolder._xmlResultFileName,
                 {
                     Assert.IsTrue(lstFileResults.Where(r => Path.GetFileName(r.filename) == itm).Count() == 1, $"Expected File attachment {itm}");
                 }
+
+                var strAndTypeDiff = File.ReadAllText(lstFileResults.Where(r => Path.GetFileName(r.filename) == $"String and Type Count differences_{numIter}.txt").First().filename);
+                TestContext.WriteLine($"String and Type Count differences_{numIter}.txt");
+                TestContext.WriteLine(strAndTypeDiff);
+                Assert.IsTrue(strAndTypeDiff.Contains(nameof(BigStuffWithLongNameSoICanSeeItBetter)),$"Type must be in StringandTypeDiff");
+                Assert.IsTrue(strAndTypeDiff.Contains("leaking string"), $"'leaking string' must be in StringandTypeDiff");
                 Assert.AreEqual(13, lstFileResults.Count, $"# file results");
                 //                Assert.IsTrue(TestContext.at)
                 TestContext.Properties[didGetLeakException] = 1;
