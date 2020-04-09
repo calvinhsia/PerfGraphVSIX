@@ -49,6 +49,10 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,5,0,5" HorizontalAlignment="Left">
+            <Label>Filter: </Label>
+            <TextBox x:Name="txtFilter" MinWidth="200" />
+        </StackPanel>
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,5,0,5" HorizontalAlignment="Right">
             <CheckBox Name="GcCheckbox" Content="GC" Width="40" Margin="5,3,5,0" Checked="OnGcChecked" ToolTip="Check to do a GC after each interval of refresh. View is refreshed every 1 second." />
             <Button Content="Reset" Width="40" Margin="5,0,5,0" Click="OnResetClick" ToolTip="Click to clear all currently tracked objects. Cannot be undone once performed untill VS is restarted"/>
