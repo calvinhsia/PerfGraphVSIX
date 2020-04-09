@@ -134,7 +134,7 @@ namespace PerfGraphVSIX
                 if (trackedObject.HasProbablyLeaked)
                 {
                     closedContent.AppendLine("\t " + closedIndex + ". Probably Leaked object (Alive even after object claims to be closed): " + trackedObject.Identifier +
-                                                Environment.NewLine + "\t   Descritpion: " + trackedObject.Description +
+                                                Environment.NewLine + "\t   Description: " + trackedObject.Description +
                                                 Environment.NewLine + "\t   Preview: " + trackedObject.Preview +
                                                 Environment.NewLine + recordDelimtiter);
                     closedIndex++;
@@ -142,7 +142,7 @@ namespace PerfGraphVSIX
                 else
                 {
                     openContent.AppendLine("\t " + openIndex + ". Alive object (Object claims to still be open): " + trackedObject.Identifier +
-                                                Environment.NewLine + "\t   Descritpion: " + trackedObject.Description +
+                                                Environment.NewLine + "\t   Description: " + trackedObject.Description +
                                                 Environment.NewLine + "\t   Preview: " + trackedObject.Preview +
                                                 Environment.NewLine + recordDelimtiter);
                     openIndex++;

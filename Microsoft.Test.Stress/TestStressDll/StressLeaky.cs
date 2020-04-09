@@ -84,7 +84,7 @@ $"StressLeaky_{numIter}_0.dmp",
 $"StressLeaky_{numIter-4}_0.dmp",
 "StressTestLog.log",
 $"String and Type Count differences_{numIter}.txt",
-MeasurementHolder._xmlResultFileName,
+//MeasurementHolder._xmlResultFileName,
 };
                 foreach (var itm in expectedFiles)
                 {
@@ -96,7 +96,7 @@ MeasurementHolder._xmlResultFileName,
                 TestContext.WriteLine(strAndTypeDiff);
                 Assert.IsTrue(strAndTypeDiff.Contains(nameof(BigStuffWithLongNameSoICanSeeItBetter)),$"Type must be in StringandTypeDiff");
                 Assert.IsTrue(strAndTypeDiff.Contains("leaking string"), $"'leaking string' must be in StringandTypeDiff");
-                Assert.AreEqual(13, lstFileResults.Count, $"# file results");
+                Assert.AreEqual(expectedFiles.Length, lstFileResults.Count, $"# file results");
                 //                Assert.IsTrue(TestContext.at)
                 TestContext.Properties[didGetLeakException] = 1;
                 throw;
