@@ -193,7 +193,12 @@
 
                 btnDoSample.Click += (o, e) =>
                   {
-                      ThreadHelper.JoinableTaskFactory.Run(() => DoSampleAsync(measurementHolderInteractiveUser, "Manual"));
+                      ThreadHelper.JoinableTaskFactory.Run(async () =>
+                          {
+                              await WaitForInitializationCompleteAsync();
+                              await DoSampleAsync(measurementHolderInteractiveUser, "Manual");
+                          }
+                      );
                   };
 
 
@@ -254,8 +259,8 @@
 
                 _ = Task.Run(async () =>
                 {
-                    await AddStatusMsgAsync("Waiting 15 seconds to initialize graph");
-                    await Task.Delay(TimeSpan.FromSeconds(15));// delay samples til VS started
+                    //await AddStatusMsgAsync("Waiting 15 seconds to initialize graph");
+                    //await Task.Delay(TimeSpan.FromSeconds(15));// delay samples til VS started
                     await ResetPerfCounterMonitorAsync();
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
@@ -593,10 +598,10 @@
 #pragma warning restore VSTHRD100 // Avoid async void methods
         {
             btnClrObjExplorer.IsEnabled = false;
+            await WaitForInitializationCompleteAsync();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             DoGC(); //must be on main thread
             await Task.Delay(TimeSpan.FromSeconds(1));
-
             await measurementHolderInteractiveUser.CreateDumpAsync(
                 System.Diagnostics.Process.GetCurrentProcess().Id,
                 MemoryAnalysisType.StartClrObjExplorer,
@@ -605,12 +610,22 @@
             btnClrObjExplorer.IsEnabled = true;
         }
 
+        private async Task WaitForInitializationCompleteAsync()
+        {
+            while (measurementHolderInteractiveUser == null)
+            {
+                await AddStatusMsgAsync("waiting for initialization to complete");
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+        }
+
 #pragma warning disable VSTHRD100 // Avoid async void methods
         private async void BtnExecCode_Click(object sender, RoutedEventArgs e)
 #pragma warning restore VSTHRD100 // Avoid async void methods
         {
             try
             {
+                await WaitForInitializationCompleteAsync();
                 if (this.UpdateInterval != 0)
                 {
                     this.UpdateInterval = 0;

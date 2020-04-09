@@ -183,13 +183,16 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.3.2099" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.6.2043">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Editor" Version="16.6.61" />
     <PackageReference Include="Microsoft.VisualStudio.CoreUtility" Version="16.6.61" />
     <PackageReference Include="Microsoft.VisualStudio.ComponentModelHost" Version="16.5.9" />
     <PackageReference Include="Microsoft.VisualStudio.Shell.15.0" Version="16.6.29814.60" />
-	<PackageReference Include="Microsoft.VisualStudio.Workspace.VSIntegration" Version="16.3.43" />
-	<PackageReference Include="EnvDTE" Version="8.0.2" />
+    <PackageReference Include="Microsoft.VisualStudio.Workspace.VSIntegration" Version="16.3.43" />
+    <PackageReference Include="EnvDTE" Version="8.0.2" />
     <PackageReference Include="EnvDTE80" Version="8.0.3" />
     <PackageReference Include="Microsoft.VisualStudio.Workspace" Version="16.3.43" />
     <PackageReference Include="Microsoft.VisualStudio.Workspace.VSIntegration.Contracts" Version="16.1.22-pre-gb310514873" />

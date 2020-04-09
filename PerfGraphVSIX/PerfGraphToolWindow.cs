@@ -18,17 +18,23 @@
     [Guid("6772729d-d216-4ae2-8d05-da9f47416168")]
     public class PerfGraphToolWindow : ToolWindowPane
     {
+        internal const string CaptionString = "PerfGraphToolWindow";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PerfGraphToolWindow"/> class.
         /// </summary>
         public PerfGraphToolWindow() : base(null)
         {
-            this.Caption = "PerfGraphToolWindow";
+            this.Caption = CaptionString;
 
             // This is the user control hosted by the tool window; Note that, even if this class implements IDisposable,
             // we are not calling Dispose on this object. This is because ToolWindowPane calls Dispose on
             // the object returned by the Content property.
             this.Content = new PerfGraphToolWindowControl();
+        }
+        public PerfGraphToolWindow(string message): this()
+        {
+
         }
     }
 }
