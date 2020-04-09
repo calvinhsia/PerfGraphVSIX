@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -92,6 +93,10 @@ namespace PerfGraphVSIX
         {
             foreach (var trackedObject in trackedObjects)
             {
+                if(!string.IsNullOrEmpty(txtFilter.Text) &&  !(CultureInfo.CurrentCulture.CompareInfo.IndexOf(trackedObject.Identifier, txtFilter.Text) >=0))
+                {
+                    continue;
+                }
                 var t = new TextBlock();
                 t.FontFamily = _fontFamily;
                 t.Margin = new Thickness(2.0);
