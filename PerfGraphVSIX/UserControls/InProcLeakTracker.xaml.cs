@@ -22,7 +22,6 @@ namespace PerfGraphVSIX
         private readonly FontFamily _fontFamily;
         private readonly JoinableTaskFactory _jtf;
         private readonly IMemoryLeakTrackerService _tracker;
-        private readonly HashSet<LivingObjectRecord> _alreadyShownRecords = new HashSet<LivingObjectRecord>();
 
         public InProcLeakTracker()
         {
@@ -32,8 +31,10 @@ namespace PerfGraphVSIX
             _tracker = PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
             _jtf = PerfGraphToolWindowPackage.ComponentModel.GetService<JoinableTaskContext>().Factory;
 
-            _timer = new DispatcherTimer(DispatcherPriority.Background, this.Dispatcher);
-            _timer.Interval = TimeSpan.FromMilliseconds(1000.0);
+            _timer = new DispatcherTimer(DispatcherPriority.Background, this.Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(1000.0)
+            };
 
             this.IsVisibleChanged += OnIsVisibleChanged;
         }
@@ -97,11 +98,13 @@ namespace PerfGraphVSIX
                 {
                     continue;
                 }
-                var t = new TextBlock();
-                t.FontFamily = _fontFamily;
-                t.Margin = new Thickness(2.0);
-                t.Text = "Tracked Object: " + trackedObject.Identifier + " ; Description: " + trackedObject.Description;
-                t.ToolTip = trackedObject.Preview;
+                var t = new TextBlock
+                {
+                    FontFamily = _fontFamily,
+                    Margin = new Thickness(2.0),
+                    Text = "Tracked Object: " + trackedObject.Identifier + " ; Description: " + trackedObject.Description,
+                    ToolTip = trackedObject.Preview
+                };
                 views.Children.Add(t);
             }
         }

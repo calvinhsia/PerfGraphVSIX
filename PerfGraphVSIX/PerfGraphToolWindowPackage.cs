@@ -51,14 +51,18 @@ namespace PerfGraphVSIX
 
         public static IComponentModel ComponentModel { get; private set; }
 
+        private bool fDidShowToolWindow = false;
 
         // https://github.com/microsoft/VSSDK-Analyzers/blob/master/doc/VSSDK003.md#solution
         public override IVsAsyncToolWindowFactory GetAsyncToolWindowFactory(Guid toolWindowType)
         {
             IVsAsyncToolWindowFactory res = null;
-            if (toolWindowType == typeof(PerfGraphToolWindow).GUID)
+            if (!fDidShowToolWindow)
             {
-                res =  this;
+                if (toolWindowType == typeof(PerfGraphToolWindow).GUID)
+                {
+                    res = this;
+                }
             }
             return res;
         }
@@ -76,11 +80,10 @@ namespace PerfGraphVSIX
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await PerfGraphToolWindowCommand.InitializeAsync(this);
 
-            ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
-            await TaskScheduler.Default;
-            _ = DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+            EnvDTE.DTE dte = (EnvDTE.DTE)await GetServiceAsync(typeof(EnvDTE.DTE));
+            
+            PerfGraphToolWindowCommand.Instance.g_dte = dte ?? throw new InvalidOperationException(nameof(dte));
 
             return "foo";
         }
@@ -90,10 +93,7 @@ namespace PerfGraphVSIX
         /// </summary>
         public PerfGraphToolWindowPackage()
         {
-            // Inside this method you can place any initialization code that does not require
-            // any Visual Studio service because at this point the package object is created but
-            // not sited yet inside Visual Studio environment. The place to do all the other
-            // initialization is the Initialize method.
+
         }
 
 
@@ -104,9 +104,34 @@ namespace PerfGraphVSIX
         /// <param name="cancellationToken">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
         /// <param name="progress">A provider for progress updates.</param>
         /// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
-        //protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
-        //{
-        //}
+        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        {
+            await Task.Yield();
+            await PerfGraphToolWindowCommand.InitializeAsync(this);
+            ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
+            await TaskScheduler.Default;
+            _ = DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
+            //            await InitializeToolWindowAsync(typeof(PerfGraphToolWindow), id: 0, cancellationToken: cancellationToken);
+
+            // Get the instance number 0 of this tool window. This window is single instance so this instance
+            // is actually the only one.
+            // The last flag is set to true so that if the tool window does not exists it will be created.
+            await this.JoinableTaskFactory.RunAsync(async delegate
+             {
+                 var cts = new CancellationToken();
+                 ToolWindowPane window = await this.ShowToolWindowAsync(typeof(PerfGraphToolWindow), id: 0, create: true, cancellationToken: cts);
+                 if ((null == window) || (null == window.Frame))
+                 {
+                     throw new NotSupportedException("Cannot create tool window");
+                 }
+
+                 await this.JoinableTaskFactory.SwitchToMainThreadAsync();
+                 IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
+                 fDidShowToolWindow = true;
+                 Microsoft.VisualStudio.ErrorHandler.ThrowOnFailure(windowFrame.Show());
+             });
+
+        }
 
 
     }

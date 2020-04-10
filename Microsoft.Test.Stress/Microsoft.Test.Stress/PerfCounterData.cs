@@ -195,7 +195,7 @@ namespace Microsoft.Test.Stress
         public static List<PerfCounterData> GetPerfCountersToUse(Process processToMonitor, bool IsForStress)
         {
             var lst = new List<PerfCounterData>();
-            foreach (var pc in _lstPerfCounterDefinitions.Where(p => IsForStress ?  p.IsEnabledForMeasurement : true))
+            foreach (var pc in _lstPerfCounterDefinitions.Where(p => !IsForStress || p.IsEnabledForMeasurement))
             {
                 var newdata = (PerfCounterData)pc.MemberwiseClone();
                 newdata.ProcToMonitor = processToMonitor;
