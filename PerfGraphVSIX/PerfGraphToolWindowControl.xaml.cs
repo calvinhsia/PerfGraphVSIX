@@ -387,7 +387,7 @@
                 await TaskScheduler.Default;
                 try
                 {
-                    res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, IsForInteractiveGraph: UpdateInterval != 0 ? true : false);
+                    res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, IsForInteractiveGraph: UpdateInterval != 0);
                     await AddDataPointsAsync(measurementHolder);
                 }
                 catch (Exception ex)
