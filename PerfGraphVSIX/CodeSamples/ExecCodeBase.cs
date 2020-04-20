@@ -58,6 +58,8 @@ namespace MyCodeToExecute
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
 
+        public bool ShowUI = true;
+
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
         public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
@@ -140,7 +142,7 @@ namespace MyCodeToExecute
                     {
                         NumIterations = numIterations,
                         ProcNamesToMonitor = string.Empty,
-                        ShowUI = true,
+                        ShowUI = this.ShowUI,
                         logger = logger,
                         Sensitivity = Sensitivity,
                         //actExecuteAfterEveryIterationAsync = async (nIter, mHolder) => // uncomment to suppress dump taking/processing.
