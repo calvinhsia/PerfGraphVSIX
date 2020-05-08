@@ -58,7 +58,7 @@
         private string _CntLeakedObjs;
         public string CntLeakedObjs { get { return _CntLeakedObjs; } set { _CntLeakedObjs = value; RaisePropChanged(); } }
 
-        private int _UpdateInterval = 1000;
+        private int _UpdateInterval = 0;
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
         /// </summary>
