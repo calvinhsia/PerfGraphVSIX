@@ -55,7 +55,7 @@ namespace MyCodeToExecute
         {
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             // to test if your code leaks, put it here. Repeat a lot to magnify the effect
             for (int i = 0; i < 1; i++)

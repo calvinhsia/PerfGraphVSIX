@@ -54,7 +54,7 @@ namespace MyCodeToExecute
             await Task.Yield();
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             var x = Heap.HeapAlloc(_heap, 0, 1048576 * 1);
             _lstAllocs.Add(x);

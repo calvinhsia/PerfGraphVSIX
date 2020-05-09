@@ -32,7 +32,7 @@ namespace MyCodeToExecute
             await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             int nScroll = 50;
             g_dte.ExecuteCommand("Edit.DocumentStart", @"");

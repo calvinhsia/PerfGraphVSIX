@@ -29,7 +29,7 @@ namespace MyCodeToExecute
             await OpenASolutionAsync();
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             _tcsProject = new TaskCompletionSource<int>();
             g_dte.ExecuteCommand("Build.CleanSolution", @"");

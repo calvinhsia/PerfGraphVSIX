@@ -58,6 +58,10 @@ namespace MyCodeToExecute
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
 
+/// <summary>
+/// If true, will show graph of measurements, then launch ClrObjectExplorer automatically, with the String and Type differences text file
+/// False means don't show graph and don't launch ClrObjectExplorer
+/// </summary>
         public bool ShowUI = true;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
@@ -115,21 +119,27 @@ namespace MyCodeToExecute
         {
             await Task.Yield();
         }
-        public virtual async Task DoIterationBodyAsync()
+        public virtual async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             await Task.Yield();
         }
 
-        public virtual async Task DoCleanupAsync()
+        public virtual async Task DoCleanupAsync() // cleanup after all iterations
         {
             await Task.Yield();
         }
 
         public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f, int delayBetweenIterationsMsec = 1000)
         {
-            await DoInitializeAsync();
-            await IterateCode(numIterations, Sensitivity, delayBetweenIterationsMsec);
-            await DoCleanupAsync();
+            try
+            {
+                await DoInitializeAsync();
+                await IterateCode(numIterations, Sensitivity, delayBetweenIterationsMsec);
+            }
+            finally
+            {
+                DoCleanupAsync().Wait();
+            }
         }
 
         public async Task IterateCode(int numIterations, double Sensitivity, int delayBetweenIterationsMsec)
@@ -145,6 +155,7 @@ namespace MyCodeToExecute
                         ShowUI = this.ShowUI,
                         logger = logger,
                         Sensitivity = Sensitivity,
+                        NumIterationsBeforeTotalToTakeBaselineSnapshot = NumIterationsBeforeTotalToTakeBaselineSnapshot,
                         //actExecuteAfterEveryIterationAsync = async (nIter, mHolder) => // uncomment to suppress dump taking/processing.
                         //{
                         //    await Task.Yield();
@@ -157,7 +168,7 @@ namespace MyCodeToExecute
                     var baseDumpFileName = string.Empty;
                     for (int iteration = 0; iteration < numIterations && !_CancellationTokenExecuteCode.IsCancellationRequested; iteration++)
                     {
-                        await DoIterationBodyAsync();
+                        await DoIterationBodyAsync(iteration, _CancellationTokenExecuteCode);
                         await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
                         var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
                         // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log

@@ -73,7 +73,7 @@ namespace TestStressDll
 
 
         [TestCleanup]
-        public async Task DoCleanupAsync()
+        public async Task CleanupAsync()
         {
             await Task.Yield();
             foreach (var itm in _lst)

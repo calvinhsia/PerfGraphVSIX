@@ -60,6 +60,7 @@ namespace PerfGraphVSIX
                 {
                     var compParams = new CompilerParameters();
                     _lstRefDirs = new HashSet<string>();
+                    _lstRefDirs.Add(Path.GetDirectoryName(pathFileToExecute));// add the dir of the source file as a ref dir
                     void AddFileToCompileList(string fileToCompile)
                     {
                         if (lstFilesToCompile.Contains(fileToCompile))
@@ -97,6 +98,14 @@ namespace PerfGraphVSIX
                                         refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
                                     }
                                     var dir = System.IO.Path.GetDirectoryName(refAsm);
+                                    if (string.IsNullOrEmpty(dir))
+                                    {
+                                        var temp = Path.Combine(Path.GetDirectoryName(pathFileToExecute), refAsm);
+                                        if (File.Exists(temp))
+                                        {
+                                            refAsm = temp;
+                                        }
+                                    }
                                     //                                _logger.LogMessage($"AddRef {refAsm}");
                                     if (!string.IsNullOrEmpty(refAsm))
                                     {

@@ -58,7 +58,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CodeExecutor.cs" />
-    <Content Include="CodeSamples\NativeHeap.cs" />
+    <Content Include="CodeSamples\MapFileDict.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="CodeSamples\MapFileDict.pdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="CodeSamples\NativeHeap.cs">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="CodeSamples\MapFileDictSample.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Compile Include="UserControls\InProcLeakTracker.xaml.cs">
       <DependentUpon>InProcLeakTracker.xaml</DependentUpon>
     </Compile>

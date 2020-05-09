@@ -89,6 +89,7 @@ namespace Microsoft.Test.Stress
         ///  Specifies the iteration # at which to take a baseline. 
         ///   NumIterationsBeforeTotalToTakeBaselineSnapshot is subtracted from NumIterations to get the baseline iteration number
         /// e.g. 100 iterations, with NumIterationsBeforeTotalToTakeBaselineSnapshot ==4 means take a baseline at iteartion 100-4==96;
+        /// Setting to 0 means don't take a baseline snapshot
         /// </summary>
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
 

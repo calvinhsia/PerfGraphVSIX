@@ -30,7 +30,7 @@ namespace MyCodeToExecute
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode);
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             _tcsDebug = new TaskCompletionSource<int>();
             g_dte.ExecuteCommand("Debug.Start", @"");
