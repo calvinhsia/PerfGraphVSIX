@@ -36,45 +36,44 @@ namespace MyCodeToExecute
 
         MapFileDict<int, DataClass> mfd;
         IDictionary<int, DataClass> dict;
+        Random _random = new Random();
+
         public override async Task DoInitializeAsync()
         {
-            logger.LogMessage("In MapFileDict");
+            bool fUseMapDict = true;
+            logger.LogMessage("Using " + (fUseMapDict ? "MapFileDict" : "Normal dictionary"));
+            if (!fUseMapDict)
+            {
+                dict = new Dictionary<int, DataClass>();
+            }
+            else
+            {
+                var mapfileType = MapMemTypes.MapMemTypePageFile;
+                mfd = new MapFileDict<int, DataClass>(ulInitialSize: 0, mapfileType: mapfileType);
+//                mfd._MemMap.ChangeViewSize(65536 * 2);
+                dict = mfd;
+            }
         }
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
-            var numPerIter = 4000000;
-            bool fUseMapDict = true;
+            var numPerIter = 10000;
+            var strSize = 10000;
             await Task.Run(async () =>
             {
-                if (!fUseMapDict)//|| true)
-                {
-                    dict = new Dictionary<int, DataClass>();
-                }
-                else
-                {
-                    if (mfd != null)
-                    {
-                        mfd.Dispose();
-                    }
-                    var mapfileType = MapMemTypes.MapMemTypeFileName;
-                    mfd = new MapFileDict<int, DataClass>(ulInitialSize: 0, mapfileType: mapfileType);
-                    mfd._MemMap.ChangeViewSize(65536 * 2);
-                    dict = mfd;
-                }
-                // to test if your code leaks, put it here. Repeat a lot to magnify the effect
+                dict.Clear();
                 for (int i = 0; i < numPerIter; i++)
                 {
-                    dict[iteration * numPerIter + i] = DataClass.MakeInstance((ulong)iteration);
-                    if (i % 1000 == 0 && cts.IsCancellationRequested)
+                    dict[i] = DataClass.MakeInstance((ulong)i);
+
+                    if (i % 10000 == 0 && cts.IsCancellationRequested)
                     {
                         break;
                     }
-                    //                logger.LogMessage(string.Format("loop {0}", i));
                 }
                 if (mfd != null)
                 {
                     logger.LogMessage(mfd._MemMap._stats.ToString());
-//                    await Task.Delay(TimeSpan.FromSeconds(20), cts);
+                    //                    await Task.Delay(TimeSpan.FromSeconds(10), cts);
                 }
             });
         }
@@ -198,5 +197,4 @@ namespace MyCodeToExecute
             return base.GetHashCode();
         }
     }
-
 }
