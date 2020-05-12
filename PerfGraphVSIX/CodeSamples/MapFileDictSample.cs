@@ -25,7 +25,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 13);
+                await oMyClass.DoTheTest(numIterations: 5);
             }
         }
         public MyClass(object[] args) : base(args)
@@ -40,30 +40,33 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-            bool fUseMapDict = true;
-            logger.LogMessage("Using " + (fUseMapDict ? "MapFileDict" : "Normal dictionary"));
+            // Sample demonstrates  putting lots of data in a dictionary.
+            // The dictionary can be either a normal System.Collectsions.Generic.Dictionary<K,V>
+            // or a MapFileDict<K,V>, because they both implement IDictionary<K,V>
+            bool fUseMapDict = false;
             if (!fUseMapDict)
             {
                 dict = new Dictionary<int, DataClass>();
             }
             else
             {
-                var mapfileType = MapMemTypes.MapMemTypePageFile;
+                var mapfileType = MapMemTypes.MapMemTypePageFile; // store data in system paeg file 
+                mapfileType = MapMemTypes.MapMemTypeFileName; // store data in temp file on disk
                 mfd = new MapFileDict<int, DataClass>(ulInitialSize: 0, mapfileType: mapfileType);
-//                mfd._MemMap.ChangeViewSize(65536 * 2);
+                //                mfd._MemMap.ChangeViewSize(65536 * 2); // can change default memory map view size
                 dict = mfd;
             }
+            logger.LogMessage("Using " + dict.GetType().Name);
         }
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             var numPerIter = 10000;
-            var strSize = 10000;
             await Task.Run(async () =>
             {
                 dict.Clear();
                 for (int i = 0; i < numPerIter; i++)
                 {
-                    dict[i] = DataClass.MakeInstance((ulong)i);
+                    dict[i] = DataClass.MakeInstance(i);
 
                     if (i % 10000 == 0 && cts.IsCancellationRequested)
                     {
@@ -107,24 +110,24 @@ namespace MyCodeToExecute
         public double double8;
         public DateTime dt9;
 
-        public static DataClass MakeInstance(ulong i)
+        public static DataClass MakeInstance(int i)
         {
             var testInstance = new DataClass()
             {
                 //str5 = "FOO" + i.ToString(), 
-                int1 = (int)i,
-                ulong4 = i,
+                int1 = i,
+                ulong4 = (ulong)i,
                 uint2 = (uint)i,
-                long3 = 256 * (long)i,
-                basenum = (long)i,
+                long3 = 256 * i,
+                basenum = i,
                 str5 = makestring(i),
                 float7 = (float)i,
                 double8 = (double)i,
-                dt9 = new DateTime((long)i)
+                dt9 = new DateTime(i)
             };
             return testInstance;
         }
-        public static string makestring(ulong i)
+        public static string makestring(int i)
         {
             if (i % 10 == 0)
             {
@@ -134,7 +137,7 @@ namespace MyCodeToExecute
             {
                 return string.Empty; // test null strings too
             }
-            return string.Format("Foo{0}", new string('0', (int)(i % 20000)));
+            return string.Format("Foo{0}", new string('0', 10000 + i % 20000));
         }
 
         //public DateTime dt;
