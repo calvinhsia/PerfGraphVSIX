@@ -267,6 +267,30 @@ namespace MyCodeToExecute
             _tcsDebug.TrySetResult(0);
         }
 
+        public void IterateSolutionItems(Func<Project, ProjectItem, int, bool> func)
+        {
+            var projs = g_dte.Solution.Projects;
+            foreach (Project proj in projs)
+            {
+                //                m_pane.OutputString(string.Format("Proj {0} {1}\n", proj.Name, proj.Kind));
+                IterateProjItems(proj, proj.ProjectItems, func, 0);
+            }
+        }
+        public void IterateProjItems(Project proj, ProjectItems items, Func<Project, ProjectItem, int, bool> func, int nLevel)
+        {
+            if (items != null)
+            {
+                foreach (ProjectItem item in items)
+                {
+                    if (func(proj, item, nLevel))
+                    {
+                        //       m_pane.OutputString(string.Format("  Item {0} {1} {2}\n", new string(' ', 2 * nLevel), item.Name, item.Kind));
+                        IterateProjItems(proj, item.ProjectItems, func, nLevel + 1);
+                    }
+                }
+            }
+        }
+
     }
 }
 

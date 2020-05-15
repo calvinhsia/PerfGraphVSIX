@@ -25,7 +25,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 5);
+                await oMyClass.DoTheTest(numIterations: 1);
             }
         }
         IVsOutputWindowPane m_pane;
@@ -35,7 +35,6 @@ namespace MyCodeToExecute
             NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
         }
         Guid guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
-        Guid guidDebugOutputPane = new Guid("FC076020-078A-11D1-A7DF-00A0C9110051");
 
         public override async Task DoInitializeAsync()
         {
@@ -52,11 +51,61 @@ namespace MyCodeToExecute
             outputWindow.GetPane(ref guidPane, out m_pane);
             m_pane.Clear();
             logger.LogMessage(string.Format("got output Window CreatePane={0} OutputWindow = {1}  Pane {2}", crPane, outputWindow, m_pane));
+
+            IVsUIShell vsUIShell = await asyncServiceProvider.GetServiceAsync(typeof(SVsUIShell)) as IVsUIShell;
+            logger.LogMessage(string.Format("Got vsuishell {0}", vsUIShell));
+
+            IterateSolutionItems((proj, item, nLevel) =>
+            {
+                var fName = string.Empty;
+                if (item.FileCount == 1 && item.Name != "OutputPane.cs") // misc files proj
+                {
+                    try
+                    {
+                        fName = item.FileNames[0];
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        m_pane.OutputString(string.Format("ArgEx '{0}' {1}\n", item.Name, ex));
+                    }
+                }
+                m_pane.OutputString(string.Format("Item {0} {1} {2} {3} {4}\n", new string(' ', 2 * nLevel), proj.Name, item.Name, fName, item.Kind));
+                return true;
+            });
+
+            IterateSolutionItems((proj, item, nLevel) =>
+            {
+                var fName = string.Empty;
+                if (item.FileCount == 1 && item.Name != "OutputPane.cs") // misc files proj
+                {
+                    try
+                    {
+                        fName = item.FileNames[0];
+                        if (fName.EndsWith("xaml")) // || fName.EndsWith("vb") || fName.EndsWith("cpp"))
+                        {
+//                            if (fName.Contains("xaml"))
+                            {
+                                var w = item.Open(EnvDTE.Constants.vsViewKindPrimary);
+                                w.Visible = true;
+                                m_pane.OutputString(string.Format("Opening'{0}' {1} {2}\n", item.Name, item.Kind, w));
+                            }
+                        }
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        m_pane.OutputString(string.Format("ArgEx '{0}' {1}\n", item.Name, ex));
+                    }
+                }
+                m_pane.OutputString(string.Format("Item {0} {1} {2} {3} {4}\n", new string(' ', 2 * nLevel), proj.Name, item.Name, fName, item.Kind));
+                return true;
+            });
+
         }
+
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken token)
         {
             await Task.Yield();
-            var numPerIter = 3;
+            var numPerIter = 1;
             for (int i = 0; i < numPerIter; i++)
             {
                 m_pane.OutputString(string.Format(" test {0}  {1}\n", i, DateTime.Now));
