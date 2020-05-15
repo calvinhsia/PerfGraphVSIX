@@ -237,6 +237,7 @@ namespace PerfGraphVSIX
                             token,
                             itakeSample,
                             PerfGraphToolWindowCommand.Instance?.g_dte,
+                            PerfGraphToolWindowCommand.Instance?.package
                         };
                         var res = mainMethod.Invoke(null, new object[] { parms });
                         if (res is string strres)

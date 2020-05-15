@@ -57,11 +57,14 @@ namespace MyCodeToExecute
         public ILogger logger;
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
+        public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
+        public IAsyncServiceProvider asyncServiceProvider { get { return package as IAsyncServiceProvider; } }
+        private object package;
 
-/// <summary>
-/// If true, will show graph of measurements, then launch ClrObjectExplorer automatically, with the String and Type differences text file
-/// False means don't show graph and don't launch ClrObjectExplorer
-/// </summary>
+        /// <summary>
+        /// If true, will show graph of measurements, then launch ClrObjectExplorer automatically, with the String and Type differences text file
+        /// False means don't show graph and don't launch ClrObjectExplorer
+        /// </summary>
         public bool ShowUI = true;
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
@@ -84,7 +87,7 @@ namespace MyCodeToExecute
             _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
             itakeSample = args[3] as ITakeSample;
             g_dte = args[4] as EnvDTE.DTE;
-
+            package = args[5] as object;// IAsyncPackage;
             //logger.LogMessage("Registering events ");
 
             BuildEvents = g_dte.Events.BuildEvents;
@@ -138,8 +141,8 @@ namespace MyCodeToExecute
             }
             finally
             {
-                DoCleanupAsync().Wait();
             }
+            await DoCleanupAsync();
         }
 
         public async Task IterateCode(int numIterations, double Sensitivity, int delayBetweenIterationsMsec)
