@@ -32,8 +32,7 @@ namespace MyCodeToExecute
         {
             ShowUI = false;
             NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
-            SolutionToLoad = @"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase.sln";
-            await OpenASolutionAsync();
+            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase.sln");
             g_dte.ExecuteCommand("File.OpenFile", file1);
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
             g_dte.ExecuteCommand("File.OpenFile", file2);

@@ -43,6 +43,7 @@ using System.Threading.Tasks;
 using PerfGraphVSIX;
 using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using EnvDTE;
 
 using Microsoft.VisualStudio.Threading;
@@ -58,7 +59,7 @@ namespace MyCodeToExecute
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
         public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
-        public IAsyncServiceProvider asyncServiceProvider { get { return package as IAsyncServiceProvider; } }
+        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
         private object package;
 
         /// <summary>
@@ -69,16 +70,20 @@ namespace MyCodeToExecute
 
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
-        public string SolutionToLoad = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
 
-        public BuildEvents BuildEvents;
-        public DebuggerEvents DebuggerEvents;
+        public BuildEvents BuildEvents; // need to get ref to these for their lifetime
+        public DebuggerEvents DebuggerEvents;// need to get ref to these for their lifetime
         public ITakeSample itakeSample;
 
         public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsDebug = new TaskCompletionSource<int>();
         public string TestName { get { return Path.GetFileNameWithoutExtension(FileToExecute); } }
+
+        public IVsOutputWindowPane _OutputPane;
+        public IVsUIShell _vsUIShell;
+
+        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
 
         public BaseExecCodeClass(object[] args)
         {
@@ -115,7 +120,36 @@ namespace MyCodeToExecute
 
             BuildEvents = null;
             DebuggerEvents = null;
+        }
 
+        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f, int delayBetweenIterationsMsec = 1000)
+        {
+            try
+            {
+                // this shows how to get VS Services
+                // you can add ref to a DLL if needed, and add Using's if needed
+                // if you're outputting to the OutputWindow, be aware that the OutputPanes are editor instances, which will
+                // look like a leak as they accumulate data.
+                IVsOutputWindow outputWindow = await asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
+                var crPane = outputWindow.CreatePane(
+                    ref _guidPane,
+                    "PerfGraphVSIX",
+                    fInitVisible: 1,
+                    fClearWithSolution: 0);
+                outputWindow.GetPane(ref _guidPane, out _OutputPane);
+                _OutputPane.Clear();
+                logger.LogMessage(string.Format("got output Window CreatePane={0} OutputWindow = {1}  Pane {2}", crPane, outputWindow, _OutputPane));
+
+                _vsUIShell = await asyncServiceProvider.GetServiceAsync(typeof(SVsUIShell)) as IVsUIShell;
+                logger.LogMessage(string.Format("Got vsuishell {0}", _vsUIShell));
+
+                await DoInitializeAsync();
+                await IterateCode(numIterations, Sensitivity, delayBetweenIterationsMsec);
+            }
+            finally
+            {
+            }
+            await DoCleanupAsync();
         }
 
         public virtual async Task DoInitializeAsync()
@@ -130,19 +164,6 @@ namespace MyCodeToExecute
         public virtual async Task DoCleanupAsync() // cleanup after all iterations
         {
             await Task.Yield();
-        }
-
-        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f, int delayBetweenIterationsMsec = 1000)
-        {
-            try
-            {
-                await DoInitializeAsync();
-                await IterateCode(numIterations, Sensitivity, delayBetweenIterationsMsec);
-            }
-            finally
-            {
-            }
-            await DoCleanupAsync();
         }
 
         public async Task IterateCode(int numIterations, double Sensitivity, int delayBetweenIterationsMsec)
@@ -211,15 +232,22 @@ namespace MyCodeToExecute
             UnregisterEvents();
         }
 
-        public async Task OpenASolutionAsync(int delayAfterOpen = 5)
+        public async Task OpenASolutionAsync(string slnFile = "", int delayAfterOpen = 5)
         {
-            _tcsSolution = new TaskCompletionSource<int>();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.Solution.Open(SolutionToLoad);
-            await _tcsSolution.Task;
-            if (!_CancellationTokenExecuteCode.IsCancellationRequested)
+            if (string.IsNullOrEmpty(slnFile))
             {
-                await Task.Delay(TimeSpan.FromSeconds(delayAfterOpen * DelayMultiplier), _CancellationTokenExecuteCode);
+                slnFile = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
+            }
+            if (g_dte.Solution != null && g_dte.Solution.FullName.ToLower() != slnFile.ToLower())
+            {
+                _tcsSolution = new TaskCompletionSource<int>();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                g_dte.Solution.Open(slnFile);
+                await _tcsSolution.Task;
+                if (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(delayAfterOpen * DelayMultiplier), _CancellationTokenExecuteCode);
+                }
             }
         }
 
@@ -266,26 +294,36 @@ namespace MyCodeToExecute
             //logger.LogMessage("DebuggerEvents_OnEnterDesignMode " + Reason.ToString()); //dbgEventReasonStopDebugging
             _tcsDebug.TrySetResult(0);
         }
-
-        public void IterateSolutionItems(Func<Project, ProjectItem, int, bool> func)
+        bool stopIter = false;
+        public async Task IterateSolutionItemsAsync(Func<Project, ProjectItem, int, Task<bool>> func)
         {
             var projs = g_dte.Solution.Projects;
+            stopIter = false;
             foreach (Project proj in projs)
             {
-                //                m_pane.OutputString(string.Format("Proj {0} {1}\n", proj.Name, proj.Kind));
-                IterateProjItems(proj, proj.ProjectItems, func, 0);
+                //                _OutputPane.OutputString(string.Format("Proj {0} {1}\n", proj.Name, proj.Kind));
+                await IterateProjItemsAsync(proj, proj.ProjectItems, func, 0);
+                if (stopIter)
+                {
+                    break;
+                }
             }
         }
-        public void IterateProjItems(Project proj, ProjectItems items, Func<Project, ProjectItem, int, bool> func, int nLevel)
+        async Task IterateProjItemsAsync(Project proj, ProjectItems items, Func<Project, ProjectItem, int, Task<bool>> func, int nLevel)
         {
             if (items != null)
             {
                 foreach (ProjectItem item in items)
                 {
-                    if (func(proj, item, nLevel))
+                    if (await func(proj, item, nLevel))
                     {
-                        //       m_pane.OutputString(string.Format("  Item {0} {1} {2}\n", new string(' ', 2 * nLevel), item.Name, item.Kind));
-                        IterateProjItems(proj, item.ProjectItems, func, nLevel + 1);
+                        //       _OutputPane.OutputString(string.Format("  Item {0} {1} {2}\n", new string(' ', 2 * nLevel), item.Name, item.Kind));
+                        await IterateProjItemsAsync(proj, item.ProjectItems, func, nLevel + 1);
+                    }
+                    else
+                    {
+                        stopIter = true;
+                        break;
                     }
                 }
             }
