@@ -25,7 +25,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 573);
+                await oMyClass.DoTheTest(numIterations: 73);
             }
         }
         public MyClass(object[] args) : base(args)
@@ -42,7 +42,8 @@ namespace MyCodeToExecute
             var rootSuffix = string.Empty;
             appCommandLine.GetOption("rootsuffix", out hasRootSuffix, out rootSuffix);
             logger.LogMessage(string.Format("Root suf {0} {1}", hasRootSuffix, rootSuffix));
-            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
+//            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
+            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\WebApp2\WebApp2.sln");
             //            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase.sln");
 
             await IterateSolutionItemsAsync(async (proj, item, nLevel) =>
@@ -77,16 +78,16 @@ namespace MyCodeToExecute
                     try
                     {
                         fName = item.FileNames[0];
-                        if (fName.EndsWith("MainWindow.xaml") && proj.Name == "hWndHost") // || fName.EndsWith("vb") || fName.EndsWith("cpp"))
+                        if (fName.EndsWith("Default.aspx") && proj.Name == "WebApp2") // || fName.EndsWith("vb") || fName.EndsWith("cpp"))
                         {
                             //                            if (fName.Contains("xaml"))
                             //                            if (item.FileNames[0] == @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost\MainWindow.xaml")
-                            var w = item.Open(EnvDTE.Constants.vsViewKindPrimary);
+                            var w = item.Open(EnvDTE.Constants.vsViewKindDesigner);
                             w.Visible = true;
                             await Task.Delay(TimeSpan.FromSeconds(5));
 
                             lstWindows.Add(w);
-                            _OutputPane.OutputString(string.Format("Opening'{0}' {1} {2}\n", item.Name, item.Kind, w));
+//                            _OutputPane.OutputString(string.Format("Opening'{0}' {1} {2}\n", item.Name, item.Kind, w));
                         }
                         else
                         {
@@ -95,13 +96,12 @@ namespace MyCodeToExecute
                     }
                     catch (ArgumentException ex)
                     {
-                        _OutputPane.OutputString(string.Format("ArgEx '{0}' {1}\n", item.Name, ex));
+//                        _OutputPane.OutputString(string.Format("ArgEx '{0}' {1}\n", item.Name, ex));
                     }
                 }
                 //                _OutputPane.OutputString(string.Format("Item {0} {1} {2} {3} {4}\n", new string(' ', 2 * nLevel), proj.Name, item.Name, fName, item.Kind));
                 return lstWindows.Count < 3 && !token.IsCancellationRequested;
             });
-            logger.LogMessage("Done opening");
             await Task.Delay(TimeSpan.FromSeconds(10));
             foreach (var win in lstWindows)
             {
