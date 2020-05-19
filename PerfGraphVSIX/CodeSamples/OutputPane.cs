@@ -25,13 +25,13 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 7);
+                await oMyClass.DoTheTest(numIterations: 1);
             }
         }
         public MyClass(object[] args) : base(args)
         {
-            //ShowUI = false;
-            //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+            ShowUI = false;
+            NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
         }
 
         public override async Task DoInitializeAsync()
@@ -45,6 +45,16 @@ namespace MyCodeToExecute
 //            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
             await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\WebApp2\WebApp2.sln");
             //            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase.sln");
+
+            IVsUIShellOpenDocument uIShellOpenDocument = await asyncServiceProvider.GetServiceAsync(typeof(SVsUIShellOpenDocument)) as IVsUIShellOpenDocument;
+            if (uIShellOpenDocument != null)
+            {
+                logger.LogMessage("uiShellOpendocument = " + uIShellOpenDocument.ToString());
+            }
+            else
+            {
+                logger.LogMessage("Didn't get uiShellOpendocument ");
+            }
 
             await IterateSolutionItemsAsync(async (proj, item, nLevel) =>
             {
