@@ -16,6 +16,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using Microsoft.VisualStudio.Shell.Interop;
+using System.Linq;
 
 namespace MyCodeToExecute
 {
@@ -37,16 +38,13 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-
-            //var procTree = ProcessEx.GetProcessTree();
-            //DumpProcTree(procTree, 0);
-
             await base.DoInitializeAsync();
         }
+
         bool StopIter = false;
         void IterateTreeNodes(List<ProcessEx.ProcNode> nodes, int level, Func<ProcessEx.ProcNode, int, bool> func)
         {
-            if (level == 0)
+            if (level == 0) // initialize recursion
             {
                 StopIter = false;
             }
@@ -63,7 +61,7 @@ namespace MyCodeToExecute
                 {
                     StopIter = true;
                 }
-                if (StopIter)
+                if (StopIter) // if any recursive call has set it, break
                 {
                     break;
                 }
@@ -72,31 +70,50 @@ namespace MyCodeToExecute
 
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken token)
         {
-            await Task.Yield();
+            await TaskScheduler.Default;
+            var procToMonitor = "XDesProc.exe";
+            var lstProcToMonitor = new List<ProcessEx.ProcNode>();
+            logger.LogMessage("Monitoring Child Processes " + procToMonitor);
+            _OutputPane.Activate();
             while (!token.IsCancellationRequested)
             {
-                await Task.Run(() =>
+                await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
-                    var children = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
-                    var doesHaveIt = false;
-                    IterateTreeNodes(children, level: 0, func: (node, level) =>
+                    var curlstProcToMonitor = new List<ProcessEx.ProcNode>();
+                    var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                    IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
                      {
-                         if (node.ProcEntry.szExeFile.Contains("cl.exe"))
+                         if (node.ProcEntry.szExeFile.IndexOf(procToMonitor, StringComparison.OrdinalIgnoreCase) >= 0)
                          {
-                             doesHaveIt = true;
+                             curlstProcToMonitor.Add(node);
                          }
-                         return !doesHaveIt;
+                         return true;
                      });
-                    if (doesHaveIt)
+                    if (curlstProcToMonitor.Count != lstProcToMonitor.Count ||
+                    (
+                        curlstProcToMonitor.Where(p => lstProcToMonitor.Where(q => q.procId != p.procId).Any()).Any() ||
+                        lstProcToMonitor.Where(p => curlstProcToMonitor.Where(q => q.procId != p.procId).Any()).Any()
+                    ))
                     {
-                        IterateTreeNodes(children, level: 0, func: (node, level) =>
-                          {
-                              logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
-                              return true;
-                          });
+                        int level = 0;
+                        foreach (var node in curlstProcToMonitor)
+                        {
+                            logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
+                        }
+                        lstProcToMonitor.Clear();
+                        lstProcToMonitor.AddRange(curlstProcToMonitor);
+                        //IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                        //  {
+                        //      if (node.ProcEntry.szExeFile.IndexOf(procToMonitor, StringComparison.OrdinalIgnoreCase) >= 0)
+                        //      {
+                        //          _OutputPane.OutputString(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile) + Environment.NewLine);
+                        //          lstProcToMonitor.Add(node.ProcEntry.th32ProcessID);
+                        //      }
+                        //      return true;
+                        //  });
                     }
                 });
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1), token);
             }
         }
 
@@ -120,7 +137,6 @@ namespace MyCodeToExecute
             All = 0x0000001F,
             NoHeaps = 0x40000000
         }
-        //inner struct used only internally
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         public struct PROCESSENTRY32
         {
@@ -137,19 +153,6 @@ namespace MyCodeToExecute
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
             public string szExeFile;
         }
-
-        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        static extern IntPtr CreateToolhelp32Snapshot([In] UInt32 dwFlags, [In] UInt32 th32ProcessID);
-
-        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [DllImport("kernel32", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool CloseHandle([In] IntPtr hObject);
 
         public class ProcNode
         {
@@ -169,22 +172,29 @@ namespace MyCodeToExecute
             }
         }
 
+        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        static extern IntPtr CreateToolhelp32Snapshot([In] UInt32 dwFlags, [In] UInt32 th32ProcessID);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+        [DllImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CloseHandle([In] IntPtr hObject);
+
+
         /// <summary>
         ///  in one pass, produce a tree of nodes
         /// </summary>
-        /// <param name="RootPid">If 0, entire tree. Else tree rooted from specified pid</param>
+        /// <param name="RootPid">If 0, entire tree. Else tree rooted from specified pid, and list length will == 1 or 0</param>
         /// <returns></returns>
         public static List<ProcNode> GetProcessTree(int RootPid = 0)
         {
             var dictprocNodesById = new Dictionary<int, ProcNode>(); // index ProcId
-            GetProcesses((procEntry) =>
-            {
-                var procNodeRaw = new ProcNode(procEntry);
-                //Debug.WriteLine($"{procNodeRaw}  {procEntry.szExeFile}");
-                //Debug.Assert(!dictprocNodesById.ContainsKey(procEntry.th32ProcessID)); // unique ids
-                dictprocNodesById[procEntry.th32ProcessID] = procNodeRaw;
-                return true;
-            });
+            GetProcesses(p => { dictprocNodesById[p.th32ProcessID] = new ProcNode(p); return true; });
 
             var lstNodeRoots = new List<ProcNode>();
             foreach (var proc in dictprocNodesById.Values)

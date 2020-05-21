@@ -80,10 +80,10 @@ namespace MyCodeToExecute
         public TaskCompletionSource<int> _tcsDebug = new TaskCompletionSource<int>();
         public string TestName { get { return Path.GetFileNameWithoutExtension(FileToExecute); } }
 
+        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
         public IVsOutputWindowPane _OutputPane;
         public IVsUIShell _vsUIShell;
 
-        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
 
         public BaseExecCodeClass(object[] args)
         {
@@ -138,10 +138,11 @@ namespace MyCodeToExecute
                     fClearWithSolution: 0);
                 outputWindow.GetPane(ref _guidPane, out _OutputPane);
                 _OutputPane.Clear();
-                logger.LogMessage(string.Format("got output Window CreatePane={0} OutputWindow = {1}  Pane {2}", crPane, outputWindow, _OutputPane));
+//                _OutputPane.Activate();
+                //logger.LogMessage(string.Format("got output Window CreatePane={0} OutputWindow = {1}  Pane {2}", crPane, outputWindow, _OutputPane));
 
                 _vsUIShell = await asyncServiceProvider.GetServiceAsync(typeof(SVsUIShell)) as IVsUIShell;
-                logger.LogMessage(string.Format("Got vsuishell {0}", _vsUIShell));
+                //logger.LogMessage(string.Format("Got vsuishell {0}", _vsUIShell));
 
                 await DoInitializeAsync();
                 await IterateCode(numIterations, Sensitivity, delayBetweenIterationsMsec);

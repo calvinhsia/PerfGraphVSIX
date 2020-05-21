@@ -89,6 +89,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="CodeSamples\Simple.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Compile Include="UserControls\InProcLeakTracker.xaml.cs">
       <DependentUpon>InProcLeakTracker.xaml</DependentUpon>
     </Compile>
