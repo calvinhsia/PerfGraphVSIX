@@ -30,8 +30,8 @@ namespace MyCodeToExecute
         }
         public MyClass(object[] args) : base(args)
         {
-            ShowUI = false;
-            NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+            //ShowUI = false;
+            //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
         }
 
         CancellationTokenSource _cts;

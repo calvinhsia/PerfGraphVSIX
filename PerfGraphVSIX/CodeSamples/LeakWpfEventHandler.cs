@@ -30,6 +30,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.ComponentModel.Composition.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
@@ -48,8 +49,11 @@ using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.ComponentModelHost;
-using EnvDTE;
-
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Reflection;
+using System.Xml;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
@@ -94,31 +98,68 @@ namespace MyCodeToExecute
                 fClearWithSolution: 0);
             outputWindow.GetPane(ref _guidPane, out _OutputPane);
             _OutputPane.Clear();
-            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                await TaskScheduler.Default; // switch to background thread
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();//outputpane must be called from main thread
-                _OutputPane.OutputString("Here in MySimpleSample " + DateTime.Now.ToString("MM/dd/yy hh:mm:ss"));
-                await TaskScheduler.Default; // switch to background thread
-                _logger.LogMessage("Logger message from MySimpleSample. Doesn't support the newest C# compiler constructs");
-            });
-
-            var ComponentModel = (await _asyncServiceProvider.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
-            _logger.LogMessage("CompModel: " + ComponentModel.ToString());
-            var exportProvider = ComponentModel.DefaultExportProvider;
-            var compService = ComponentModel.DefaultCompositionService;
-            var y = new MyMefComponent();
-            compService.SatisfyImportsOnce(y);
-//            var MyMef = ComponentModel.GetService<MyMefComponent>();
+            var ox = new MyWindow(this);
+//            ox.ShowDialog();
+            ox.Show();
         }
     }
-    [Export(typeof(MyMefComponent))]
-    public class MyMefComponent
+    class MyWindow : Window
     {
-        public void Initialize(MySimpleSample mySimpleSample)
+        MySimpleSample _mySimpleSample;
+        public MyWindow(MySimpleSample mySimpleSample)
         {
-            mySimpleSample._logger.LogMessage("From MyMefComponent");
+            this._mySimpleSample = mySimpleSample;
+            this.Loaded += (ol, el) =>
+             {
+                 try
+                 {
+                     _mySimpleSample._logger.LogMessage("In Form Load");
+
+                     var strxaml =
+         string.Format(@"<Grid
+xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+xmlns:l=""clr-namespace:{0};assembly={1}"" 
+        Margin=""5,5,5,5"">
+        <Grid.RowDefinitions>
+            <RowDefinition Height=""auto""/>
+            <RowDefinition Height=""*""/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
+            <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45""/>
+        </StackPanel>
+        
+    </Grid>
+", this.GetType().Namespace,
+         System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)); 
+                     
+                     var strReader = new System.IO.StringReader(strxaml);
+                     var xamlreader = XmlReader.Create(strReader);
+
+                     var grid = (Grid)(XamlReader.Load(xamlreader));
+                     grid.DataContext = this;
+                     this.Content = grid;
+                     var btnGo = (Button)grid.FindName("_btnGo");
+                     btnGo.Click += (o, e) =>
+                     {
+                         this.Close();
+                     };
+
+                 }
+                 catch (global::System.Exception ex)
+                 {
+                     this.Content = ex;
+                 }
+             };
         }
+
+    }
+    class MyButton: Button
+    {
+
+    }
+    class MyCheckBox: CheckBox
+    {
 
     }
 }

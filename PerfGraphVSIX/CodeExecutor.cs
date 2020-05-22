@@ -140,7 +140,7 @@ namespace PerfGraphVSIX
                     AddFileToCompileList(pathFileToExecute);
                     if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
                     {
-                        _logger.LogMessage($"Using prior compiled assembly for {pathFileToExecute}");
+                        _logger.LogMessage($"No Compilation required: Using prior compiled assembly for {pathFileToExecute}");
                     }
                     else
                     {

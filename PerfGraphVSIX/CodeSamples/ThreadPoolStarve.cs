@@ -61,7 +61,7 @@ using System.IO;
  * */
 namespace MyCodeToExecute
 {
-    public class MySimpleSample
+    public class ThreadPoolStarvationDemo
     {
         public IServiceProvider _serviceProvider { get { return _package as IServiceProvider; } }
         public Microsoft.VisualStudio.Shell.IAsyncServiceProvider _asyncServiceProvider { get { return _package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
@@ -74,7 +74,7 @@ namespace MyCodeToExecute
 
         public static async Task DoMain(object[] args)
         {
-            var oMySimpleSample = new MySimpleSample();
+            var oMySimpleSample = new ThreadPoolStarvationDemo();
             await oMySimpleSample.DoInitializeAsync(args);
         }
         async Task DoInitializeAsync(object[] args)
@@ -102,23 +102,6 @@ namespace MyCodeToExecute
                 await TaskScheduler.Default; // switch to background thread
                 _logger.LogMessage("Logger message from MySimpleSample. Doesn't support the newest C# compiler constructs");
             });
-
-            var ComponentModel = (await _asyncServiceProvider.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
-            _logger.LogMessage("CompModel: " + ComponentModel.ToString());
-            var exportProvider = ComponentModel.DefaultExportProvider;
-            var compService = ComponentModel.DefaultCompositionService;
-            var y = new MyMefComponent();
-            compService.SatisfyImportsOnce(y);
-//            var MyMef = ComponentModel.GetService<MyMefComponent>();
         }
-    }
-    [Export(typeof(MyMefComponent))]
-    public class MyMefComponent
-    {
-        public void Initialize(MySimpleSample mySimpleSample)
-        {
-            mySimpleSample._logger.LogMessage("From MyMefComponent");
-        }
-
     }
 }
