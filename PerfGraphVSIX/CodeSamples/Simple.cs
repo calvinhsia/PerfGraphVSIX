@@ -35,6 +35,8 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
 
+//Pragma: GenerateInMemory=false
+
 
 using System;
 using System.Linq;
@@ -102,7 +104,7 @@ namespace MyCodeToExecute
                 await TaskScheduler.Default; // switch to background thread
                 _logger.LogMessage("Logger message from MySimpleSample. Doesn't support the newest C# compiler constructs");
             });
-
+            _OutputPane.OutputString("Hi Pooya!\n");
             var ComponentModel = (await _asyncServiceProvider.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
             _logger.LogMessage("CompModel: " + ComponentModel.ToString());
             var exportProvider = ComponentModel.DefaultExportProvider;

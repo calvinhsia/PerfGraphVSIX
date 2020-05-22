@@ -21,7 +21,7 @@
 
 
 //Ref: %PerfGraphVSIX%
-
+//Pragma: GenerateInMemory = False
 
 ////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
 
@@ -126,13 +126,13 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
-            <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45""/>
+            <MyButton x:Name=""_btnGo"" Content=""_Go"" Width=""45""/>
         </StackPanel>
         
     </Grid>
 ", this.GetType().Namespace,
-         System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)); 
-                     
+         System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
+                     _mySimpleSample._logger.LogMessage(strxaml);
                      var strReader = new System.IO.StringReader(strxaml);
                      var xamlreader = XmlReader.Create(strReader);
 
@@ -154,7 +154,7 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
         }
 
     }
-    class MyButton: Button
+    public class MyButton: Button
     {
 
     }

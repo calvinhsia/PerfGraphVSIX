@@ -25,6 +25,7 @@ namespace PerfGraphVSIX
         public const string VSRootSubstitution = "%VSRoot%";
         public const string refPathPrefix = "//Ref:";
         public const string includePathPrefix = "//Include:";
+        public const string pragmaPrefix = "//Pragma:";
         bool _fDidAddAssemblyResolver;
         readonly ILogger _logger;
 
@@ -43,6 +44,7 @@ namespace PerfGraphVSIX
             object result = string.Empty;
             var lstFilesToCompile = new HashSet<string>();
             var hashofCodeToExecute = 0;
+            var GenerateInMemory = true;
             //            _logger.LogMessage($"Compiling code");
             try
             {
@@ -71,9 +73,26 @@ namespace PerfGraphVSIX
                         var strCodeToExecute = File.ReadAllText(fileToCompile);
                         hashofCodeToExecute += strCodeToExecute.GetHashCode();
                         var srcLines = strCodeToExecute.Split("\r\n".ToArray());
-                        foreach (var srcline in srcLines.Where(s => s.StartsWith(refPathPrefix) || s.StartsWith(includePathPrefix)))
+                        foreach (var srcline in srcLines.Where(
+                            s => s.StartsWith(refPathPrefix) ||
+                            s.StartsWith(pragmaPrefix) ||
+                            s.StartsWith(includePathPrefix)))
                         {
-                            if (srcline.StartsWith(refPathPrefix))
+                            if (srcline.StartsWith(pragmaPrefix)) ////Pragma: GenerateInMemory=false
+                            {
+                                var splitPragma = srcline.Substring(pragmaPrefix.Length).Split(new[] { '=', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                switch(splitPragma[0])
+                                {
+                                    case "GenerateInMemory":
+                                        GenerateInMemory = bool.Parse(splitPragma[1]);
+                                        _logger.LogMessage($"Pragma {nameof(GenerateInMemory)}  = {GenerateInMemory}");
+
+                                        break;
+                                    default:
+                                        throw new InvalidOperationException($"Unknown Pragma {srcline}");
+                                }
+                            }
+                            else if (srcline.StartsWith(refPathPrefix))
                             {
                                 var refAsm = srcline.Replace(refPathPrefix, string.Empty).Trim();
                                 if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
@@ -146,7 +165,10 @@ namespace PerfGraphVSIX
                     {
                         //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
                         compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
-                        compParams.GenerateInMemory = true; // in memory cannot be unloaded
+                        if (GenerateInMemory)
+                        {
+                            compParams.GenerateInMemory = true; // in memory cannot be unloaded
+                        }
                         var resCompile = cdProvider.CompileAssemblyFromFile(compParams, lstFilesToCompile.ToArray());
                         if (resCompile.Errors.HasErrors || resCompile.Errors.HasWarnings)
                         {
