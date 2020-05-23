@@ -55,7 +55,7 @@ namespace MyCodeToExecute
     public class BaseExecCodeClass : IDisposable
     {
         public string FileToExecute;
-        public ILogger logger;
+        public ILogger _logger;
         public CancellationToken _CancellationTokenExecuteCode;
         public EnvDTE.DTE g_dte;
         public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
@@ -88,7 +88,7 @@ namespace MyCodeToExecute
         public BaseExecCodeClass(object[] args)
         {
             FileToExecute = args[0] as string;
-            logger = args[1] as ILogger;
+            _logger = args[1] as ILogger;
             _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
             itakeSample = args[3] as ITakeSample;
             g_dte = args[4] as EnvDTE.DTE;
@@ -178,7 +178,7 @@ namespace MyCodeToExecute
                         NumIterations = numIterations,
                         ProcNamesToMonitor = string.Empty,
                         ShowUI = this.ShowUI,
-                        logger = logger,
+                        logger = _logger,
                         Sensitivity = Sensitivity,
                         NumIterationsBeforeTotalToTakeBaselineSnapshot = NumIterationsBeforeTotalToTakeBaselineSnapshot,
                         //actExecuteAfterEveryIterationAsync = async (nIter, mHolder) => // uncomment to suppress dump taking/processing.
@@ -206,11 +206,11 @@ namespace MyCodeToExecute
                     }
                     if (!_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
-                        logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
+                        _logger.LogMessage(string.Format("Done all {0} iterations", numIterations));
                     }
                     else
                     {
-                        logger.LogMessage("Cancelled Code Execution");
+                        _logger.LogMessage("Cancelled Code Execution");
                     }
                 }
             }
@@ -220,11 +220,11 @@ namespace MyCodeToExecute
             }
             catch (OperationCanceledException)
             {
-                logger.LogMessage("Cancelled");
+                _logger.LogMessage("Cancelled");
             }
             catch (Exception ex)
             {
-                logger.LogMessage(ex.ToString());
+                _logger.LogMessage(ex.ToString());
             }
         }
 
@@ -265,7 +265,7 @@ namespace MyCodeToExecute
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
-            //            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
+            //           _logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
             _tcsSolution.TrySetResult(0);
         }
 
@@ -277,11 +277,11 @@ namespace MyCodeToExecute
 
         void BuildEvents_OnBuildBegin(vsBuildScope Scope, vsBuildAction Action)
         {
-            //            logger.LogMessage("BuildEvents_OnBuildBegin " + Scope.ToString() + Action.ToString());
+            //           _logger.LogMessage("BuildEvents_OnBuildBegin " + Scope.ToString() + Action.ToString());
         }
         void BuildEvents_OnBuildDone(vsBuildScope Scope, vsBuildAction Action)
         {
-            //            logger.LogMessage("BuildEvents_OnBuildDone " + Scope.ToString() + Action.ToString());
+            //           _logger.LogMessage("BuildEvents_OnBuildDone " + Scope.ToString() + Action.ToString());
             _tcsProject.TrySetResult(0);
         }
 
@@ -338,10 +338,10 @@ namespace MyCodeToExecute
                     //await OpenASolutionAsync();
                     //foreach (EnvDTE.Window win in g_dte.Windows)
                     //{
-                    //    logger.LogMessage("Win " + win.Kind + " " + win.ToString());
+                    //   _logger.LogMessage("Win " + win.Kind + " " + win.ToString());
                     //    if (win.Kind == "Document") // "Tool"
                     //    {
-                    //        logger.LogMessage("   " + win.Document.Name);
+                    //       _logger.LogMessage("   " + win.Document.Name);
                     //    }
                     //}
                     //g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
@@ -353,19 +353,19 @@ namespace MyCodeToExecute
                     //Func<Task> undoAll = async () =>
                     //  {
                     //      var done = false;
-                    //      logger.LogMessage("Start undo loop");
+                    //     _logger.LogMessage("Start undo loop");
                     //      while (!done)
                     //      {
                     //          try
                     //          {
-                    //              logger.LogMessage(" in undo loop");
+                    //             _logger.LogMessage(" in undo loop");
                     //              g_dte.ExecuteCommand("Edit.Undo");
                     //              await Task.Delay(100);
                     //          }
                     //          catch (Exception)
                     //          {
                     //              done = true;
-                    //              logger.LogMessage("Done undo loop");
+                    //             _logger.LogMessage("Done undo loop");
                     //          }
                     //      }
                     //  };

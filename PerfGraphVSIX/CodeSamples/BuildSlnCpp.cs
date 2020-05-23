@@ -36,7 +36,7 @@ namespace MyCodeToExecute
             g_dte.ExecuteCommand("Build.CleanSolution", @"");
             await _tcsProject.Task;
 
-            //                    logger.LogMessage("Build.BuildSolution");
+            //                   _logger.LogMessage("Build.BuildSolution");
             _tcsProject = new TaskCompletionSource<int>();
             g_dte.ExecuteCommand("Build.BuildSolution", @"");
             await _tcsProject.Task;

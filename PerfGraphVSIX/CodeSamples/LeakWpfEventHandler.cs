@@ -99,7 +99,7 @@ namespace MyCodeToExecute
             }
 //            await Task.Delay(TimeSpan.FromSeconds(20));
             var lstEventHandlers = GetRoutedEventHandlerList<MyCheckBox>(_MyWindow.chkBox, MyCheckBox.CheckedEvent);
-            logger.LogMessage(string.Format("#Ev Handlers = {0}", lstEventHandlers.Length));
+           _logger.LogMessage(string.Format("#Ev Handlers = {0}", lstEventHandlers.Length));
         }
         public override async Task DoCleanupAsync()
         {
@@ -133,7 +133,7 @@ namespace MyCodeToExecute
                     lstDelegates.Add(handler.Handler);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
             return lstDelegates.ToArray();
@@ -153,7 +153,7 @@ namespace MyCodeToExecute
                  {
                      try
                      {
-                         _MyClass.logger.LogMessage("In Form Load");
+                         _MyClass._logger.LogMessage("In Form Load");
 
                          var strxaml =
              string.Format(@"<Grid
@@ -195,7 +195,7 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
                                      ChkBoxAction(i);
                                  }
                                  var lstEventHandlers = GetRoutedEventHandlerList<MyCheckBox>(chkBox, MyCheckBox.CheckedEvent);
-                                 _MyClass.logger.LogMessage("# evHandlers = " + lstEventHandlers.Length.ToString());
+                                 _MyClass._logger.LogMessage("# evHandlers = " + lstEventHandlers.Length.ToString());
                              }
                              catch (Exception ex)
                              {
@@ -267,7 +267,7 @@ Children of "-- MyCodeToExecute.MyClass+MyCheckBox 0x21591f6c"
             }
             void ChkboxHandler(object sender, RoutedEventArgs e)
             {
-                _myWindow._MyClass.logger.LogMessage("Click" + (_myWindow.numClicks++).ToString());
+                _myWindow._MyClass._logger.LogMessage("Click" + (_myWindow.numClicks++).ToString());
             }
         }
         public class MyCheckBox : CheckBox

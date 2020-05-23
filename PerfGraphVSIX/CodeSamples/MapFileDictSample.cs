@@ -56,7 +56,7 @@ namespace MyCodeToExecute
                 //                mfd._MemMap.ChangeViewSize(65536 * 2); // can change default memory map view size
                 dict = mfd;
             }
-            logger.LogMessage("Using " + dict.GetType().Name);
+           _logger.LogMessage("Using " + dict.GetType().Name);
         }
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
@@ -75,7 +75,7 @@ namespace MyCodeToExecute
                 }
                 if (mfd != null)
                 {
-                    logger.LogMessage(mfd._MemMap._stats.ToString());
+                   _logger.LogMessage(mfd._MemMap._stats.ToString());
                     //                    await Task.Delay(TimeSpan.FromSeconds(10), cts);
                 }
             });

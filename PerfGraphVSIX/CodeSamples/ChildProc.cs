@@ -73,7 +73,7 @@ namespace MyCodeToExecute
             await TaskScheduler.Default;
             var procToMonitor = "XDesProc.exe";
             var lstProcToMonitor = new List<ProcessEx.ProcNode>();
-            logger.LogMessage("Monitoring Child Processes " + procToMonitor);
+           _logger.LogMessage("Monitoring Child Processes " + procToMonitor);
             _OutputPane.Activate();
             while (!token.IsCancellationRequested)
             {
@@ -98,7 +98,7 @@ namespace MyCodeToExecute
                         int level = 0;
                         foreach (var node in curlstProcToMonitor)
                         {
-                            logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
+                           _logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
                         }
                         lstProcToMonitor.Clear();
                         lstProcToMonitor.AddRange(curlstProcToMonitor);
