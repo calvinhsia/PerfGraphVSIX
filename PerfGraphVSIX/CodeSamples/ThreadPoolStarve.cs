@@ -30,6 +30,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.ComponentModel.Composition.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
@@ -48,7 +49,11 @@ using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.ComponentModelHost;
-using EnvDTE;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+using System.Reflection;
+using System.Xml;
 
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
@@ -61,7 +66,7 @@ using System.IO;
  * */
 namespace MyCodeToExecute
 {
-    public class ThreadPoolStarvationDemo
+    public class MyClass
     {
         public IServiceProvider _serviceProvider { get { return _package as IServiceProvider; } }
         public Microsoft.VisualStudio.Shell.IAsyncServiceProvider _asyncServiceProvider { get { return _package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
@@ -74,11 +79,12 @@ namespace MyCodeToExecute
 
         public static async Task DoMain(object[] args)
         {
-            var oMySimpleSample = new ThreadPoolStarvationDemo();
-            await oMySimpleSample.DoInitializeAsync(args);
+            var o = new MyClass();
+            await o.DoInitializeAsync(args);
         }
         async Task DoInitializeAsync(object[] args)
         {
+            await Task.Yield();
             var FullPathToThisSourceFile = args[0] as string;
             _logger = args[1] as ILogger;
             _CancellationTokenExecuteCode = (CancellationToken)args[2];
@@ -86,22 +92,63 @@ namespace MyCodeToExecute
             var g_dte = args[4] as EnvDTE.DTE; // if needed
             _package = args[5] as object;// IAsyncPackage, IServiceProvider
 
-            IVsOutputWindow outputWindow = await _asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
-            var crPane = outputWindow.CreatePane(
-                ref _guidPane,
-                "PerfGraphVSIX",
-                fInitVisible: 1,
-                fClearWithSolution: 0);
-            outputWindow.GetPane(ref _guidPane, out _OutputPane);
-            _OutputPane.Clear();
-            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        }
+    }
+    public class MyWindow : Window
+    {
+        public MyClass _MyClass;
+        public MyWindow(MyClass MyClass)
+        {
+            this._MyClass = MyClass;
+            this.Loaded += (ol, el) =>
             {
-                await TaskScheduler.Default; // switch to background thread
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();//outputpane must be called from main thread
-                _OutputPane.OutputString("Here in MySimpleSample " + DateTime.Now.ToString("MM/dd/yy hh:mm:ss"));
-                await TaskScheduler.Default; // switch to background thread
-                _logger.LogMessage("Logger message from MySimpleSample. Doesn't support the newest C# compiler constructs");
-            });
+                try
+                {
+                    _MyClass.logger.LogMessage("In Form Load");
+
+                    var strxaml =
+        string.Format(@"<Grid
+xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+xmlns:l=""clr-namespace:{0};assembly={1}"" 
+        Margin=""5,5,5,5"">
+        <Grid.RowDefinitions>
+            <RowDefinition Height=""auto""/>
+            <RowDefinition Height=""*""/>
+        </Grid.RowDefinitions>
+        <StackPanel x:Name=""_sp"" Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
+        </StackPanel>
+        
+    </Grid>
+", this.GetType().Namespace,
+        System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
+                    Width = 400;
+                    Height = 600;
+                    var strReader = new System.IO.StringReader(strxaml);
+                    var xamlreader = XmlReader.Create(strReader);
+
+                    var grid = (Grid)(XamlReader.Load(xamlreader));
+                    grid.DataContext = this;
+                    this.Content = grid;
+                    var sp = (StackPanel)grid.FindName("_sp");
+                    var btnGo = new Button() { Content = "_Go" };
+                    sp.Children.Add(btnGo);
+                    btnGo.Click += (o, e) =>
+                    {
+                        try
+                        {
+                        }
+                        catch (Exception ex)
+                        {
+                            this.Content = ex.ToString();
+                        }
+                    };
+                }
+                catch (Exception ex)
+                {
+                    this.Content = ex.ToString();
+                }
+            };
         }
     }
 }

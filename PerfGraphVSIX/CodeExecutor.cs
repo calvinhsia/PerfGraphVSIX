@@ -39,7 +39,11 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileAndExecute(ITakeSample itakeSample, string pathFileToExecute, CancellationToken token)
+        public object CompileAndExecute(
+            ITakeSample itakeSample, 
+            string pathFileToExecute, 
+            CancellationToken token, 
+            bool fExecuteToo = true) // for tests, we want to compile and not execute
         {
             object result = string.Empty;
             var lstFilesToCompile = new HashSet<string>();
@@ -251,24 +255,27 @@ namespace PerfGraphVSIX
                               };
                         }
                         //                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
-                        // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
-                        object[] parms = new object[]
+                        if (fExecuteToo)
                         {
+                            // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
+                            object[] parms = new object[]
+                            {
                             pathFileToExecute,
                             _logger,
                             token,
                             itakeSample,
                             PerfGraphToolWindowCommand.Instance?.g_dte,
                             PerfGraphToolWindowCommand.Instance?.package
-                        };
-                        var res = mainMethod.Invoke(null, new object[] { parms });
-                        if (res is string strres)
-                        {
-                            result = strres;
-                        }
-                        if (res is Task task)
-                        {
-                            result = res;
+                            };
+                            var res = mainMethod.Invoke(null, new object[] { parms });
+                            if (res is string strres)
+                            {
+                                result = strres;
+                            }
+                            if (res is Task task)
+                            {
+                                result = res;
+                            }
                         }
                         break;
                     }

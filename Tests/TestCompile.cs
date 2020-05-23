@@ -612,11 +612,12 @@ public class foo {}
             var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
+            // compile again and should get msg "using prior"
             res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
-
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
         }
+
         [TestMethod]
         public void TestCompilePragma()
         {
@@ -646,12 +647,31 @@ public class foo {}
             var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
-            res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
-            LogMessage(res.ToString());
-
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
-
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Pragma GenerateInMemory  = False")).FirstOrDefault());
+        }
+
+        [TestMethod]
+        public async Task TestCompileAllCodeSamples()
+        {
+            await Task.Yield();
+            int nCompiled = 0;
+            int nErrors = 0;
+            foreach (var codesample in Directory.EnumerateFiles("CodeSamples", "*.cs"))
+            {
+                if (!codesample.Contains("ExecCodeBase"))
+                {
+                    nCompiled++;
+                    var codeExecutor = new CodeExecutor(logger: this);
+                    var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
+                    if (res is string && !string.IsNullOrEmpty(res as string))
+                    {
+                        nErrors++;
+                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                    }
+                }
+            }
+            Assert.IsTrue(nCompiled > 10, "Didn't compile files");
+            Assert.AreEqual(0, nErrors, $"# Files with Compile Errors = {nErrors}");
         }
     }
 }
