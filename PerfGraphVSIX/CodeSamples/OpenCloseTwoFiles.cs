@@ -37,7 +37,7 @@ namespace MyCodeToExecute
             //await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             g_dte.ExecuteCommand("File.OpenFile", file1);
             await Task.Delay(2000, _CancellationTokenExecuteCode); // wait one second to allow UI thread to catch  up

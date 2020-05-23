@@ -350,6 +350,7 @@ namespace MyCustomCode
 //Ref: ""%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll""
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
 
 //Ref:""%VSRoot%\Common7\IDE\PublicAssemblies\envdte.dll""
 
@@ -616,8 +617,41 @@ public class foo {}
 
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
         }
+        [TestMethod]
+        public void TestCompilePragma()
+        {
+            var strCodeToExecute = @"
+// can add the fullpath to an assembly for reference like so:
+//Pragma: GenerateInMemory=false
 
+using System;
 
+namespace DoesntMatter
+{
+public class foo {}
+    public class SomeClass
+    {
+        public static string DoMain(object [] args)
+        {
+            var x = 1;
+            var y = 100 / x;
+            return ""did main "" + y.ToString() +"" "";
+        }
+    }
+}
+";
+            var codeExecutor = new CodeExecutor(this);
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            LogMessage(res.ToString());
 
+            res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            LogMessage(res.ToString());
+
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
+
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Pragma GenerateInMemory  = False")).FirstOrDefault());
+        }
     }
 }

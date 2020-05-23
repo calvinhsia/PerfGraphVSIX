@@ -19,18 +19,20 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 13);
+                await oMyClass.DoTheTest(numIterations: 23);
             }
         }
         public MyClass(object[] args) : base(args) { }
 
         /// Note: replace this with an existing file on your machine!
-        string file1 = @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs"; // 1642 lines
-        string file2 = @"C:\Users\calvinh\Source\repos\hWndHost\Fish\FishWindow.xaml.cs"; // 1047 lines
+        string file1 = @"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase\DetourSharedBaseMain.cpp";
+        string file2 = @"C:\Users\calvinh\source\repos\DetourSample\DetourClient\DetourClientMain.cpp";
 
         public override async Task DoInitializeAsync()
         {
-            await OpenASolutionAsync();
+            ShowUI = false;
+            NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase.sln");
             g_dte.ExecuteCommand("File.OpenFile", file1);
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
             g_dte.ExecuteCommand("File.OpenFile", file2);
@@ -63,6 +65,11 @@ namespace MyCodeToExecute
 
                         await Task.Delay(TimeSpan.FromSeconds(2 * DelayMultiplier), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
                     }
+                    await Task.Delay(1000, _CancellationTokenExecuteCode);
+
+                    g_dte.ExecuteCommand("File.Close", @"");
+
+                    await Task.Delay(1000, _CancellationTokenExecuteCode);
                 }
                 catch (Exception ex)
                 {

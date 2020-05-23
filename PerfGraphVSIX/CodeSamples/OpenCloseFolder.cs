@@ -30,7 +30,7 @@ namespace MyCodeToExecute
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             await OpenAFolderAsync();
 
@@ -48,7 +48,7 @@ namespace MyCodeToExecute
         {
             _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.ExecuteCommand("File.OpenFolder", SolutionToLoad);
+            g_dte.ExecuteCommand("File.OpenFolder", @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
             await _tcs.Task;
             if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {

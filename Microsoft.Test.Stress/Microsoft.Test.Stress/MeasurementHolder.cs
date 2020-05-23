@@ -279,7 +279,8 @@ namespace Microsoft.Test.Stress
 
         public async Task CheckIfNeedToTakeSnapshotsAsync()
         {
-            if (stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
+            if (stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot > 0 &&
+                stressUtilOptions.NumIterations >= stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
             {
                 // if we have enough iterations, lets take a snapshot before they're all done so we can compare: take a baseline snapshot 
                 if (nSamplesTaken == stressUtilOptions.NumIterations - stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot)
