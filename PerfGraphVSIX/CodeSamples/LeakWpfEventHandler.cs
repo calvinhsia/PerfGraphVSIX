@@ -57,6 +57,7 @@ using System.Xml;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
+//Include: ExecCodeBase.cs
 
 /* This sample allows you to edit/compile/run code inside the VS process from within the same instance of VS
  * You can access VS Services, JTF, etc with the same code as you would from e.g. building a VS component
@@ -65,58 +66,97 @@ using System.IO;
  * */
 namespace MyCodeToExecute
 {
-    public class MySimpleSample
+    public class MyClass : BaseExecCodeClass
     {
-        public IServiceProvider _serviceProvider { get { return _package as IServiceProvider; } }
-        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider _asyncServiceProvider { get { return _package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
-        private object _package;
-        public ILogger _logger; // log to PerfGraph ToolWindow
-        public CancellationToken _CancellationTokenExecuteCode;
-
-        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
-        public IVsOutputWindowPane _OutputPane;
-
         public static async Task DoMain(object[] args)
         {
-            var oMySimpleSample = new MySimpleSample();
-            await oMySimpleSample.DoInitializeAsync(args);
+            using (var oMyClass = new MyClass(args))
+            {
+                await oMyClass.DoTheTest(numIterations: 7, Sensitivity: 2.5, delayBetweenIterationsMsec: 800);
+            }
         }
-        async Task DoInitializeAsync(object[] args)
+        public MyClass(object[] args) : base(args)
         {
-            var FullPathToThisSourceFile = args[0] as string;
-            _logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2];
-            var itakeSample = args[3] as ITakeSample; // for taking perf counter measurements
-            var g_dte = args[4] as EnvDTE.DTE; // if needed
-            _package = args[5] as object;// IAsyncPackage, IServiceProvider
+            //ShowUI = false;
+            //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+        }
+        MyWindow _MyWindow;
+        public override async Task DoInitializeAsync()
+        {
+            await Task.Yield();
+            _MyWindow = new MyWindow(this);
+            //            _MyWindow.ShowDialog();
+            _MyWindow.Show();
+        }
 
-            IVsOutputWindow outputWindow = await _asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
-            var crPane = outputWindow.CreatePane(
-                ref _guidPane,
-                "PerfGraphVSIX",
-                fInitVisible: 1,
-                fClearWithSolution: 0);
-            outputWindow.GetPane(ref _guidPane, out _OutputPane);
-            _OutputPane.Clear();
-            var ox = new MyWindow(this);
-//            ox.ShowDialog();
-            ox.Show();
-        }
-    }
-    class MyWindow : Window
-    {
-        MySimpleSample _mySimpleSample;
-        public MyWindow(MySimpleSample mySimpleSample)
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
-            this._mySimpleSample = mySimpleSample;
-            this.Loaded += (ol, el) =>
-             {
-                 try
+            await Task.Yield();
+            // to test if your code leaks, put it here. Repeat a lot to magnify the effect
+            for (int i = 0; i < 10; i++)
+            {
+                _MyWindow.ChkBoxAction(i);
+            }
+//            await Task.Delay(TimeSpan.FromSeconds(20));
+            var lstEventHandlers = GetRoutedEventHandlerList<MyCheckBox>(_MyWindow.chkBox, MyCheckBox.CheckedEvent);
+            logger.LogMessage(string.Format("#Ev Handlers = {0}", lstEventHandlers.Length));
+        }
+        public override async Task DoCleanupAsync()
+        {
+            await Task.Yield();
+            _MyWindow.Close();
+        }
+        /// <summary>
+        /// Get list of event handlers for Wpf RoutedEvents
+        /// e.g.  var eventHandlerList = GetRoutedEventHandlerList<CheckBox>(_pdfViewerWindow.chkInk0, CheckBox.CheckedEvent);
+        ///      var cntEvHandlers = eventHandlerList.Length;
+        ///     foreach (var evHandler in eventHandlerList)
+        ///     {
+        ///         var targ = evHandler.Target;
+        ///         var meth = evHandler.Method;
+        ///     }
+        /// </summary>
+        /// <typeparamref name="TEventPublisher">The type of the event publisher: e.g. Button </typeparamref>
+        /// <returns>Array of delegates or null</returns>
+        internal static Delegate[] GetRoutedEventHandlerList<TEventPublisher>(TEventPublisher instance, RoutedEvent routedEvent)
+        {
+            var lstDelegates = new List<Delegate>();
+            try
+            {
+                var evHandlersStore = typeof(TEventPublisher)
+                    .GetProperty("EventHandlersStore", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .GetValue(instance, index: null);
+                var miGetEvHandlers = evHandlersStore.GetType().GetMethod("GetRoutedEventHandlers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                var lstRoutedEvents = miGetEvHandlers.Invoke(evHandlersStore, new object[] { routedEvent }) as RoutedEventHandlerInfo[];
+                foreach (var handler in lstRoutedEvents)
+                {
+                    lstDelegates.Add(handler.Handler);
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+            return lstDelegates.ToArray();
+        }
+
+
+        public class MyWindow : Window
+        {
+            public MyClass _MyClass;
+            DockPanel dp;
+            public MyCheckBox chkBox;
+            public int numClicks = 0;
+            public MyWindow(MyClass MyClass)
+            {
+                this._MyClass = MyClass;
+                this.Loaded += (ol, el) =>
                  {
-                     _mySimpleSample._logger.LogMessage("In Form Load");
+                     try
+                     {
+                         _MyClass.logger.LogMessage("In Form Load");
 
-                     var strxaml =
-         string.Format(@"<Grid
+                         var strxaml =
+             string.Format(@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 xmlns:l=""clr-namespace:{0};assembly={1}"" 
@@ -125,41 +165,114 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
             <RowDefinition Height=""auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
-        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
-            <MyButton x:Name=""_btnGo"" Content=""_Go"" Width=""45""/>
+        <StackPanel x:Name=""_sp"" Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
         </StackPanel>
+        <DockPanel x:Name=""_dp"" Grid.Row=""1""/>
         
     </Grid>
 ", this.GetType().Namespace,
-         System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
-                     _mySimpleSample._logger.LogMessage(strxaml);
-                     var strReader = new System.IO.StringReader(strxaml);
-                     var xamlreader = XmlReader.Create(strReader);
+             System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
+                         Width = 400;
+                         Height = 600;
+                         var strReader = new System.IO.StringReader(strxaml);
+                         var xamlreader = XmlReader.Create(strReader);
 
-                     var grid = (Grid)(XamlReader.Load(xamlreader));
-                     grid.DataContext = this;
-                     this.Content = grid;
-                     var btnGo = (Button)grid.FindName("_btnGo");
-                     btnGo.Click += (o, e) =>
+                         var grid = (Grid)(XamlReader.Load(xamlreader));
+                         grid.DataContext = this;
+                         this.Content = grid;
+                         var sp = (StackPanel)grid.FindName("_sp");
+                         chkBox = new MyCheckBox() { Content = "Check Me" };
+                         sp.Children.Add(chkBox);
+                         var btnGo = new MyButton() { Content = "_Go" };
+                         sp.Children.Add(btnGo);
+                         dp = (DockPanel)grid.FindName("_dp");
+                         btnGo.Click += (o, e) =>
+                         {
+                             try
+                             {
+                                 for (int i = 0; i < 10; i++)
+                                 {
+                                     ChkBoxAction(i);
+                                 }
+                                 var lstEventHandlers = GetRoutedEventHandlerList<MyCheckBox>(chkBox, MyCheckBox.CheckedEvent);
+                                 _MyClass.logger.LogMessage("# evHandlers = " + lstEventHandlers.Length.ToString());
+                             }
+                             catch (Exception ex)
+                             {
+                                 this.Content = ex.ToString();
+                             }
+                         };
+                     }
+                     catch (Exception ex)
                      {
-                         this.Close();
-                     };
-
-                 }
-                 catch (global::System.Exception ex)
-                 {
-                     this.Content = ex;
-                 }
-             };
+                         this.Content = ex.ToString();
+                     }
+                 };
+            }
+            public void ChkBoxAction(int i)
+            {
+                dp.Children.Clear();
+                dp.Children.Add(new MyInkCanvas(this, chkBox, i));
+            }
         }
+        public class MyButton : Button
+        {
 
-    }
-    public class MyButton: Button
-    {
+        }
+        public class MyInkCanvas : InkCanvas
+        {
+            byte[] arr = new byte[1024 * 1024 * 10];
+            MyWindow _myWindow;
 
-    }
-    class MyCheckBox: CheckBox
-    {
+            public MyInkCanvas(MyWindow myWindow, MyCheckBox chkbox, int cnt)
+            {
+                this._myWindow = myWindow;
+                this.Children.Add(new TextBlock() { Text = cnt.ToString() });
+                /* Thousands of CheckBox eventhandlers:
+                 Subscribing to the Checked method can cause a leak: the single ChkBox on the form is the Publisher of the Checked Event,
+                 and it holds a list of the subscribers in it's System.Windows.EventHandlersStore _listStore
+Children of "-- MyCodeToExecute.MyClass+MyCheckBox 0x21591f6c"
+-- MyCodeToExecute.MyClass+MyCheckBox 0x21591f6c
+ -> _dispatcher = System.Windows.Threading.Dispatcher 0x035feb50
+ -> _dType = System.Windows.DependencyObjectType 0x21592064
+ -> _effectiveValues = System.Windows.EffectiveValueEntry[] 0x21599554
+  -> MyCodeToExecute.MyClass+MyWindow 0x2158d4a0
+  -> System.Collections.Generic.List<System.Windows.DependencyObject> 0x215922ec
+  -> System.Windows.DeferredThemeResourceReference 0x038a8d20
+  -> System.Windows.EventHandlersStore 0x21599548
+   -> _entries = MS.Utility.SingleObjectMap 0x21599604
+    -> _loneEntry = MS.Utility.FrugalObjectList<System.Windows.RoutedEventHandlerInfo> 0x215995f8
+     -> _listStore = MS.Utility.ArrayItemList<System.Windows.RoutedEventHandlerInfo> 0x215a41d4
+      -> _entries = System.Windows.RoutedEventHandlerInfo[] 0x3a94c858
+       -> System.Windows.RoutedEventHandler 0x21599528
+       -> System.Windows.RoutedEventHandler 0x21599614
+        -> _target = MyCodeToExecute.MyClass+MyInkCanvas 0x21595aa8
+       -> System.Windows.RoutedEventHandler 0x2159cf7c
+        -> _target = MyCodeToExecute.MyClass+MyInkCanvas 0x215996ac
+       -> System.Windows.RoutedEventHandler 0x215a08a8
+        -> _target = MyCodeToExecute.MyClass+MyInkCanvas 0x2159cfd8
+       -> System.Windows.RoutedEventHandler 0x215a41e4
+        -> _target = MyCodeToExecute.MyClass+MyInkCanvas 0x215a0904                If the event subscriber is an empty lambda, then it doesn't leak: the eventhandler count goes up
 
+                 */
+
+                chkbox.Checked += (o, e) =>
+                {
+                    var y = arr;
+                    // the lambda needs to refer to a mem var else no leak: the # ev handlers goes up, but WPF is smart: they're all the same handler
+                    //   _myWindow._MyClass.logger.LogMessage("Click" + (_myWindow.numClicks++).ToString());
+
+                };
+//                chkbox.Checked += ChkboxHandler;
+            }
+            void ChkboxHandler(object sender, RoutedEventArgs e)
+            {
+                _myWindow._MyClass.logger.LogMessage("Click" + (_myWindow.numClicks++).ToString());
+            }
+        }
+        public class MyCheckBox : CheckBox
+        {
+
+        }
     }
 }

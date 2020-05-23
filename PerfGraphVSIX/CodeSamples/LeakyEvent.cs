@@ -1,5 +1,5 @@
 ﻿//Include: ExecCodeBase.cs
-// this will demonstate leak detection
+// this will demonstrate leak detection
 
 using System;
 using System.Threading;
