@@ -89,7 +89,7 @@ namespace PerfGraphVSIX
                                 {
                                     case "GenerateInMemory":
                                         GenerateInMemory = bool.Parse(splitPragma[1]);
-                                        _logger.LogMessage($"Pragma {nameof(GenerateInMemory)}  = {GenerateInMemory}");
+                                        _logger.LogMessage($"Pragma {nameof(GenerateInMemory)}  = {GenerateInMemory} {Path.GetFileName(fileToCompile)}");
 
                                         break;
                                     default:

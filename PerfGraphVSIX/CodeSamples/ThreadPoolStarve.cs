@@ -49,7 +49,9 @@ using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.ComponentModelHost;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Threading;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Reflection;
@@ -82,6 +84,7 @@ namespace MyCodeToExecute
             var o = new MyClass();
             await o.DoInitializeAsync(args);
         }
+        MyWindow _MyWindow;
         async Task DoInitializeAsync(object[] args)
         {
             await Task.Yield();
@@ -91,20 +94,95 @@ namespace MyCodeToExecute
             var itakeSample = args[3] as ITakeSample; // for taking perf counter measurements
             var g_dte = args[4] as EnvDTE.DTE; // if needed
             _package = args[5] as object;// IAsyncPackage, IServiceProvider
+            _MyWindow = new MyWindow(this);
 
+            var timer = new DispatcherTimer()
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            var tcsMyWindow = new TaskCompletionSource<int>();
+            timer.Tick += (o, e) =>
+            {
+                if (_CancellationTokenExecuteCode.IsCancellationRequested)
+                {
+                    try
+                    {
+                        timer.Stop();
+                        //_MyWindow.Close();
+                        if (!tcsMyWindow.Task.IsCompleted)
+                        {
+                            tcsMyWindow.SetResult(0);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogMessage(ex.ToString());
+                    }
+                }
+            };
+            timer.Start();
+            _MyWindow.Closed += (o, e) =>
+             {
+                 timer.Stop();
+                 if (!tcsMyWindow.Task.IsCompleted)
+                 {
+                     tcsMyWindow.SetResult(0);
+                 }
+             };
+            //var taskClose = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            //{
+            //    await TaskScheduler.Default;
+            //    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+            //    {
+            //        await Task.Delay(TimeSpan.FromSeconds(1), _CancellationTokenExecuteCode);
+            //        _logger.LogMessage("ChkC " + tcsMyWindow.Task.IsCompleted.ToString());
+            //    }
+            //    _logger.LogMessage("ChkC dn");
+            //    _logger.LogMessage("mtxx" + tcsMyWindow.Task.ToString());
+            //    if (!tcsMyWindow.Task.IsCompleted)
+            //    {
+            //        _logger.LogMessage("mt");
+            //        tcsMyWindow.SetResult(0);
+            //    }
+            //    //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            //    //_logger.LogMessage("mt");
+            //    //_MyWindow.Close();
+            //    //_logger.LogMessage("mtcl");
+            //});
+            _MyWindow.Show();
+            await tcsMyWindow.Task;
+            _MyWindow.Close();
         }
     }
     public class MyWindow : Window
     {
+        private TextBox _txtStatus;
+        private Button _btnGo;
+        private Button _btnDbgBreak;
+        private TextBox _txtUI; // intentionally not databound so must be updated from main thread
+        const string _toolTipBtnGo = @"
+The UI (including the status window) may not be responsive, depending on the options chosen\r\n
+After completion, the status window timestamps are accurate (the actual time the msg was logged).\r\n
+The CLR will expand the threadpool if a task can't be scheduled to run because no thread is available for 1 second.
+The CLR may retire extra idle active threads
+";
+
+        public int NTasks { get; set; }
+        public bool CauseStarvation { get; set; }
+        public bool UIThreadDoAwait { get; set; }
+        public bool UseJTF { get; set; }
         public MyClass _MyClass;
         public MyWindow(MyClass MyClass)
         {
             this._MyClass = MyClass;
+            this.NTasks = 10;
+            this.UIThreadDoAwait = true;
+            Title = "ThreadPool Starvation Demo running in the Visual Studio Process";
             this.Loaded += (ol, el) =>
             {
                 try
                 {
-                    _MyClass.logger.LogMessage("In Form Load");
+                    //                    _MyClass._logger.LogMessage("In Form Load");
 
                     var strxaml =
         string.Format(@"<Grid
@@ -116,13 +194,31 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
             <RowDefinition Height=""auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
-        <StackPanel x:Name=""_sp"" Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
+
+        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
+            <Label Content=""#Tasks""/>
+            <TextBox Text=""{{Binding NTasks}}"" Width=""40"" />
+            <CheckBox Margin=""15,0,0,10"" Content=""_CauseStarvation""  IsChecked=""{{Binding CauseStarvation}}"" 
+                ToolTip=""In the task, for Non-JTF: use Thread.Sleep to cause starvation, else use Await. For JTF, use JTF.Run to cause starvation""/>
+            <CheckBox Margin=""15,0,0,10"" Content=""_UIThreadDoAwait""  IsChecked=""{{Binding UIThreadDoAwait}}"" ToolTip=""In the main (UI) thread, use Await, else use Thread.Sleep (and the UI is not responsive!!)""/>
+            <CheckBox Margin=""15,0,0,10"" Content=""_JTFDemo""  IsChecked=""{{Binding UseJTF}}"" 
+                ToolTip=""Use Joinable Task Factory and switch to main thread to update a textbox""
+                />
+            <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip=""Run the sample""/>
+        </StackPanel>
+        <StackPanel Margin=""55,0,0,10"" Orientation=""Horizontal"" HorizontalAlignment=""Right"">
+            <Button x:Name=""_btnDbgBreak"" Content=""_DebugBreak"" 
+                ToolTip=""invoke debugger: examine Threads (Threads or Parallel Stacks window) to see how busy the threadpool is and examine what each thread is doing""/>
+            <TextBox x:Name=""_txtUI"" Grid.Column=""1"" Text=""sample text"" Width=""200"" IsReadOnly=""True"" IsUndoEnabled=""False"" HorizontalAlignment=""Right""/>
         </StackPanel>
         
+        <TextBox x:Name=""_txtStatus"" Grid.Row=""1"" FontFamily=""Consolas"" FontSize=""10""
+            ToolTip=""DblClick to open in Notepad"" 
+        IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
     </Grid>
 ", this.GetType().Namespace,
         System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
-                    Width = 400;
+                    Width = 800;
                     Height = 600;
                     var strReader = new System.IO.StringReader(strxaml);
                     var xamlreader = XmlReader.Create(strReader);
@@ -130,18 +226,21 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
                     var grid = (Grid)(XamlReader.Load(xamlreader));
                     grid.DataContext = this;
                     this.Content = grid;
-                    var sp = (StackPanel)grid.FindName("_sp");
-                    var btnGo = new Button() { Content = "_Go" };
-                    sp.Children.Add(btnGo);
-                    btnGo.Click += (o, e) =>
+                    this._txtStatus = (TextBox)grid.FindName("_txtStatus");
+                    this._btnGo = (Button)grid.FindName("_btnGo");
+                    this._btnGo.Click += BtnGo_Click;
+                    this._btnDbgBreak = (Button)grid.FindName("_btnDbgBreak");
+                    this._txtUI = (TextBox)grid.FindName("_txtUI");
+                    this._btnDbgBreak.Click += (o, e) =>
                     {
-                        try
-                        {
-                        }
-                        catch (Exception ex)
-                        {
-                            this.Content = ex.ToString();
-                        }
+                        Debugger.Break();
+                    };
+
+                    _txtStatus.MouseDoubleClick += (od, ed) =>
+                    {
+                        var fname = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".txt");
+                        System.IO.File.WriteAllText(fname, _txtStatus.Text);
+                        Process.Start(fname);
                     };
                 }
                 catch (Exception ex)
@@ -149,6 +248,256 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
                     this.Content = ex.ToString();
                 }
             };
+        }
+        public void AddStatusMsg(string msg, params object[] args)
+        {
+            if (_txtStatus != null)
+            {
+                // we want to read the threadid 
+                //and time immediately on current thread
+                var dt = string.Format("[{0}],TID={1,2},",
+                    DateTime.Now.ToString("hh:mm:ss:fff"),
+                    Thread.CurrentThread.ManagedThreadId);
+                _txtStatus.Dispatcher.BeginInvoke(
+                    new Action(() =>
+                    {
+                        // this action executes on main thread
+                        if (args.Length == 0) // in cases the msg has embedded special chars like "{"
+                        {
+                            var str = string.Format(dt + "{0}" + Environment.NewLine, new object[] { msg });
+                            _txtStatus.AppendText(str);
+                        }
+                        else
+                        {
+                            var str = string.Format(dt + msg + "\r\n", args);
+                            _txtStatus.AppendText(str);
+
+                        }
+                        _txtStatus.ScrollToEnd();
+                    }));
+            }
+        }
+        private async void BtnGo_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using (var oWatcher = new MyThreadPoolWatcher(this))
+                {
+                    _txtUI.Text = "0"; // must be done on UI thread
+                    _btnGo.IsEnabled = false;
+                    _txtStatus.Clear();
+                    AddStatusMsg(string.Format("UseJTF={0} CauseStarvation={1} UIThreadDoAwait={2}", UseJTF, CauseStarvation, UIThreadDoAwait));
+                    ShowThreadPoolStats();
+                    await Task.Delay(TimeSpan.FromSeconds(.5));
+                    if (!UseJTF)
+                    {
+                        await DoThreadPoolAsync();
+                    }
+                    else
+                    {
+                        await DoJTFAsync();
+                    }
+                    AddStatusMsg("Done");
+                    ShowThreadPoolStats();
+                }
+            }
+            catch (Exception ex)
+            {
+                AddStatusMsg(ex.ToString());
+            }
+            _btnGo.IsEnabled = true;
+        }
+
+        private async Task DoThreadPoolAsync()
+        {
+            var tcs = new TaskCompletionSource<int>();
+            var lstTasks = new List<Task>();
+            // here we demonstrate getting ThreadStarvation by using the same thread to do all the work.
+            for (int ii = 0; ii < NTasks; ii++)
+            {
+                var i = ii;// local copy of iteration var
+                lstTasks.Add(Task.Run(async () =>
+                {
+                    var tid = Thread.CurrentThread.ManagedThreadId;
+                    AddStatusMsg("Task Start" + i.ToString());
+                    // in this method we do the work that might take a long time in bkgd thread (several seconds)
+                    // keep in mind how the thread that does the work is used: 
+                    // if it's calling Thread.Sleep, the CPU load will be low, but the threadpool thread will be occupied
+                    if (CauseStarvation)
+                    {
+                        while (!tcs.Task.IsCompleted)
+                        {
+                            // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
+                            Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                        }
+                    }
+                    else
+                    {
+                        // if the tcs isn't complete, then the curthread will be relinquished back to the theadpool with a continuation queued when the task is done
+                        await tcs.Task;
+                    }
+                    AddStatusMsg(string.Format("Task {0} Done on {1}", i, (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread"));
+                }));
+            }
+            var taskSetDone = Task.Run(async () =>
+            { // a task to set the done signal
+                AddStatusMsg("Starting TaskCompletionSource Task");
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                AddStatusMsg("Setting Task Completion Source");
+                tcs.TrySetResult(1);
+                AddStatusMsg("Set  Task Completion Source");
+            });
+            if (UIThreadDoAwait)
+            {   // await all the tasks
+                await Task.WhenAll(lstTasks.Union(new[] { taskSetDone }));
+            }
+            else
+            {  // keeps the UI thread really busy, even though CPU not in use
+                while (lstTasks.Union(new[] { taskSetDone }).Any(t => !t.IsCompleted))
+                {
+                    //                    await Task.Yield();
+                    Thread.Sleep(TimeSpan.FromSeconds(1));// Sleep surrenders the CPU, but the thread is still in use.
+                }
+            }
+        }
+
+        private async Task DoJTFAsync()
+        {
+            var tcs = new TaskCompletionSource<int>();
+            var jtfContext = new JoinableTaskContext();
+
+            var jtf = jtfContext.CreateFactory(jtfContext.CreateCollection());
+
+            var lstTasks = new List<JoinableTask>();
+            for (int ii = 0; ii < NTasks; ii++)
+            {
+                var i = ii;// local copy of iteration var
+                lstTasks.Add(jtf.RunAsync(async () =>
+                {
+                    Debug.Assert(jtf.Context.IsOnMainThread, "We are on UI thread");
+                    await TaskScheduler.Default; // switch to bgd thread
+                    Debug.Assert(!jtf.Context.IsOnMainThread, "We are on TP thread");
+                    AddStatusMsg("In Task jtf.runasync " + i.ToString());
+                    var tid = Thread.CurrentThread.ManagedThreadId;
+                    if (CauseStarvation)
+                    {
+                        // synchronous call: the curthread is not relinquished to the threadpool
+                        jtf.Run(async () =>
+                        {
+                            await jtf.SwitchToMainThreadAsync();
+                            UpdateUiTxt();
+                        });
+                    }
+                    else
+                    {
+                        await jtf.SwitchToMainThreadAsync(); // curthread is immediately relinquished
+                        UpdateUiTxt();
+                    }
+
+                    Thread.Sleep(TimeSpan.FromSeconds(2.5));// simulate long time on main thread
+                    await TaskScheduler.Default; // switch to tp thread
+                                                 //await Task.Yield().ConfigureAwait(false); // this will allow the continuation to go on any thread, not the thread of the captured context.
+                                                 //AddStatusMsg($"In Task jtf.runasync {i} bgd");
+                                                 //await jtf.SwitchToMainThreadAsync();
+                                                 //UpdateUiTxt();
+                    AddStatusMsg(string.Format("Task jtf.runasync {0} Done on ", i, (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread"));
+                }));
+            }
+            lstTasks.Add(jtf.RunAsync(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                AddStatusMsg("Setting Task Completion Source");
+                tcs.TrySetResult(1);
+            }));
+            if (UIThreadDoAwait)
+            {
+                await Task.WhenAll(lstTasks.Select(j => j.Task));
+            }
+            else
+            {
+                while (lstTasks.Where(j => !j.Task.IsCompleted).Count() > 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1)); // need this await so ui thread can be used by other tasks. Else deadlock
+                    await Task.Yield();
+                }
+            }
+        }
+
+        private void UpdateUiTxt()
+        {
+            var val = int.Parse(_txtUI.Text); // will throw if not on UI thread
+            _txtUI.Text = (val + 1).ToString();
+        }
+
+
+        private void ShowThreadPoolStats()
+        {
+            int workerThreads, completionPortThreads;
+            ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);  /// 2047, 1000
+            AddStatusMsg(string.Format("  Max    #workerThreads={0} #completionPortThreads={1}",workerThreads,completionPortThreads));
+            int minWorkerThreads, minCompletionPortThreads;
+            ThreadPool.GetMinThreads(out minWorkerThreads, out minCompletionPortThreads);   // 8, 8
+            AddStatusMsg(string.Format("  Min    #minWorkerThreads={0} #minCompletionPortThreads={1}", minWorkerThreads, minCompletionPortThreads));
+            int availWorkerThreads, availCompletionPortThreads;
+            ThreadPool.GetAvailableThreads(out availWorkerThreads, out availCompletionPortThreads);
+            AddStatusMsg(string.Format("  Avail  #availWorkerThreads={0} #availCompletionPortThreads={1}", availWorkerThreads, availCompletionPortThreads));
+        }
+    }
+    // https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fenv%2Fshell%2FUIInternal%2FPackages%2FDiagnostics%2FThreadPoolWatcher.cs&_a=contents&version=GBmaster
+    internal class MyThreadPoolWatcher : IDisposable
+    {
+        private readonly MyWindow _mainWindow;
+        private readonly TaskCompletionSource<int> _tcsWatcherThread;
+        private readonly CancellationTokenSource _ctsWatcherThread;
+        private readonly Thread _threadWatcher;
+
+        public MyThreadPoolWatcher(MyWindow mainWindow)
+        {
+            this._mainWindow = mainWindow;
+            this._tcsWatcherThread = new TaskCompletionSource<int>();
+            this._ctsWatcherThread = new CancellationTokenSource();
+            // to detect a threadpool starvation, we need a non-threadpool thread
+            this._threadWatcher = new Thread(() =>
+            {
+                var sw = new Stopwatch();
+                mainWindow.AddStatusMsg("MyThreadPoolWatcher");
+                while (!_ctsWatcherThread.IsCancellationRequested)
+                {
+                    // continuously monitor how long it takes to execute a vary fast WorkItem in threadpool
+                    sw.Restart();
+                    var tcs = new TaskCompletionSource<int>(0);
+                    ThreadPool.QueueUserWorkItem((o) =>
+                    {
+                        tcs.SetResult(0); // the very imple workitem that should execute very quickly
+                    });
+                    tcs.Task.Wait(); // wait for the workitem to be completed. Can't use async here
+                    sw.Stop();
+                    if (sw.Elapsed > TimeSpan.FromSeconds(0.25)) //detect if it took > thresh to execute task
+                    {
+                        // when starvation has been detected, the CLR has waited 1 second for an available thread and created another thread
+                        mainWindow.AddStatusMsg(string.Format("Detected ThreadPool Starvation !!!!!!!! {0:n2} secs", sw.Elapsed.TotalSeconds));
+                        Thread.Sleep(TimeSpan.FromSeconds(1)); // don't try to detect starvation for another second
+                    }
+                }
+                _tcsWatcherThread.TrySetResult(0);
+            })
+            {
+                Name = "MyThreadPoolWatcher",
+                IsBackground = true
+            };
+            this._threadWatcher.Start();
+        }
+
+        public void Dispose()
+        {
+            //            _mainWindow.AddStatusMsg($"{nameof(MyThreadPoolWatcher)} Dispose");
+            this._ctsWatcherThread.Cancel();
+            while (!_tcsWatcherThread.Task.IsCompleted)
+            {
+                Task.Delay(TimeSpan.FromSeconds(0.2)).Wait();
+            }
+            this._ctsWatcherThread.Dispose();
+            _mainWindow.AddStatusMsg("{nameof(MyThreadPoolWatcher)} Disposed");
         }
     }
 }

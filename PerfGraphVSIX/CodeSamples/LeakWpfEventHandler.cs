@@ -79,6 +79,7 @@ namespace MyCodeToExecute
         {
             //ShowUI = false;
             //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+            SecsBetweenIterations = 0.1;
         }
         MyWindow _MyWindow;
         public override async Task DoInitializeAsync()

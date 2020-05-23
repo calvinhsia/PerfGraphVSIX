@@ -666,7 +666,7 @@ public class foo {}
                     if (res is string && !string.IsNullOrEmpty(res as string))
                     {
                         nErrors++;
-                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+//                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
                     }
                 }
             }

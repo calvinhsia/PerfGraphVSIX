@@ -67,7 +67,7 @@ namespace MyCodeToExecute
         /// False means don't show graph and don't launch ClrObjectExplorer
         /// </summary>
         public bool ShowUI = true;
-
+        public double SecsBetweenIterations = 1;
         public int DelayMultiplier = 1; // increase this when running under e.g. MemSpect
         public int NumIterationsBeforeTotalToTakeBaselineSnapshot = 4;
 
@@ -180,6 +180,7 @@ namespace MyCodeToExecute
                         ShowUI = this.ShowUI,
                         logger = _logger,
                         Sensitivity = Sensitivity,
+                        SecsBetweenIterations = SecsBetweenIterations,
                         NumIterationsBeforeTotalToTakeBaselineSnapshot = NumIterationsBeforeTotalToTakeBaselineSnapshot,
                         //actExecuteAfterEveryIterationAsync = async (nIter, mHolder) => // uncomment to suppress dump taking/processing.
                         //{
