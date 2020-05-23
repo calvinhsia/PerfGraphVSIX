@@ -54,3 +54,9 @@ To change VS repo: change .corext\Configs\default.config
 
 // deploy to diff machine with VS enlistment
 xcopy /dy \\calvinh2\c$\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Release\Microsoft.Test.Stress.dll \vs\src\ExternalAPIs\Microsoft.Test.Stress\lib\net461
+
+this repo is in 2 places: 
+	https://github.com/calvinhsia/PerfGraphVSIX.git
+	https://devdiv.visualstudio.com/DefaultCollection/Engineering/_git/DevDivStress
+
+git push GitHub --all
