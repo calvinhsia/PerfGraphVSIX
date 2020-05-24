@@ -212,7 +212,7 @@ namespace Microsoft.Test.Stress
         {
             if (_ClrObjExplorerExe == null)
             {
-                var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), "ClrObjExplorer");
+                var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), @"..\ClrObjExplorer");
                 //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
                 try
                 {

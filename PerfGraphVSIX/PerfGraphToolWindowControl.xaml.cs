@@ -571,7 +571,15 @@
                 DateTime.Now.ToString("hh:mm:ss:fff")
                 //,Thread.CurrentThread.ManagedThreadId
                 );
-            var str = string.Format(dt + msg, args);
+            var str = string.Empty;
+            if (args.Length > 0)
+            {
+                str = string.Format(dt + msg, args);
+            }
+            else
+            {
+                str = dt + msg;
+            }
             if (System.Diagnostics.Debugger.IsAttached)
             {
                 System.Diagnostics.Debug.WriteLine(str);

@@ -201,6 +201,11 @@ namespace Microsoft.Test.Stress
             {
                 Directory.CreateDirectory(dirMyTemp);
             }
+            dirMyTemp = Path.Combine(dirMyTemp, "Dumps");
+            if (!Directory.Exists(dirMyTemp))
+            {
+                Directory.CreateDirectory(dirMyTemp);
+            }
             return dirMyTemp;
         }
         public static string GetNewResultsFolderName(string baseFolderName)

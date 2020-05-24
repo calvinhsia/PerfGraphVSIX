@@ -696,7 +696,7 @@ public class foo {}
             int nErrors = 0;
             foreach (var codesample in Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "CodeSamples"), "*.cs"))
             {
-                if (codesample.Contains("LeakWpf"))
+//                if (codesample.Contains("PoolStarve"))
                 {
                     LogMessage($"Compiling {codesample}");
                     nCompiled++;
@@ -704,8 +704,11 @@ public class foo {}
                     var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
                     if (res is string && !string.IsNullOrEmpty(res as string))
                     {
-                        nErrors++;
-                        //                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                        if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+                        {
+                            nErrors++;
+                            LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                        }
                     }
                 }
             }

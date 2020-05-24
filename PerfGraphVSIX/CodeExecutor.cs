@@ -51,6 +51,7 @@ namespace PerfGraphVSIX
             var GenerateInMemory = true;
             var UseCSC = true;
             var verbose = false;
+            var showWarnings = false;
             //            _logger.LogMessage($"Compiling code");
             try
             {
@@ -101,6 +102,9 @@ namespace PerfGraphVSIX
                                         break;
                                     case "verbose":
                                         verbose = bool.Parse(splitPragma[1]);
+                                        break;
+                                    case "showwarnings":
+                                        showWarnings = true;
                                         break;
                                     default:
                                         throw new InvalidOperationException($"Unknown Pragma {srcline}");
@@ -237,10 +241,14 @@ namespace PerfGraphVSIX
                                 proc.BeginErrorReadLine();
                                 proc.WaitForExit();
                             }
-                            _logger.LogMessage("{0}", sb.ToString());
+//                            _logger.LogMessage("{0}", sb.ToString());
                             if (!File.Exists(outfile) || sb.ToString().Contains(": error"))
                             {
                                 throw new InvalidOperationException(sb.ToString());
+                            }
+                            if (showWarnings && sb.ToString().Contains("warning"))
+                            {
+                                _logger.LogMessage(sb.ToString());
                             }
                             asmCompiled = Assembly.LoadFrom(outfile);
                         }
