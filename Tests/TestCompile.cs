@@ -649,6 +649,44 @@ public class foo {}
 
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Pragma GenerateInMemory  = False")).FirstOrDefault());
         }
+        [TestMethod]
+        public void TestCompileCSC()
+        {
+            var strCodeToExecute = @"
+// can add the fullpath to an assembly for reference like so:
+//Ref: %PerfGraphVSIX%
+//Pragma: useCSC=true
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using PerfGraphVSIX;
+using Microsoft.Test.Stress;
+
+
+namespace DoesntMatter
+{
+public class foo {}
+    public class SomeClass
+    {
+        public static string DoMain(object [] args)
+        {
+            ILogger logger;
+            var x = 1;
+            var y = 100 / x;
+            var zz = $""{x}  {y}"";
+            return ""did main "" + y.ToString() +"" "";
+        }
+    }
+}
+";
+            var codeExecutor = new CodeExecutor(this);
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            LogMessage(res.ToString());
+
+        }
 
         [TestMethod]
         public async Task TestCompileAllCodeSamples()
@@ -656,20 +694,22 @@ public class foo {}
             await Task.Yield();
             int nCompiled = 0;
             int nErrors = 0;
-            foreach (var codesample in Directory.EnumerateFiles("CodeSamples", "*.cs"))
+            foreach (var codesample in Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "CodeSamples"), "*.cs"))
             {
-                if (!codesample.Contains("ExecCodeBase"))
+                if (codesample.Contains("LeakWpf"))
                 {
+                    LogMessage($"Compiling {codesample}");
                     nCompiled++;
                     var codeExecutor = new CodeExecutor(logger: this);
                     var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
                     if (res is string && !string.IsNullOrEmpty(res as string))
                     {
                         nErrors++;
-//                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                        //                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
                     }
                 }
             }
+            LogMessage($"#Compiled Fies= {nCompiled}  #Errors = {nErrors}");
             Assert.IsTrue(nCompiled > 10, "Didn't compile files");
             Assert.AreEqual(0, nErrors, $"# Files with Compile Errors = {nErrors}");
         }

@@ -299,7 +299,7 @@
                 this.Content = ex.ToString();
             }
         }
-        
+
         private bool IsLeakTrackerServiceSupported()
         {
             try
@@ -315,7 +315,7 @@
         }
 
         // Types get loaded before the method that uses them, so it can't be caught in the same method as the Catch: must be in a method below the Catch
-        [ MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
+        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
         private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
 
         // use a circular buffer to store samples. 
@@ -659,7 +659,7 @@
                     }
                     else
                     {
-                        await AddStatusMsgAsync($"Result of CompileAndExecute\r\n" + res.ToString());
+                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
                     }
                     _ctsExecuteCode = null;
                     this.btnExecCode.Content = "ExecCode";

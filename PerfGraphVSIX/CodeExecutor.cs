@@ -31,7 +31,7 @@ namespace PerfGraphVSIX
 
 
         int _hashOfPriorCodeToExecute;
-        CompilerResults _resCompile;
+        Assembly _priorCompiledAssembly;
         HashSet<string> _lstRefDirs = new HashSet<string>();
 
 
@@ -40,15 +40,17 @@ namespace PerfGraphVSIX
             this._logger = logger;
         }
         public object CompileAndExecute(
-            ITakeSample itakeSample, 
-            string pathFileToExecute, 
-            CancellationToken token, 
+            ITakeSample itakeSample,
+            string pathFileToExecute,
+            CancellationToken token,
             bool fExecuteToo = true) // for tests, we want to compile and not execute
         {
             object result = string.Empty;
             var lstFilesToCompile = new HashSet<string>();
             var hashofCodeToExecute = 0;
             var GenerateInMemory = true;
+            var UseCSC = true;
+            var verbose = false;
             //            _logger.LogMessage($"Compiling code");
             try
             {
@@ -62,6 +64,8 @@ namespace PerfGraphVSIX
                 }
                 var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
                                                                              // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
+
+                Assembly asmCompiled = null;
                 using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
                 {
                     var compParams = new CompilerParameters();
@@ -85,12 +89,18 @@ namespace PerfGraphVSIX
                             if (srcline.StartsWith(pragmaPrefix)) ////Pragma: GenerateInMemory=false
                             {
                                 var splitPragma = srcline.Substring(pragmaPrefix.Length).Split(new[] { '=', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                                switch(splitPragma[0])
+                                switch (splitPragma[0].ToLower())
                                 {
-                                    case "GenerateInMemory":
+                                    case "generateinmemory":
                                         GenerateInMemory = bool.Parse(splitPragma[1]);
                                         _logger.LogMessage($"Pragma {nameof(GenerateInMemory)}  = {GenerateInMemory} {Path.GetFileName(fileToCompile)}");
-
+                                        break;
+                                    case "usecsc":
+                                        UseCSC = bool.Parse(splitPragma[1]);
+                                        _logger.LogMessage($"Pragma {nameof(UseCSC)}  = {UseCSC} {Path.GetFileName(fileToCompile)}");
+                                        break;
+                                    case "verbose":
+                                        verbose = bool.Parse(splitPragma[1]);
                                         break;
                                     default:
                                         throw new InvalidOperationException($"Unknown Pragma {srcline}");
@@ -161,37 +171,83 @@ namespace PerfGraphVSIX
                         }
                     }
                     AddFileToCompileList(pathFileToExecute);
-                    if (_resCompile != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
+                    if (_priorCompiledAssembly != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
                     {
                         _logger.LogMessage($"No Compilation required: Using prior compiled assembly for {pathFileToExecute}");
                     }
                     else
                     {
-                        //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
-                        compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
-                        if (GenerateInMemory)
+                        if (!UseCSC)
                         {
-                            compParams.GenerateInMemory = true; // in memory cannot be unloaded
-                        }
-                        var resCompile = cdProvider.CompileAssemblyFromFile(compParams, lstFilesToCompile.ToArray());
-                        if (resCompile.Errors.HasErrors || resCompile.Errors.HasWarnings)
-                        {
-                            var strb = new StringBuilder();
-                            int nErrors = 0;
-                            foreach (var err in resCompile.Errors)
+                            //                        compParams.ReferencedAssemblies.Add(typeof(DependencyObject).Assembly.Location); // C:\WINDOWS\Microsoft.Net\assembly\GAC_MSIL\WindowsBase\v4.0_4.0.0.0__31bf3856ad364e35\WindowsBase.dll  c:\Windows\Microsoft.NET\Framework\v4.0.30319\WPF  c:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF
+                            compParams.ReferencedAssemblies.Add(typeof(PerfGraphToolWindowControl).Assembly.Location);
+                            if (GenerateInMemory)
                             {
-                                strb.AppendLine(err.ToString());
-                                _logger.LogMessage(err.ToString());
-                                nErrors++;
+                                compParams.GenerateInMemory = true; // in memory cannot be unloaded
                             }
-                            strb.AppendLine($"# errors = {nErrors}");
-                            throw new InvalidOperationException(strb.ToString());
+                            var resCompile = cdProvider.CompileAssemblyFromFile(compParams, lstFilesToCompile.ToArray());
+                            if (resCompile.Errors.HasErrors || resCompile.Errors.HasWarnings)
+                            {
+                                var strb = new StringBuilder();
+                                int nErrors = 0;
+                                foreach (var err in resCompile.Errors)
+                                {
+                                    strb.AppendLine(err.ToString());
+                                    _logger.LogMessage(err.ToString());
+                                    nErrors++;
+                                }
+                                strb.AppendLine($"# errors = {nErrors}");
+                                throw new InvalidOperationException(strb.ToString());
+                            }
+                            asmCompiled = resCompile.CompiledAssembly;
                         }
-                        _resCompile = resCompile;
-                        _hashOfPriorCodeToExecute = hashofCodeToExecute;
+                        else
+                        {// C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\MSBuild\Current\bin\Roslyn\csc.exe
+                            var cscExe = Path.Combine(vsRoot, @"MSBuild\Current\Bin\Roslyn\csc.exe");
+                            if (!File.Exists(cscExe))
+                            {
+                                throw new FileNotFoundException(cscExe);
+                            }
+                            var sb = new StringBuilder();
+                            // Csc /target:library -out:asm.exe -r:<filelist>
+                            var outfile = Path.ChangeExtension(Path.GetTempFileName(), ".dll");
+                            var refs = string.Empty;
+                            if (compParams.ReferencedAssemblies?.Count > 0)
+                            {
+                                foreach (var refd in compParams.ReferencedAssemblies)
+                                {
+                                    refs += $@"-reference:""{refd}"" ";
+                                }
+                            }
+                            var srcFiles = string.Empty;
+                            foreach (var srcfile in lstFilesToCompile)
+                            {
+                                srcFiles += " " + srcfile;
+                            }
+                            // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/reference-compiler-option
+                            var args = $@"{srcFiles} /target:library /nologo /out:""{outfile}"" {refs}";
+                            if (verbose)
+                            {
+                                _logger.LogMessage($@"Compile line: ""{cscExe}"" " + args.ToString());
+                            }
+                            using (var proc = VSHandler.CreateProcess(cscExe, args, sb))
+                            {
+                                proc.Start();
+                                proc.BeginOutputReadLine();
+                                proc.BeginErrorReadLine();
+                                proc.WaitForExit();
+                            }
+                            _logger.LogMessage("{0}", sb.ToString());
+                            if (!File.Exists(outfile) || sb.ToString().Contains(": error"))
+                            {
+                                throw new InvalidOperationException(sb.ToString());
+                            }
+                            asmCompiled = Assembly.LoadFrom(outfile);
+                        }
                     }
                 }
-                var asmCompiled = _resCompile.CompiledAssembly;
+                _hashOfPriorCodeToExecute = hashofCodeToExecute;
+                _priorCompiledAssembly = asmCompiled;
                 var didGetMain = false;
                 foreach (var clas in asmCompiled.GetExportedTypes())
                 {
@@ -248,7 +304,7 @@ namespace PerfGraphVSIX
                                       }
                                       if (asm == null)
                                       {
-                                          _logger.LogMessage($"Couldn't resolve {e.Name}");
+                                          _logger.LogMessage($"AssemblyResolver: Couldn't resolve {e.Name}");
                                       }
                                   }
                                   return asm;
@@ -289,7 +345,7 @@ namespace PerfGraphVSIX
             {
                 result = ex.ToString();
                 _hashOfPriorCodeToExecute = 0;
-                _resCompile = null;
+                _priorCompiledAssembly = null;
             }
             return result;
         }

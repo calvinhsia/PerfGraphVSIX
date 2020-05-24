@@ -22,6 +22,9 @@
 
 //Ref: %PerfGraphVSIX%
 //Pragma: GenerateInMemory = False
+//Pragma: UseCSC = true
+
+//Pragma: verbose = false
 
 ////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
 
@@ -157,10 +160,11 @@ namespace MyCodeToExecute
                          _MyClass._logger.LogMessage("In Form Load");
 
                          var strxaml =
-             string.Format(@"<Grid
+             $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-xmlns:l=""clr-namespace:{0};assembly={1}"" 
+xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
+                 System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         Margin=""5,5,5,5"">
         <Grid.RowDefinitions>
             <RowDefinition Height=""auto""/>
@@ -171,8 +175,8 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
         <DockPanel x:Name=""_dp"" Grid.Row=""1""/>
         
     </Grid>
-", this.GetType().Namespace,
-             System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
+";
+
                          Width = 400;
                          Height = 600;
                          var strReader = new System.IO.StringReader(strxaml);
