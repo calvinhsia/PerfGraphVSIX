@@ -19,7 +19,7 @@
 
 //Ref:"%VSRoot%\Common7\IDE\PublicAssemblies\envdte.dll"
 
-
+//Pragma: showwarnings=true
 //Ref: %PerfGraphVSIX%
 
 

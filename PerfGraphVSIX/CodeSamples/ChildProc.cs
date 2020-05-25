@@ -1,6 +1,7 @@
 ﻿//Include: ExecCodeBase.cs
 // this will demonstate leak detection
 // 
+//Pragma: showwarnings=true
 //Ref: MapFileDict.dll
 
 using System;
@@ -79,6 +80,7 @@ namespace MyCodeToExecute
             {
                 await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
+                    await TaskScheduler.Default;
                     var curlstProcToMonitor = new List<ProcessEx.ProcNode>();
                     var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
                     IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>

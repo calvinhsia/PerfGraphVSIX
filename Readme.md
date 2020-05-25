@@ -24,8 +24,17 @@ Stress Testing for leak detection is also supported:
 
 Install from https://github.com/calvinhsia/PerfGraphVSIX/releases/latest
 View Menu->Other Windows->PerfGraphToolWindow
-Choose the Options pane, select the LeakWpfEventHandler.cs file, dbl-click to open it, and click the ExecCodeButton to run it.
-Other samples: CancellationTokenSource leak, EventHandler (non-WPF) leak, ThreadPool Starvation Demo
+Choose the Options pane, select a CodeSamples file, dbl-click to open it, and click the ExecCodeButton to run it.
+Samples include:
+	Iterate VS operations, monitoring memory use
+		opening/closing a VS solution
+		building a VS solution
+		opening/closing files
+	CancellationTokenSource leak
+	EvenhtHandler leak: demonstrates leaking eventhandlers and how to find all the subscribers of an event
+	EventHandler (non-WPF) leak: similarly for WPF RoutedEventHandlers
+	ThreadPool Starvation Demo Shows how to detect and cause ThreadPool starvation
+	MapFileDict: Store the huge contents of a System.Collections.Generic.Dictionary in a temporary file, rather than main memory
 
 A button click will create a process dump of the current VS process and open the dump in ClrObjectExplorer, so individual classes and objects
 can be examined, aggregated, references can be viewed, and leaks can be easily found.

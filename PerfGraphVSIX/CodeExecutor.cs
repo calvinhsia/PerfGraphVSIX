@@ -178,6 +178,7 @@ namespace PerfGraphVSIX
                     if (_priorCompiledAssembly != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
                     {
                         _logger.LogMessage($"No Compilation required: Using prior compiled assembly for {pathFileToExecute}");
+                        asmCompiled = _priorCompiledAssembly;
                     }
                     else
                     {
