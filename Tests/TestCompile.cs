@@ -106,7 +106,6 @@ namespace DoesntMatter
         }
 
 
-
         [TestMethod]
         public void TestCompileCodeReturnTask()
         {
@@ -696,18 +695,21 @@ public class foo {}
             int nErrors = 0;
             foreach (var codesample in Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "CodeSamples"), "*.cs"))
             {
-//                if (codesample.Contains("PoolStarve"))
+                if (!codesample.Contains("ExecCodeBase"))
                 {
-                    LogMessage($"Compiling {codesample}");
-                    nCompiled++;
-                    var codeExecutor = new CodeExecutor(logger: this);
-                    var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
-                    if (res is string && !string.IsNullOrEmpty(res as string))
+//                    if (codesample.Contains("Fish"))
                     {
-                        if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+                        LogMessage($"Compiling {codesample}");
+                        nCompiled++;
+                        var codeExecutor = new CodeExecutor(logger: this);
+                        var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
+                        if (res is string && !string.IsNullOrEmpty(res as string))
                         {
-                            nErrors++;
-                            LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                            if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+                            {
+                                nErrors++;
+                                LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                            }
                         }
                     }
                 }
@@ -715,6 +717,20 @@ public class foo {}
             LogMessage($"#Compiled Fies= {nCompiled}  #Errors = {nErrors}");
             Assert.IsTrue(nCompiled > 10, "Didn't compile files");
             Assert.AreEqual(0, nErrors, $"# Files with Compile Errors = {nErrors}");
+        }
+
+        [TestMethod]
+        public async Task TestCompileVB()
+        {
+            await Task.Yield();
+            var vbfile = @"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples\Cartoon.vb";
+
+            var codeExecutor = new CodeExecutor(this);
+            var res = codeExecutor.CompileAndExecute(null, vbfile, CancellationToken.None);
+            LogMessage("{0}", res.ToString());
+
+
+
         }
     }
 }

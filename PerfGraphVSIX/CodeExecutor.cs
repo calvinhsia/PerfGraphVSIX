@@ -23,9 +23,9 @@ namespace PerfGraphVSIX
     {
         public const string DoMain = "DoMain"; // not domain
         public const string VSRootSubstitution = "%VSRoot%";
-        public const string refPathPrefix = "//Ref:";
-        public const string includePathPrefix = "//Include:";
-        public const string pragmaPrefix = "//Pragma:";
+        public string refPathPrefix = "//Ref:";
+        public string includePathPrefix = "//Include:";
+        public string pragmaPrefix = "//Pragma:";
         bool _fDidAddAssemblyResolver;
         readonly ILogger _logger;
 
@@ -47,6 +47,14 @@ namespace PerfGraphVSIX
         {
             object result = string.Empty;
             var lstFilesToCompile = new HashSet<string>();
+            var IsCSharp = true;
+            if (Path.GetExtension(pathFileToExecute).ToLower() == ".vb")
+            {
+                IsCSharp = false;
+                refPathPrefix = refPathPrefix.Replace("//", "'");
+                includePathPrefix = includePathPrefix.Replace("//", "'");
+                pragmaPrefix = pragmaPrefix.Replace("//", "'"); ;
+            }
             var hashofCodeToExecute = 0;
             var GenerateInMemory = true;
             var UseCSC = true;
@@ -208,10 +216,10 @@ namespace PerfGraphVSIX
                         }
                         else
                         {// C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\MSBuild\Current\bin\Roslyn\csc.exe
-                            var cscExe = Path.Combine(vsRoot, @"MSBuild\Current\Bin\Roslyn\csc.exe");
-                            if (!File.Exists(cscExe))
+                            var roslynExe = Path.Combine(vsRoot, @"MSBuild\Current\Bin\Roslyn", (IsCSharp ? "csc.exe" : "vbc.exe"));
+                            if (!File.Exists(roslynExe))
                             {
-                                throw new FileNotFoundException(cscExe);
+                                throw new FileNotFoundException(roslynExe);
                             }
                             var sb = new StringBuilder();
                             // Csc /target:library -out:asm.exe -r:<filelist>
@@ -221,7 +229,7 @@ namespace PerfGraphVSIX
                             {
                                 foreach (var refd in compParams.ReferencedAssemblies)
                                 {
-                                    refs += $@"-reference:""{refd}"" ";
+                                    refs += $@"-r:""{refd}"" ";
                                 }
                             }
                             var srcFiles = string.Empty;
@@ -233,16 +241,16 @@ namespace PerfGraphVSIX
                             var args = $@"{srcFiles} /target:library /nologo /out:""{outfile}"" {refs}";
                             if (verbose)
                             {
-                                _logger.LogMessage($@"Compile line: ""{cscExe}"" " + args.ToString());
+                                _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args.ToString());
                             }
-                            using (var proc = VSHandler.CreateProcess(cscExe, args, sb))
+                            using (var proc = VSHandler.CreateProcess(roslynExe, args, sb))
                             {
                                 proc.Start();
                                 proc.BeginOutputReadLine();
                                 proc.BeginErrorReadLine();
                                 proc.WaitForExit();
                             }
-//                            _logger.LogMessage("{0}", sb.ToString());
+                            //                            _logger.LogMessage("{0}", sb.ToString());
                             if (!File.Exists(outfile) || sb.ToString().Contains(": error"))
                             {
                                 throw new InvalidOperationException(sb.ToString());
@@ -347,7 +355,7 @@ namespace PerfGraphVSIX
                 }
                 if (!didGetMain)
                 {
-                    throw new InvalidOperationException($"Couldn't find static Main in {pathFileToExecute}");
+                    throw new InvalidOperationException($"Couldn't find static {DoMain} in {pathFileToExecute}");
                 }
             }
             catch (Exception ex)

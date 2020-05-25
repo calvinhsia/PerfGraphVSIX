@@ -62,11 +62,6 @@ using Task = System.Threading.Tasks.Task;
 using System.IO;
 //Include: ExecCodeBase.cs
 
-/* This sample allows you to edit/compile/run code inside the VS process from within the same instance of VS
- * You can access VS Services, JTF, etc with the same code as you would from e.g. building a VS component
- * but the Edit/Build/Run cycle is much smaller and faster
- * rIntellisense mostly works. Debugging is via logging or output window pane.
- * */
 namespace MyCodeToExecute
 {
     public class MyClass : BaseExecCodeClass
@@ -232,7 +227,14 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             {
                 this._myWindow = myWindow;
                 this.Children.Add(new TextBlock() { Text = cnt.ToString() });
-                /* Thousands of CheckBox eventhandlers:
+                /* 
+                 * This exmple is based on a real leak I experienced while developing my SheetMusic Viewer
+                 * https://github.com/calvinhsia/SheetMusicViewer
+                 * Each instance of the InkCanvas had a rendering of a sheet music page
+                 * As I played the piano reading the music, each page I turned was leaked 
+                 * (and sheet music PDF files consume a lot of memory), eventually
+                 * causing an OutOfMemory exception.
+                 Thousands of CheckBox eventhandlers:
                  Subscribing to the Checked method can cause a leak: the single ChkBox on the form is the Publisher of the Checked Event,
                  and it holds a list of the subscribers in it's System.Windows.EventHandlersStore _listStore
 Children of "-- MyCodeToExecute.MyClass+MyCheckBox 0x21591f6c"

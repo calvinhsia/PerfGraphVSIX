@@ -50,7 +50,7 @@ namespace MyCodeToExecute
             }
             else
             {
-                var mapfileType = MapMemTypes.MapMemTypePageFile; // store data in system paeg file 
+                var mapfileType = MapMemTypes.MapMemTypePageFile; // store data in system page file 
                 mapfileType = MapMemTypes.MapMemTypeFileName; // store data in temp file on disk
                 mfd = new MapFileDict<int, DataClass>(ulInitialSize: 0, mapfileType: mapfileType);
                 //                mfd._MemMap.ChangeViewSize(65536 * 2); // can change default memory map view size

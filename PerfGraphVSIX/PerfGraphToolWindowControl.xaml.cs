@@ -150,7 +150,9 @@
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     LstCodeSamples.Clear();
-                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f => new FileInfo(f).LastWriteTime))
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory)
+                        .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
+                        .OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
                         LstCodeSamples.Add(Path.GetFileName(file));
                     }
