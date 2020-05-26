@@ -49,6 +49,7 @@ namespace MyCodeToExecute
         {
             //ShowUI = false;
             //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+            SecsBetweenIterations = 0;
         }
 
         public override async Task DoInitializeAsync()
@@ -69,10 +70,10 @@ namespace MyCodeToExecute
         {
             await Task.Yield();
             var eventHandlerList = GetEventHandlerList<MyClass, EventArgs>(this, "Myevent");
-            logger.LogMessage(string.Format("Leaked: # Event Handlers =  {0} ", eventHandlerList.Length));
+           _logger.LogMessage(string.Format("Leaked: # Event Handlers =  {0} ", eventHandlerList.Length));
             foreach (var evHandler in eventHandlerList)
             {
-                logger.LogMessage(string.Format("   {0} {1}", evHandler.Target, evHandler.Method));
+               _logger.LogMessage(string.Format("   {0} {1}", evHandler.Target, evHandler.Method));
             }
         }
 

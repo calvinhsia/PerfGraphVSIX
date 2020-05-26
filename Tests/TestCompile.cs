@@ -106,7 +106,6 @@ namespace DoesntMatter
         }
 
 
-
         [TestMethod]
         public void TestCompileCodeReturnTask()
         {
@@ -612,11 +611,12 @@ public class foo {}
             var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
+            // compile again and should get msg "using prior"
             res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
-
             Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
         }
+
         [TestMethod]
         public void TestCompilePragma()
         {
@@ -646,12 +646,94 @@ public class foo {}
             var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
-            res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
+            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Pragma GenerateInMemory  = False")).FirstOrDefault());
+        }
+        [TestMethod]
+        public void TestCompileCSC()
+        {
+            var strCodeToExecute = @"
+// can add the fullpath to an assembly for reference like so:
+//Ref: %PerfGraphVSIX%
+//Pragma: useCSC=true
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using PerfGraphVSIX;
+using Microsoft.Test.Stress;
+
+
+namespace DoesntMatter
+{
+public class foo {}
+    public class SomeClass
+    {
+        public static string DoMain(object [] args)
+        {
+            ILogger logger;
+            var x = 1;
+            var y = 100 / x;
+            var zz = $""{x}  {y}"";
+            return ""did main "" + y.ToString() +"" "";
+        }
+    }
+}
+";
+            var codeExecutor = new CodeExecutor(this);
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, strCodeToExecute);
+            var res = codeExecutor.CompileAndExecute(null, tempFile, CancellationToken.None);
             LogMessage(res.ToString());
 
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Using prior compiled assembly")).FirstOrDefault());
+        }
 
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Pragma GenerateInMemory  = False")).FirstOrDefault());
+        [TestMethod]
+        public async Task TestCompileAllCodeSamples()
+        {
+            await Task.Yield();
+            int nCompiled = 0;
+            int nErrors = 0;
+
+            foreach (var codesample in Directory.EnumerateFiles(@"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples")
+                        .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
+                )
+            {
+                if (!codesample.Contains("ExecCodeBase"))
+                {
+                    //                    if (codesample.Contains("Fish"))
+                    {
+                        LogMessage($"Compiling {codesample}");
+                        nCompiled++;
+                        var codeExecutor = new CodeExecutor(logger: this);
+                        var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
+                        if (res is string && !string.IsNullOrEmpty(res as string))
+                        {
+                            if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+                            {
+                                nErrors++;
+                                LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                            }
+                        }
+                    }
+                }
+            }
+            LogMessage($"#Compiled Fies= {nCompiled}  #Errors = {nErrors}");
+            Assert.IsTrue(nCompiled > 10, $"Didn't compile all files: compiled only {nCompiled}");
+            Assert.AreEqual(0, nErrors, $"# Files with Compile Errors = {nErrors}");
+        }
+
+        [TestMethod]
+        public async Task TestCompileVB()
+        {
+            await Task.Yield();
+            var vbfile = @"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples\Cartoon.vb";
+
+            var codeExecutor = new CodeExecutor(this);
+            var res = codeExecutor.CompileAndExecute(null, vbfile, CancellationToken.None);
+            LogMessage("{0}", res.ToString());
+
+
+
         }
     }
 }

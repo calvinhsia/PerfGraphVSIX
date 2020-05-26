@@ -22,6 +22,9 @@
 
 //Ref: %PerfGraphVSIX%
 //Pragma: GenerateInMemory = False
+//Pragma: UseCSC = true
+//Pragma: showwarnings = true
+//Pragma: verbose = false
 
 ////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
 
@@ -59,11 +62,6 @@ using Task = System.Threading.Tasks.Task;
 using System.IO;
 //Include: ExecCodeBase.cs
 
-/* This sample allows you to edit/compile/run code inside the VS process from within the same instance of VS
- * You can access VS Services, JTF, etc with the same code as you would from e.g. building a VS component
- * but the Edit/Build/Run cycle is much smaller and faster
- * rIntellisense mostly works. Debugging is via logging or output window pane.
- * */
 namespace MyCodeToExecute
 {
     public class MyClass : BaseExecCodeClass
@@ -79,6 +77,7 @@ namespace MyCodeToExecute
         {
             //ShowUI = false;
             //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+            SecsBetweenIterations = 0.1;
         }
         MyWindow _MyWindow;
         public override async Task DoInitializeAsync()
@@ -99,7 +98,7 @@ namespace MyCodeToExecute
             }
 //            await Task.Delay(TimeSpan.FromSeconds(20));
             var lstEventHandlers = GetRoutedEventHandlerList<MyCheckBox>(_MyWindow.chkBox, MyCheckBox.CheckedEvent);
-            logger.LogMessage(string.Format("#Ev Handlers = {0}", lstEventHandlers.Length));
+           _logger.LogMessage(string.Format("#Ev Handlers = {0}", lstEventHandlers.Length));
         }
         public override async Task DoCleanupAsync()
         {
@@ -133,7 +132,7 @@ namespace MyCodeToExecute
                     lstDelegates.Add(handler.Handler);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
             return lstDelegates.ToArray();
@@ -153,13 +152,14 @@ namespace MyCodeToExecute
                  {
                      try
                      {
-                         _MyClass.logger.LogMessage("In Form Load");
+                         _MyClass._logger.LogMessage("In Form Load");
 
                          var strxaml =
-             string.Format(@"<Grid
+             $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-xmlns:l=""clr-namespace:{0};assembly={1}"" 
+xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
+                 System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         Margin=""5,5,5,5"">
         <Grid.RowDefinitions>
             <RowDefinition Height=""auto""/>
@@ -170,8 +170,7 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
         <DockPanel x:Name=""_dp"" Grid.Row=""1""/>
         
     </Grid>
-", this.GetType().Namespace,
-             System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
+";
                          Width = 400;
                          Height = 600;
                          var strReader = new System.IO.StringReader(strxaml);
@@ -195,7 +194,7 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
                                      ChkBoxAction(i);
                                  }
                                  var lstEventHandlers = GetRoutedEventHandlerList<MyCheckBox>(chkBox, MyCheckBox.CheckedEvent);
-                                 _MyClass.logger.LogMessage("# evHandlers = " + lstEventHandlers.Length.ToString());
+                                 _MyClass._logger.LogMessage("# evHandlers = " + lstEventHandlers.Length.ToString());
                              }
                              catch (Exception ex)
                              {
@@ -228,7 +227,14 @@ xmlns:l=""clr-namespace:{0};assembly={1}""
             {
                 this._myWindow = myWindow;
                 this.Children.Add(new TextBlock() { Text = cnt.ToString() });
-                /* Thousands of CheckBox eventhandlers:
+                /* 
+                 * This exmple is based on a real leak I experienced while developing my SheetMusic Viewer
+                 * https://github.com/calvinhsia/SheetMusicViewer
+                 * Each instance of the InkCanvas had a rendering of a sheet music page
+                 * As I played the piano reading the music, each page I turned was leaked 
+                 * (and sheet music PDF files consume a lot of memory), eventually
+                 * causing an OutOfMemory exception.
+                 Thousands of CheckBox eventhandlers:
                  Subscribing to the Checked method can cause a leak: the single ChkBox on the form is the Publisher of the Checked Event,
                  and it holds a list of the subscribers in it's System.Windows.EventHandlersStore _listStore
 Children of "-- MyCodeToExecute.MyClass+MyCheckBox 0x21591f6c"
@@ -267,7 +273,7 @@ Children of "-- MyCodeToExecute.MyClass+MyCheckBox 0x21591f6c"
             }
             void ChkboxHandler(object sender, RoutedEventArgs e)
             {
-                _myWindow._MyClass.logger.LogMessage("Click" + (_myWindow.numClicks++).ToString());
+                _myWindow._MyClass._logger.LogMessage("Click" + (_myWindow.numClicks++).ToString());
             }
         }
         public class MyCheckBox : CheckBox

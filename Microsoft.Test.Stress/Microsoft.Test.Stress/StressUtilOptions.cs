@@ -123,7 +123,7 @@ namespace Microsoft.Test.Stress
         ///               --> 298198f0 Microsoft.Test.Apex.VisualStudio.Editor.VisualStudioTextEditorTestExtension.&lt;VsTextView>k__BackingField (#instances = 22)
         ///               --> 1ec80ddc Microsoft.VisualStudio.Editor.Implementation.VsTextViewAdapter  (#instances = 27)
         /// </summary>
-        public int SecsBetweenIterations = 0;
+        public double SecsBetweenIterations = 1;
 
 
         /// <summary>

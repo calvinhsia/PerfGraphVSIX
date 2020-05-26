@@ -70,19 +70,19 @@ namespace MyCodeToExecute
 
         private void SolutionEvents_OnAfterOpenFolder(object sender, EventArgs e)
         {
-//            logger.LogMessage("SolutionEvents_OnAfterOpenFolder");
+//           _logger.LogMessage("SolutionEvents_OnAfterOpenFolder");
             _tcs.TrySetResult(0);
         }
 
         //private void SolutionEvents_OnAfterCloseFolder(object sender, EventArgs e)
         //{
-        //    logger.LogMessage("SolutionEvents_OnAfterCloseFolder");
+        //   _logger.LogMessage("SolutionEvents_OnAfterCloseFolder");
         //    _tcs.TrySetResult(0);
         //}
 
         private void SolutionEvents_OnAfterCloseSolution(object sender, EventArgs e)
         {
-//            logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
+//           _logger.LogMessage("SolutionEvents_OnAfterCloseSolution");
             _tcs.TrySetResult(0);
         }
     }

@@ -41,7 +41,7 @@ namespace MyCodeToExecute
             var hasRootSuffix = 0;
             var rootSuffix = string.Empty;
             appCommandLine.GetOption("rootsuffix", out hasRootSuffix, out rootSuffix);
-            logger.LogMessage(string.Format("Root suf {0} {1}", hasRootSuffix, rootSuffix));
+           _logger.LogMessage(string.Format("Root suf {0} {1}", hasRootSuffix, rootSuffix));
 //            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
             await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\WebApp2\WebApp2.sln");
             //            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\DetourSample\DetourSharedBase.sln");
@@ -49,11 +49,11 @@ namespace MyCodeToExecute
             IVsUIShellOpenDocument uIShellOpenDocument = await asyncServiceProvider.GetServiceAsync(typeof(SVsUIShellOpenDocument)) as IVsUIShellOpenDocument;
             if (uIShellOpenDocument != null)
             {
-                logger.LogMessage("uiShellOpendocument = " + uIShellOpenDocument.ToString());
+               _logger.LogMessage("uiShellOpendocument = " + uIShellOpenDocument.ToString());
             }
             else
             {
-                logger.LogMessage("Didn't get uiShellOpendocument ");
+               _logger.LogMessage("Didn't get uiShellOpendocument ");
             }
 
             await IterateSolutionItemsAsync(async (proj, item, nLevel) =>
@@ -101,7 +101,7 @@ namespace MyCodeToExecute
                         }
                         else
                         {
-//                            logger.LogMessage(string.Format("reject '{0}' '{1}'", proj.Name, item.FileNames[0]));
+//                           _logger.LogMessage(string.Format("reject '{0}' '{1}'", proj.Name, item.FileNames[0]));
                         }
                     }
                     catch (ArgumentException ex)

@@ -179,14 +179,14 @@ namespace Microsoft.Test.Stress
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
-                    sb.AppendLine(string.Format("==>StdOut: {0}", e.Data));
+                    sb.AppendLine(string.Format("{0}", e.Data));
                 }
             };
             process.ErrorDataReceived += (o, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
-                    sb.AppendLine(string.Format("==>StdErr: {0}", e.Data));
+                    sb.AppendLine(string.Format("{0}", e.Data));
                 }
             };
             info.CreateNoWindow = true;

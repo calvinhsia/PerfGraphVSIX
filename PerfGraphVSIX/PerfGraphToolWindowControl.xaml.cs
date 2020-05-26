@@ -150,7 +150,9 @@
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     LstCodeSamples.Clear();
-                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.cs").OrderByDescending(f => new FileInfo(f).LastWriteTime))
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory)
+                        .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
+                        .OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
                         LstCodeSamples.Add(Path.GetFileName(file));
                     }
@@ -299,7 +301,7 @@
                 this.Content = ex.ToString();
             }
         }
-        
+
         private bool IsLeakTrackerServiceSupported()
         {
             try
@@ -315,7 +317,7 @@
         }
 
         // Types get loaded before the method that uses them, so it can't be caught in the same method as the Catch: must be in a method below the Catch
-        [ MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
+        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
         private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
 
         // use a circular buffer to store samples. 
@@ -571,7 +573,15 @@
                 DateTime.Now.ToString("hh:mm:ss:fff")
                 //,Thread.CurrentThread.ManagedThreadId
                 );
-            var str = string.Format(dt + msg, args);
+            var str = string.Empty;
+            if (args.Length > 0)
+            {
+                str = string.Format(dt + msg, args);
+            }
+            else
+            {
+                str = dt + msg;
+            }
             if (System.Diagnostics.Debugger.IsAttached)
             {
                 System.Diagnostics.Debug.WriteLine(str);
@@ -659,7 +669,7 @@
                     }
                     else
                     {
-                        await AddStatusMsgAsync($"Result of CompileAndExecute\r\n" + res.ToString());
+                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
                     }
                     _ctsExecuteCode = null;
                     this.btnExecCode.Content = "ExecCode";

@@ -28,7 +28,7 @@ namespace MyCodeToExecute
             await Task.Yield();
         }
 
-        public override async Task DoIterationBodyAsync()
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             await OpenASolutionAsync();
 

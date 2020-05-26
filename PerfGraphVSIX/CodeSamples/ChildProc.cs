@@ -1,6 +1,7 @@
 ﻿//Include: ExecCodeBase.cs
 // this will demonstate leak detection
 // 
+//Pragma: showwarnings=true
 //Ref: MapFileDict.dll
 
 using System;
@@ -73,12 +74,13 @@ namespace MyCodeToExecute
             await TaskScheduler.Default;
             var procToMonitor = "XDesProc.exe";
             var lstProcToMonitor = new List<ProcessEx.ProcNode>();
-            logger.LogMessage("Monitoring Child Processes " + procToMonitor);
+           _logger.LogMessage("Monitoring Child Processes " + procToMonitor);
             _OutputPane.Activate();
             while (!token.IsCancellationRequested)
             {
                 await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
+                    await TaskScheduler.Default;
                     var curlstProcToMonitor = new List<ProcessEx.ProcNode>();
                     var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
                     IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
@@ -98,7 +100,7 @@ namespace MyCodeToExecute
                         int level = 0;
                         foreach (var node in curlstProcToMonitor)
                         {
-                            logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
+                           _logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
                         }
                         lstProcToMonitor.Clear();
                         lstProcToMonitor.AddRange(curlstProcToMonitor);
