@@ -23,9 +23,10 @@ namespace PerfGraphVSIX
     {
         public const string DoMain = "DoMain"; // not domain
         public const string VSRootSubstitution = "%VSRoot%";
-        public string refPathPrefix = "//Ref:";
-        public string includePathPrefix = "//Include:";
-        public string pragmaPrefix = "//Pragma:";
+        public string refPathPrefix => $"{CommentPrefix}Ref:";
+        public string includePathPrefix => $"{CommentPrefix}Include:";
+        public string pragmaPrefix => $"{CommentPrefix}Pragma:";
+        public string CommentPrefix; // for vb "'". For C# "//"
         bool _fDidAddAssemblyResolver;
         readonly ILogger _logger;
 
@@ -51,9 +52,12 @@ namespace PerfGraphVSIX
             if (Path.GetExtension(pathFileToExecute).ToLower() == ".vb")
             {
                 IsCSharp = false;
-                refPathPrefix = refPathPrefix.Replace("//", "'");
-                includePathPrefix = includePathPrefix.Replace("//", "'");
-                pragmaPrefix = pragmaPrefix.Replace("//", "'"); ;
+                CommentPrefix = "'";
+            }
+            else
+            {
+                CommentPrefix = "//";
+                IsCSharp = true;
             }
             var hashofCodeToExecute = 0;
             var GenerateInMemory = true;
@@ -78,8 +82,10 @@ namespace PerfGraphVSIX
                 using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
                 {
                     var compParams = new CompilerParameters();
-                    _lstRefDirs = new HashSet<string>();
-                    _lstRefDirs.Add(Path.GetDirectoryName(pathFileToExecute));// add the dir of the source file as a ref dir
+                    _lstRefDirs = new HashSet<string>
+                    {
+                        Path.GetDirectoryName(pathFileToExecute)// add the dir of the source file as a ref dir
+                    };
                     void AddFileToCompileList(string fileToCompile)
                     {
                         if (lstFilesToCompile.Contains(fileToCompile))
@@ -241,7 +247,7 @@ namespace PerfGraphVSIX
                             var args = $@"{srcFiles} /target:library /nologo /out:""{outfile}"" {refs}";
                             if (verbose)
                             {
-                                _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args.ToString());
+                                _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args);
                             }
                             using (var proc = VSHandler.CreateProcess(roslynExe, args, sb))
                             {
@@ -265,6 +271,10 @@ namespace PerfGraphVSIX
                 }
                 _hashOfPriorCodeToExecute = hashofCodeToExecute;
                 _priorCompiledAssembly = asmCompiled;
+                if (verbose)
+                {
+                    _logger.LogMessage($"Looking for Static Main");
+                }
                 var didGetMain = false;
                 foreach (var clas in asmCompiled.GetExportedTypes())
                 {
@@ -340,7 +350,15 @@ namespace PerfGraphVSIX
                             PerfGraphToolWindowCommand.Instance?.g_dte,
                             PerfGraphToolWindowCommand.Instance?.package
                             };
+                            if (verbose)
+                            {
+                                _logger.LogMessage($"Calling Static Main");
+                            }
                             var res = mainMethod.Invoke(null, new object[] { parms });
+                            if (verbose)
+                            {
+                                _logger.LogMessage($"Static Main return= {res}");
+                            }
                             if (res is string strres)
                             {
                                 result = strres;
