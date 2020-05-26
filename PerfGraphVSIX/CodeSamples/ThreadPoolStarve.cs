@@ -61,11 +61,8 @@ using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
 
-/* This sample allows you to edit/compile/run code inside the VS process from within the same instance of VS
- * You can access VS Services, JTF, etc with the same code as you would from e.g. building a VS component
- * but the Edit/Build/Run cycle is much smaller and faster
- * rIntellisense mostly works. Debugging is via logging or output window pane.
- * */
+// https://github.com/calvinhsia/ThreadPool
+
 namespace MyCodeToExecute
 {
     public class MyClass

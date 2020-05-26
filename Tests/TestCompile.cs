@@ -693,11 +693,14 @@ public class foo {}
             await Task.Yield();
             int nCompiled = 0;
             int nErrors = 0;
-            foreach (var codesample in Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "CodeSamples"), "*.cs"))
+
+            foreach (var codesample in Directory.EnumerateFiles(@"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples")
+                        .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
+                )
             {
                 if (!codesample.Contains("ExecCodeBase"))
                 {
-//                    if (codesample.Contains("Fish"))
+                    //                    if (codesample.Contains("Fish"))
                     {
                         LogMessage($"Compiling {codesample}");
                         nCompiled++;
@@ -715,7 +718,7 @@ public class foo {}
                 }
             }
             LogMessage($"#Compiled Fies= {nCompiled}  #Errors = {nErrors}");
-            Assert.IsTrue(nCompiled > 10, "Didn't compile files");
+            Assert.IsTrue(nCompiled > 10, $"Didn't compile all files: compiled only {nCompiled}");
             Assert.AreEqual(0, nErrors, $"# Files with Compile Errors = {nErrors}");
         }
 

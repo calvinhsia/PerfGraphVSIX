@@ -40,8 +40,8 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
 
 
-
-
+// https://docs.microsoft.com/en-us/archive/blogs/calvin_hsia/turtle-graphics-logo-program
+// https://github.com/calvinhsia/HwndHost
 //using hWndHost;
 using System;
 using System.Windows;

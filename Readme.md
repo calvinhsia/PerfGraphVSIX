@@ -26,15 +26,19 @@ Install from https://github.com/calvinhsia/PerfGraphVSIX/releases/latest
 View Menu->Other Windows->PerfGraphToolWindow
 Choose the Options pane, select a CodeSamples file, dbl-click to open it, and click the ExecCodeButton to run it.
 Samples include:
-	Iterate VS operations, monitoring memory use
+	Leak Demos showing detecting and identifying leaks
+		CancellationTokenSource leak
+		EvenhtHandler leak: demonstrates leaking eventhandlers and how to find all the subscribers of an event
+		EventHandler (non-WPF) leak: similarly for WPF RoutedEventHandlers
+	Iterate Visaul Studio operations, monitoring memory use
 		opening/closing a VS solution
 		building a VS solution
 		opening/closing files
-	CancellationTokenSource leak
-	EvenhtHandler leak: demonstrates leaking eventhandlers and how to find all the subscribers of an event
-	EventHandler (non-WPF) leak: similarly for WPF RoutedEventHandlers
-	ThreadPool Starvation Demo Shows how to detect and cause ThreadPool starvation
-	MapFileDict: Store the huge contents of a System.Collections.Generic.Dictionary in a temporary file, rather than main memory
+	Practical samples
+		ThreadPool Starvation Demo Shows how to detect and cause ThreadPool starvation
+		MapFileDict: Store the huge contents of a System.Collections.Generic.Dictionary in a temporary file, rather than main memory
+	Fun Samples
+		Fish, Logo, Cartoon
 
 A button click will create a process dump of the current VS process and open the dump in ClrObjectExplorer, so individual classes and objects
 can be examined, aggregated, references can be viewed, and leaks can be easily found.
