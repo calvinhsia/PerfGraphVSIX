@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Internal.Performance
 {
+    // except for MyClass, most of this file is from https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fvscommon%2FCodeMarkers%2FManagedCodeMarkers.cs
 
     public class MyClass
     {
