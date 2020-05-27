@@ -5,7 +5,7 @@
 
 //Ref: %PerfGraphVSIX%
 
-//Pragma: verbose=true
+//Pragma: verbose=false
 
 using System;
 using System.Threading;
@@ -28,16 +28,16 @@ namespace Microsoft.Internal.Performance
         public static async Task DoMain(object[] args)
         {
             var ox = new MyClass();
-            await ox.DoIt(args);
+            await ox.DoItAsync(args);
         }
-        async Task DoIt(object[] args)
+        async Task DoItAsync(object[] args)
         {
             _logger = args[1] as ILogger;
             var markerToSend = 123;
             _CancellationTokenExecuteCode = (CancellationToken)args[2];
             while (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                _logger.LogMessage($"Sending CodeMerker {markerToSend}");
+                _logger.LogMessage($"Sending CodeMarker {markerToSend}");
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 CodeMarkers.Instance.CodeMarker(markerToSend);
                 //CodeMarkers.Instance.CodeMarkerEx(CodeMarkerEvent.perfTargetedTraceBegin,
