@@ -1,7 +1,6 @@
-﻿//Include: ExecCodeBase.cs
-// this will demonstate leak detection
+﻿//Include: ..\LeakTests\ExecCodeBase.cs
+//Desc: This will demonstrate leak detection of Canceallation Token Source
 // 
-//Ref: MapFileDict.dll
 
 using System;
 using System.Threading;
@@ -14,12 +13,11 @@ using Microsoft.VisualStudio.Shell;
 using EnvDTE;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
-using MapFileDict;
 
 namespace MyCodeToExecute
 {
 
-    public class MyClass : BaseExecCodeClass
+    public class MyClass : ExecCodeBase
     {
         public static async Task DoMain(object[] args)
         {
@@ -38,6 +36,7 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
+            await Task.Yield();
             _cts = new CancellationTokenSource();
         }
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken token)
@@ -45,6 +44,7 @@ namespace MyCodeToExecute
             var numPerIter = 100000;
             await Task.Run(async () =>
             {
+                await Task.Yield();
                 for (int i = 0; i < numPerIter; i++)
                 {
                     var newcts = new CancellationTokenSource();
@@ -79,6 +79,7 @@ namespace MyCodeToExecute
         }
         public override async Task DoCleanupAsync()
         {
+            await Task.Yield();
             _cts.Dispose();
         }
     }

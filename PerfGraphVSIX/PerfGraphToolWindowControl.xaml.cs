@@ -67,6 +67,7 @@
         public int NumDataPoints { get; set; } = 100;
 
         public bool SetMaxGraphTo100 { get; set; } = false;
+        public TabControl TabControl => tabControl; // so executing code can reference it
 
 
         public string CodeSampleDirectory
@@ -270,7 +271,6 @@
                     await ResetPerfCounterMonitorAsync();
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
-                chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
 
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {

@@ -1,4 +1,5 @@
-﻿
+﻿//Desc: The base class used for many of the leak samples
+
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
@@ -52,7 +53,7 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-    public class BaseExecCodeClass : IDisposable
+    public class ExecCodeBase : IDisposable
     {
         public string FileToExecute;
         public ILogger _logger;
@@ -85,7 +86,7 @@ namespace MyCodeToExecute
         public IVsUIShell _vsUIShell;
 
 
-        public BaseExecCodeClass(object[] args)
+        public ExecCodeBase(object[] args)
         {
             FileToExecute = args[0] as string;
             _logger = args[1] as ILogger;
@@ -94,6 +95,9 @@ namespace MyCodeToExecute
             g_dte = args[4] as EnvDTE.DTE;
             package = args[5] as object;// IAsyncPackage;
             //logger.LogMessage("Registering events ");
+
+            var perfGraphToolWindowControl = itakeSample as PerfGraphToolWindowControl;
+            perfGraphToolWindowControl.TabControl.SelectedIndex = 1; // select graph tab
 
             BuildEvents = g_dte.Events.BuildEvents;
             DebuggerEvents = g_dte.Events.DebuggerEvents;

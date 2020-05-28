@@ -1,4 +1,5 @@
-﻿
+﻿//Desc: sample to show how ThreadPool Starvation can occur, with and without the JoinableTakeFactory
+
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
@@ -21,7 +22,7 @@
 
 //Pragma: showwarnings=true
 //Ref: %PerfGraphVSIX%
-//Pragma: verbose = true
+//Pragma: verbose = False
 
 
 ////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll

@@ -1,8 +1,7 @@
-﻿//Include: ExecCodeBase.cs
-// this will demonstate leak detection
+﻿//Desc: Show how to get the child processes of Devenv and possibly monitor them
+//Include: ..\LeakTests\ExecCodeBase.cs
 // 
 //Pragma: showwarnings=true
-//Ref: MapFileDict.dll
 
 using System;
 using System.Threading;
@@ -22,7 +21,7 @@ using System.Linq;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : BaseExecCodeClass
+    public class MyClass : ExecCodeBase
     {
         public static async Task DoMain(object[] args)
         {

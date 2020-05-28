@@ -1,4 +1,4 @@
-﻿
+﻿//Desc: Demonstrate a leak with WPF RoutedEventHandlers
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
@@ -60,11 +60,11 @@ using System.Xml;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
-//Include: ExecCodeBase.cs
+//Include: ..\LeakTests\ExecCodeBase.cs
 
 namespace MyCodeToExecute
 {
-    public class MyClass : BaseExecCodeClass
+    public class MyClass : ExecCodeBase
     {
         public static async Task DoMain(object[] args)
         {

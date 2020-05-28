@@ -1,5 +1,5 @@
-﻿//Include: ExecCodeBase.cs
-// this will demonstate leak detection
+﻿//Include: ..\LeakTests\ExecCodeBase.cs
+//Desc: Demonstrate leak detection of handles
 
 using System;
 using System.Threading;
@@ -20,7 +20,7 @@ using HANDLE = System.IntPtr;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : BaseExecCodeClass
+    public class MyClass : ExecCodeBase
     {
         class BigStuffWithLongNameSoICanSeeItBetter
         {

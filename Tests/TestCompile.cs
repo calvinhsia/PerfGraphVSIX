@@ -694,24 +694,27 @@ public class foo {}
             int nCompiled = 0;
             int nErrors = 0;
 
-            foreach (var codesample in Directory.EnumerateFiles(@"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples")
+            foreach (var codesample in Directory.EnumerateFiles(@"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples", "*.*", SearchOption.AllDirectories)
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
                 )
             {
-                if (!codesample.Contains("ExecCodeBase"))
+                //LogMessage($"Compiling {codesample}");
                 {
-                    //                    if (codesample.Contains("Fish"))
+                    if (!codesample.Contains("ExecCodeBase"))
                     {
-                        LogMessage($"Compiling {codesample}");
-                        nCompiled++;
-                        var codeExecutor = new CodeExecutor(logger: this);
-                        var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
-                        if (res is string && !string.IsNullOrEmpty(res as string))
+                        //                    if (codesample.Contains("Fish"))
                         {
-                            if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+//                            LogMessage($"Compiling {codesample}");
+                            nCompiled++;
+                            var codeExecutor = new CodeExecutor(logger: this);
+                            var res = codeExecutor.CompileAndExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
+                            if (res is string && !string.IsNullOrEmpty(res as string))
                             {
-                                nErrors++;
-                                LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                                if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+                                {
+                                    nErrors++;
+                                    LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                                }
                             }
                         }
                     }

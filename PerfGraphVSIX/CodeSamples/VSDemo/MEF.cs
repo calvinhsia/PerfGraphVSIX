@@ -1,4 +1,5 @@
-﻿
+﻿//Desc: MEF: use MEF to obtain components. Doesn't work yet
+
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 

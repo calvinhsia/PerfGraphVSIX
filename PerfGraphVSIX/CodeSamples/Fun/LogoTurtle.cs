@@ -1,4 +1,5 @@
-﻿
+﻿//Desc: A turtle with a pen can move around with simple commands, like Left, Forward
+//Desc: It's very fast, and creates mesmerizing images
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
@@ -24,7 +25,7 @@
 //Pragma: GenerateInMemory = False
 //Pragma: UseCSC = true
 //Pragma: showwarnings = true
-//Pragma: verbose = true
+//Pragma: verbose = False
 
 ////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
 

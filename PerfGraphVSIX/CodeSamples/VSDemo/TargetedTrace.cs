@@ -1,4 +1,4 @@
-﻿
+﻿//Desc: Sample code to show how to initiate a targeted trace
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Newtonsoft.Json.dll
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Telemetry.dll
 

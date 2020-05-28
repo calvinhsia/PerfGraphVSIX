@@ -1,5 +1,5 @@
-﻿//Include: ExecCodeBase.cs
-// this will demonstate leak detection
+﻿//Include: ..\LeakTests\ExecCodeBase.cs
+//Desc: Demonstrate using a file on disk or system page file for backing store for an IDictionary<K,V> or IList<T>
 // 
 //Ref: MapFileDict.dll
 
@@ -19,7 +19,7 @@ using MapFileDict;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : BaseExecCodeClass
+    public class MyClass : ExecCodeBase
     {
         public static async Task DoMain(object[] args)
         {

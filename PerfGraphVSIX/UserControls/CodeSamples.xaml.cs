@@ -30,7 +30,7 @@ namespace PerfGraphVSIX.UserControls
             this._codeSampleDirectory = codeSampleDirectory;
             this._targetToSelect = targetToSelect;
             ToolTip = "Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests. The selection changes to be the most recent edited when the directory changes content.";
-            MaxHeight = 250;
+            MaxHeight = 200;
 
             AddItems(this, new DirectoryInfo(codeSampleDirectory));
         }
@@ -48,12 +48,15 @@ namespace PerfGraphVSIX.UserControls
             }
             foreach (var file in dirInfo.GetFiles())
             {
-                var tvItem = new MyFileTreeviewItem() { Header = file.Name, FullFileName = file.FullName };
-                ctrl.Items.Add(tvItem);
-                if (file.Name == _targetToSelect)
+                if (".vb|.cs".Contains(System.IO.Path.GetExtension(file.Name).ToLower()))
                 {
-                    containsTarget = true;
-                    tvItem.IsSelected = true;
+                    var tvItem = new MyFileTreeviewItem() { Header = file.Name, FullFileName = file.FullName };
+                    ctrl.Items.Add(tvItem);
+                    if (file.Name == _targetToSelect)
+                    {
+                        containsTarget = true;
+                        tvItem.IsSelected = true;
+                    }
                 }
             }
             return containsTarget;
@@ -89,7 +92,7 @@ namespace PerfGraphVSIX.UserControls
             public string GetTip()
             {
                 var tip = FullFileName;
-                var cmnt = System.IO.Path.GetExtension(FullFileName).ToLower() == ".cs" ? "//" : "`";
+                var cmnt = System.IO.Path.GetExtension(FullFileName).ToLower() == ".cs" ? "//" : "'";
                 var desc = $"{cmnt}Desc:";
                 var txt = string.Join(
                     Environment.NewLine,
@@ -98,7 +101,7 @@ namespace PerfGraphVSIX.UserControls
                     .Select(lin => lin.Substring(desc.Length)));
                 if (!string.IsNullOrEmpty(txt))
                 {
-                    tip += Environment.NewLine + txt;
+                    tip = txt + Environment.NewLine + tip;
                 }
                 return tip;
             }

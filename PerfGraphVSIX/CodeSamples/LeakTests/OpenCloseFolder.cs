@@ -1,4 +1,6 @@
-﻿//Include: ExecCodeBase.cs
+﻿//Desc: Repeatedly Open/close a folder. Modify the code to point to a folder
+
+//Include: ExecCodeBase.cs
 
 using System;
 using System.Threading;
@@ -11,7 +13,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace MyCodeToExecute
 {
-    public class MyClass : BaseExecCodeClass
+    public class MyClass : ExecCodeBase
     {
         public TaskCompletionSource<int> _tcs = new TaskCompletionSource<int>();
 
