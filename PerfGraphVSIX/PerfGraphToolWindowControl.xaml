@@ -142,13 +142,11 @@
                         <Label Content="Counters to track:"/>
                         <ListBox Name="lbPCounters" SelectionMode="Extended" Width="160" MaxHeight = "200" VerticalAlignment="Top" ToolTip="Multiselect various counters" />
                     </StackPanel>
-                    <StackPanel Grid.Column="2">
+                    <StackPanel x:Name="spCodeSamples" Grid.Column="2">
                         <Label Content="Code Samples:"/>
-                        <ListBox Name="lvCodeSamples" 
-                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests. These are sorted by LastWriteTime and the 1st one is selected when the directory changes content."
-                                 ItemsSource="{Binding LstCodeSamples }" 
-                                 MaxHeight="200"
-                                 MouseDoubleClick="LvCodeSamples_MouseDoubleClick"/>
+                        <UserControl Name="TvCodeSamples" 
+                                 ToolTip="Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests. The selection changes to be the most recent edited when the directory changes content."
+                                 MaxHeight="200"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

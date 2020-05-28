@@ -29,6 +29,7 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
     using Microsoft.VisualStudio.Utilities;
+    using PerfGraphVSIX.UserControls;
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
@@ -80,8 +81,6 @@
                 return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
             }
         }
-        private ObservableCollection<string> _LstCodeSamples = new ObservableCollection<string>();
-        public ObservableCollection<string> LstCodeSamples { get { return _LstCodeSamples; } set { _LstCodeSamples = value; RaisePropChanged(); } }
 
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
@@ -149,24 +148,29 @@
                 async Task RefreshCodeToRunAsync()
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    LstCodeSamples.Clear();
-                    foreach (var file in Directory.GetFiles(CodeSampleDirectory)
+                    FileInfo mostRecentFileInfo = null;
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.*", SearchOption.AllDirectories)
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
-                        LstCodeSamples.Add(Path.GetFileName(file));
+                        if (!file.Contains("ExecCodeBase"))
+                        {
+                            var finfo = new FileInfo(file);
+                            if (mostRecentFileInfo == null || finfo.LastWriteTime > mostRecentFileInfo.LastWriteTime)
+                            {
+                                mostRecentFileInfo = finfo;
+                            }
+                        }
                     }
-                    //_ctsExecuteCode?.Cancel();
-                    if (LstCodeSamples[0].Contains("ExecCodeBase.cs")) // The base class doesn't have a Static Main
-                    {
-                        lvCodeSamples.SelectedItem = LstCodeSamples[1];
-                    }
-                    else
-                    {
-                        lvCodeSamples.SelectedItem = LstCodeSamples[0];
-                    }
+                    _codeSampleControl = new CodeSamples(CodeSampleDirectory, mostRecentFileInfo?.Name);
+                    this.spCodeSamples.Children.Clear();
+                    this.spCodeSamples.Children.Add(new Label() { Content = "Code Samples" });
+                    this.spCodeSamples.Children.Add(_codeSampleControl);
                 }
-                _ = RefreshCodeToRunAsync();
+                _ = Task.Run(() =>
+                {
+                    _ = RefreshCodeToRunAsync();
+                });
 
                 _fileSystemWatcher = new FileSystemWatcher(CodeSampleDirectory);
                 FileSystemEventHandler h = new FileSystemEventHandler(
@@ -563,6 +567,7 @@
 
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
+        private CodeSamples _codeSampleControl;
 
         // we can't use the output window because it will just accumulate and look like a leak
         async public Task AddStatusMsgAsync(string msg, params object[] args)
@@ -573,7 +578,7 @@
                 DateTime.Now.ToString("hh:mm:ss:fff")
                 //,Thread.CurrentThread.ManagedThreadId
                 );
-            var str = string.Empty;
+            string str;
             if (args.Length > 0)
             {
                 str = string.Format(dt + msg, args);
@@ -643,14 +648,15 @@
                 }
                 if (_ctsExecuteCode == null)
                 {
-                    this.tabControl.SelectedIndex = 0; // select graph tab
-                    var CodeFileToRun = string.Empty;
-                    if (lvCodeSamples.SelectedItem == null || lvCodeSamples.SelectedItems.Count != 1)
+//                    this.tabControl.SelectedIndex = 0; // select graph tab
+                    var CodeFileToRun = _codeSampleControl.GetSelectedFile();
+                    
+                    if (string.IsNullOrEmpty(CodeFileToRun))
                     {
                         LogMessage($"No single Code file selected");
                         return;
                     }
-                    CodeFileToRun = Path.Combine(CodeSampleDirectory, lvCodeSamples.SelectedItem.ToString());
+                    CodeFileToRun = Path.Combine(CodeSampleDirectory, CodeFileToRun);
 
                     this.btnExecCode.Content = "Cancel Code Execution";
                     await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
@@ -688,22 +694,6 @@
                 this.btnExecCode.Content = "ExecCode";
                 this.btnExecCode.IsEnabled = true;
                 _ctsExecuteCode = null;
-            }
-        }
-
-        private void LvCodeSamples_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            //            ThreadHelper.ThrowIfNotOnUIThread();
-            Dispatcher.VerifyAccess();
-
-            if (lvCodeSamples.SelectedItems.Count == 1)
-            {
-                var itm = lvCodeSamples.SelectedItems[0] as string;
-                var pathFile = Path.Combine(
-                    CodeSampleDirectory,
-                    itm.ToString());
-                pathFile = "\"" + pathFile + "\"";
-                PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", pathFile);
             }
         }
     }

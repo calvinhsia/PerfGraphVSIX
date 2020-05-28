@@ -1,5 +1,6 @@
 ﻿//Include: ExecCodeBase.cs
-// this will demonstate leak detection
+//Desc: This will demonstrate leak detection
+//Desc: It has a big class that consumes lots of memory
 
 using System;
 using System.Threading;
