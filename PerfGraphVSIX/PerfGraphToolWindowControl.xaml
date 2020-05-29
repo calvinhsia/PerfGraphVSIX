@@ -59,6 +59,44 @@
             <RowDefinition Height = "*"/>
         </Grid.RowDefinitions>
         <TabControl Name="tabControl" Grid.Row="0">
+            <TabItem Header="Code Samples">
+                <StackPanel x:Name="spCodeSamples" Grid.Column="2">
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Graph">
+                <StackPanel Orientation="Vertical" Name = "spGraph">
+                    <WindowsFormsHost Name="wfhost"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header = "TextViewTracker" ToolTip="Track Editor TextView instances via ITextViewCreationListener">
+                <StackPanel Orientation="Vertical">
+                    <Label Content="Opened TextViews" ToolTip="Views that are currently opened. (Refreshed by UpdateInterval, which does GC)"/>
+                    <ListBox ItemsSource="{Binding OpenedViews}" MaxHeight = "400"/>
+                    <Label Content="Leaked TextViews" ToolTip="Each row is a views that has ITextView.IsClosed==true, but is still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh"/>
+                    <ListBox ItemsSource="{Binding LeakedViews}" MaxHeight = "400"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header = "ObjectTracker" ToolTip="Track various Object instances">
+                <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Name="btnClearObjects" Content="Clear tracked objects" ToolTip="Clear the list of objects being tracked. The objects will not be tracked: but they may still be in memory"/>
+                        <Label Content="Filter"/>
+                        <local:MyTextBox Text="{Binding ObjectTrackerFilter}" Width="146"
+                    ToolTip="Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'  Negative: All without 'text': '^((?!text).)*$'"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="{Binding CntCreatedObjs}" ToolTip="Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding CreatedObjs}" MaxHeight = "400"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="{Binding CntLeakedObjs}" ToolTip="Objects that have Objects.IsClosed or *disposed* ==true, but are still in memory. If these accumulate, likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
+                    </StackPanel>
+                    <UserControl Name="BrowLeakedObjects"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem x:Name="inProcLeakTracerTabItem" Visibility="Collapsed" Header = "MemoryLeakService Tracker" ToolTip="Track Object instances using the IMemoryLeakTrackerServices for objects that support it. The objects claimed to leak here are probable leaks as per the developers of those object.">
+                <UserControl x:Name="inProcLeakTracker"/>
+            </TabItem>
             <TabItem Header = "Options" ToolTip="Choose options">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -105,43 +143,7 @@
                         <Label Content="Counters to track:"/>
                         <ListBox Name="lbPCounters" SelectionMode="Extended" Width="160" MaxHeight = "200" VerticalAlignment="Top" ToolTip="Multiselect various Performance Counters to graph" />
                     </StackPanel>
-                    <StackPanel x:Name="spCodeSamples" Grid.Column="2">
-                    </StackPanel>
                 </Grid>
-            </TabItem>
-            <TabItem Header="Graph">
-                <StackPanel Orientation="Vertical" Name = "spGraph">
-                    <WindowsFormsHost Name="wfhost"/>
-                </StackPanel>
-            </TabItem>
-            <TabItem Header = "TextViewTracker" ToolTip="Track Editor TextView instances via ITextViewCreationListener">
-                <StackPanel Orientation="Vertical">
-                    <Label Content="Opened TextViews" ToolTip="Views that are currently opened. (Refreshed by UpdateInterval, which does GC)"/>
-                    <ListBox ItemsSource="{Binding OpenedViews}" MaxHeight = "400"/>
-                    <Label Content="Leaked TextViews" ToolTip="Each row is a views that has ITextView.IsClosed==true, but is still in memory (Refreshed by UpdateInterval, which does GC). Thanks to David Pugh"/>
-                    <ListBox ItemsSource="{Binding LeakedViews}" MaxHeight = "400"/>
-                </StackPanel>
-            </TabItem>
-            <TabItem Header = "ObjectTracker" ToolTip="Track various Object instances">
-                <StackPanel Orientation="Vertical">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Name="btnClearObjects" Content="Clear tracked objects" ToolTip="Clear the list of objects being tracked. The objects will not be tracked: but they may still be in memory"/>
-                        <Label Content="Filter"/>
-                        <local:MyTextBox Text="{Binding ObjectTrackerFilter}" Width="146"
-                    ToolTip="Filter to include only these items below. Applied every Update(Tab out to apply). (See UpdateInterval on Options Tab). Regex (ignores case) like '.*proj.*'  Negative: All without 'text': '^((?!text).)*$'"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="{Binding CntCreatedObjs}" ToolTip="Objs that are currently in memory. These could be leaks (Refreshed by UpdateInterval, which does GC). Order By Count descending"/>
-                    </StackPanel>
-                    <ListBox ItemsSource="{Binding CreatedObjs}" MaxHeight = "400"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Label Content="{Binding CntLeakedObjs}" ToolTip="Objects that have Objects.IsClosed or *disposed* ==true, but are still in memory. If these accumulate, likely to be a leak. (Refreshed by UpdateInterval, which does GC)."/>
-                    </StackPanel>
-                    <UserControl Name="BrowLeakedObjects"/>
-                </StackPanel>
-            </TabItem>
-            <TabItem x:Name="inProcLeakTracerTabItem" Visibility="Collapsed" Header = "MemoryLeakService Tracker" ToolTip="Track Object instances using the IMemoryLeakTrackerServices for objects that support it. The objects claimed to leak here are probable leaks as per the developers of those object.">
-                <UserControl x:Name="inProcLeakTracker"/>
             </TabItem>
         </TabControl>
         <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>

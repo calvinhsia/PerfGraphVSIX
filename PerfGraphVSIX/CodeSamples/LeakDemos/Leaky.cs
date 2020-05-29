@@ -1,4 +1,4 @@
-﻿//Include: ..\LeakTests\ExecCodeBase.cs
+﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
 //Desc: This will demonstrate leak detection
 //Desc: It has a big class that consumes lots of memory
 

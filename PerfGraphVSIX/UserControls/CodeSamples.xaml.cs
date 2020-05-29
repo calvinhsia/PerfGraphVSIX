@@ -89,6 +89,16 @@ namespace PerfGraphVSIX.UserControls
                     PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", FullFileName);
                 };
             }
+            protected override void OnPreviewKeyDown(KeyEventArgs e)
+            {
+                base.OnPreviewKeyDown(e);
+                if (e.Key == Key.Enter)
+                {
+                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                    PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", FullFileName);
+                    e.Handled = true;
+                }
+            }
             public string GetTip()
             {
                 var tip = FullFileName;

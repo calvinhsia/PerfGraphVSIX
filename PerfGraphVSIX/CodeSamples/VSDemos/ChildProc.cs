@@ -1,5 +1,5 @@
 ﻿//Desc: Show how to get the child processes of Devenv and possibly monitor them
-//Include: ..\LeakTests\ExecCodeBase.cs
+//Include: ..\VSLeakTests\ExecCodeBase.cs
 // 
 //Pragma: showwarnings=true
 

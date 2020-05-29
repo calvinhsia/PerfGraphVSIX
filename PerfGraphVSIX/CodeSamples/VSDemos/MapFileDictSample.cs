@@ -1,4 +1,4 @@
-﻿//Include: ..\LeakTests\ExecCodeBase.cs
+﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
 //Desc: Demonstrate using a file on disk or system page file for backing store for an IDictionary<K,V> or IList<T>
 // 
 //Ref: MapFileDict.dll

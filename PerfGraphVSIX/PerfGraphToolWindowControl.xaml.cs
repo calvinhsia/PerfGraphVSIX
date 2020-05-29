@@ -165,7 +165,6 @@
                     }
                     _codeSampleControl = new CodeSamples(CodeSampleDirectory, mostRecentFileInfo?.Name);
                     this.spCodeSamples.Children.Clear();
-                    this.spCodeSamples.Children.Add(new Label() { Content = "Code Samples" });
                     this.spCodeSamples.Children.Add(_codeSampleControl);
                 }
                 _ = Task.Run(() =>

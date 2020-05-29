@@ -1,4 +1,4 @@
-﻿//Include: ..\LeakTests\ExecCodeBase.cs
+﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
 //Desc: Demonstrate leak detection of native heap memory
 
 using System;

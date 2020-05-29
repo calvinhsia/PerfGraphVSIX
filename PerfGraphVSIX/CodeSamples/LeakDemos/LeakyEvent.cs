@@ -1,4 +1,4 @@
-﻿//Include: ..\LeakTests\ExecCodeBase.cs
+﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
 //Desc: this will demonstrate EventHandler leaks
 
 using System;

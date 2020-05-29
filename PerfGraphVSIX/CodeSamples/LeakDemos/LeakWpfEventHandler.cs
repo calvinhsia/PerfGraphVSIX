@@ -60,7 +60,7 @@ using System.Xml;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
-//Include: ..\LeakTests\ExecCodeBase.cs
+//Include: ..\VSLeakTests\ExecCodeBase.cs
 
 namespace MyCodeToExecute
 {

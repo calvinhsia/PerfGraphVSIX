@@ -1,4 +1,4 @@
-﻿//Include: ..\LeakTests\ExecCodeBase.cs
+﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
 //Desc: This will demonstrate leak detection of Canceallation Token Source
 // 
 
