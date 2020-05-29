@@ -93,7 +93,7 @@ namespace MyCodeToExecute
             var itakeSample = args[3] as ITakeSample; // for taking perf counter measurements
             var g_dte = args[4] as EnvDTE.DTE; // if needed
             _package = args[5] as object;// IAsyncPackage, IServiceProvider
-            _MyWindow = new MainWindow();
+            _MyWindow = new MainWindow(_CancellationTokenExecuteCode);
 
             var timer = new DispatcherTimer()
             {
@@ -165,13 +165,15 @@ After completion, the status window timestamps are accurate (the actual time the
 The CLR will expand the threadpool if a task can't be scheduled to run because no thread is available for 1 second.
 The CLR may retire extra idle active threads
 ";
+        CancellationToken _CancellationTokenExecuteCode;
 
-        public int NTasks { get; set; } = 10;
+        public int NTasks { get; set; } = 150; // if we're using the vs threadpool, it may already have grown substantially as VS is used.
         public bool CauseStarvation { get; set; }
         public bool UIThreadDoAwait { get; set; } = true;
         public bool UseJTF { get; set; }
-        public MainWindow()
+        public MainWindow(CancellationToken cancellationToken)
         {
+            this._CancellationTokenExecuteCode = cancellationToken;
             this.Loaded += MainWindow_Loaded;
         }
         public void AddStatusMsg(string msg, params object[] args)
@@ -219,6 +221,23 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <RowDefinition Height=""auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
+        <Canvas Margin=""511,0,0,0.5"">
+            <Ellipse Name=""Ball"" Width=""24"" Height=""24"" Fill=""Blue""
+             Canvas.Left=""396"">
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent=""Ellipse.Loaded"">
+                        <BeginStoryboard>
+                            <Storyboard TargetName=""Ball"" RepeatBehavior=""Forever"">
+                                <DoubleAnimation
+                                Storyboard.TargetProperty=""(Canvas.Left)""
+                                From=""96"" To=""300"" Duration=""0:0:1""
+                                AutoReverse=""True"" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+        </Canvas>
 
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <Label Content=""#Tasks""/>
@@ -347,7 +366,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             var taskSetDone = Task.Run(async () =>
             { // a task to set the done signal
                 AddStatusMsg("Starting TaskCompletionSource Task");
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(10), _CancellationTokenExecuteCode);
                 AddStatusMsg("Setting Task Completion Source");
                 tcs.TrySetResult(1);
                 AddStatusMsg("Set  Task Completion Source");
@@ -369,9 +388,16 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
         private async Task DoJTFAsync()
         {
             var tcs = new TaskCompletionSource<int>();
-            var jtfContext = new JoinableTaskContext();
-
-            var jtf = jtfContext.CreateFactory(jtfContext.CreateCollection());
+            JoinableTaskFactory jtf;
+            if (Process.GetCurrentProcess().ProcessName == "devenv")
+            {
+                jtf = ThreadHelper.JoinableTaskFactory; // use the VS JTF
+            }
+            else
+            {
+                var jtfContext = new JoinableTaskContext();
+                jtf = jtfContext.CreateFactory(jtfContext.CreateCollection());
+            }
 
             var lstTasks = new List<JoinableTask>();
             for (int ii = 0; ii < NTasks; ii++)
@@ -391,15 +417,24 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                         {
                             await jtf.SwitchToMainThreadAsync();
                             UpdateUiTxt();
+                            await TaskScheduler.Default; // switch to tp thread
+                            while (!tcs.Task.IsCompleted)
+                            {
+                                // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
+                                Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                            }
                         });
                     }
                     else
                     {
                         await jtf.SwitchToMainThreadAsync(); // curthread is immediately relinquished
                         UpdateUiTxt();
+                        await TaskScheduler.Default; // switch to tp thread
+                        await tcs.Task;
                     }
+                    await Task.Delay(TimeSpan.FromSeconds(2.5), _CancellationTokenExecuteCode);
 
-                    Thread.Sleep(TimeSpan.FromSeconds(2.5));// simulate long time on main thread
+                    //                    Thread.Sleep(TimeSpan.FromSeconds(2.5));// simulate long time on main thread
                     await TaskScheduler.Default; // switch to tp thread
                                                  //await Task.Yield().ConfigureAwait(false); // this will allow the continuation to go on any thread, not the thread of the captured context.
                                                  //AddStatusMsg($"In Task jtf.runasync {i} bgd");
@@ -410,7 +445,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             }
             lstTasks.Add(jtf.RunAsync(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(10), _CancellationTokenExecuteCode);
                 AddStatusMsg("Setting Task Completion Source");
                 tcs.TrySetResult(1);
             }));

@@ -1,5 +1,5 @@
-﻿//Desc: sample to show how ThreadPool Starvation can occur, with and without the JoinableTakeFactory
-
+﻿//Desc: Andrew Arnott's sample Async Thread demo
+//Desc: https://github.com/AArnott/AsyncAndThreadingDemo.Wpf
 // This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
 // This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
 
@@ -58,7 +58,7 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Reflection;
 using System.Xml;
-
+using System.ComponentModel;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
@@ -93,7 +93,11 @@ namespace MyCodeToExecute
             var itakeSample = args[3] as ITakeSample; // for taking perf counter measurements
             var g_dte = args[4] as EnvDTE.DTE; // if needed
             _package = args[5] as object;// IAsyncPackage, IServiceProvider
-            _MyWindow = new MainWindow();
+            await TaskScheduler.Default; // switch to bgd thread
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            _MyWindow = new MainWindow(_serviceProvider);
 
             var timer = new DispatcherTimer()
             {
@@ -155,65 +159,38 @@ namespace MyCodeToExecute
     }
     public partial class MainWindow : Window
     {
-        private TextBox _txtStatus;
-        private Button _btnGo;
-        private Button _btnDbgBreak;
-        private TextBox _txtUI; // intentionally not databound so must be updated from main thread
-        const string _toolTipBtnGo = @"
-The UI (including the status window) may not be responsive, depending on the options chosen\r\n
-After completion, the status window timestamps are accurate (the actual time the msg was logged).\r\n
-The CLR will expand the threadpool if a task can't be scheduled to run because no thread is available for 1 second.
-The CLR may retire extra idle active threads
-";
-
-        public int NTasks { get; set; } = 10;
-        public bool CauseStarvation { get; set; }
-        public bool UIThreadDoAwait { get; set; } = true;
-        public bool UseJTF { get; set; }
-        public MainWindow()
+        public MainWindow(IServiceProvider serviceProvider)
         {
+            this.serviceProvider = serviceProvider;
+            this.joinableTaskCollection = this.joinableTaskContext.CreateCollection();
+            this.joinableTaskFactory = this.joinableTaskContext.CreateFactory(this.joinableTaskCollection);
             this.Loaded += MainWindow_Loaded;
         }
+        private IServiceProvider serviceProvider;
+        private JoinableTaskContext jtContext;
         private Label Label1;
         private Label Label2;
         private Label Label3;
         private Button TestThreads;
         private Button StartLongProcess;
 
+        // Have only 1 of these in the entire application!
+        private readonly JoinableTaskContext joinableTaskContext = new JoinableTaskContext();
+
+        private readonly JoinableTaskFactory joinableTaskFactory;
+        private readonly JoinableTaskCollection joinableTaskCollection;
+        private readonly CancellationTokenSource disposalTokenSource = new CancellationTokenSource();
+
         private ProgressBar TaskProgress;
 
-        public void AddStatusMsg(string msg, params object[] args)
-        {
-            if (_txtStatus != null)
-            {
-                // we want to read the threadid 
-                //and time immediately on current thread
-                var dt = string.Format("[{0}],TID={1,2},",
-                    DateTime.Now.ToString("hh:mm:ss:fff"),
-                    Thread.CurrentThread.ManagedThreadId);
-                _txtStatus.Dispatcher.BeginInvoke(
-                    new Action(() =>
-                    {
-                        // this action executes on main thread
-                        if (args.Length == 0) // in cases the msg has embedded special chars like "{"
-                        {
-                            var str = string.Format(dt + "{0}" + Environment.NewLine, new object[] { msg });
-                            _txtStatus.AppendText(str);
-                        }
-                        else
-                        {
-                            var str = string.Format(dt + msg + "\r\n", args);
-                            _txtStatus.AppendText(str);
-
-                        }
-                        _txtStatus.ScrollToEnd();
-                    }));
-            }
-        }
         private void MainWindow_Loaded(object sender, RoutedEventArgs eLoaded)
         {
             try
             {
+
+                //jtContext = serviceProvider.GetService<JoinableTaskContext>();
+                //jtf = jtContext.Factory;
+
 
                 var strxaml =
     $@"<Grid
@@ -226,7 +203,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
         <Canvas>
             <Ellipse Name=""elips"" Width=""24"" Height=""24"" Fill=""Red""
              Canvas.Left=""96"">
-
                 <Ellipse.Triggers>
                     <EventTrigger RoutedEvent=""Ellipse.Loaded"">
                         <BeginStoryboard>
@@ -286,6 +262,13 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             }
 
         }
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            this.disposalTokenSource.Cancel();
+            this.joinableTaskContext.Factory.Run(() => this.joinableTaskCollection.JoinTillEmptyAsync());
+        }
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             TestAsync(); // fix me! There's a warning here.

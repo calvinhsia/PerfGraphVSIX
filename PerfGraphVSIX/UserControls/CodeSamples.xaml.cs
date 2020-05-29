@@ -29,9 +29,12 @@ namespace PerfGraphVSIX.UserControls
             InitializeComponent();
             this._codeSampleDirectory = codeSampleDirectory;
             this._targetToSelect = targetToSelect;
-            ToolTip = "Dbl-click a code sample to open in editor. The selected one will be run with the 'ExecCode' button. Create new files in the same folder for more tests. The selection changes to be the most recent edited when the directory changes content.";
+            ToolTip = @"Dbl-click a code sample to open in editor. 
+The selected one will be run with the 'ExecCode' button. Create new files in the same folder as desired. 
+The selection changes to be the most recent edited when the directory changes content.
+Ctrl-Enter on highlighted item will execute it too.
+";
             MaxHeight = 200;
-
             AddItems(this, new DirectoryInfo(codeSampleDirectory));
         }
         bool AddItems(ItemsControl ctrl, DirectoryInfo dirInfo)
@@ -92,10 +95,26 @@ namespace PerfGraphVSIX.UserControls
             protected override void OnPreviewKeyDown(KeyEventArgs e)
             {
                 base.OnPreviewKeyDown(e);
+                Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
                 if (e.Key == Key.Enter)
                 {
-                    Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-                    PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", FullFileName);
+                    var isCtrlKeyDown = e.KeyboardDevice.Modifiers.HasFlag(ModifierKeys.Control);
+                    try
+                    {
+                        if (isCtrlKeyDown)
+                        {
+                            PerfGraphToolWindowControl.g_PerfGraphToolWindowControl.BtnExecCode_Click(this, new RoutedEventArgs(Button.ClickEvent));
+                        }
+                        else
+                        {
+                            PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", FullFileName);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _ =PerfGraphToolWindowControl.g_PerfGraphToolWindowControl.AddStatusMsgAsync("Exception " + ex.ToString());
+
+                    }
                     e.Handled = true;
                 }
             }

@@ -33,6 +33,7 @@
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
+        public static PerfGraphToolWindowControl g_PerfGraphToolWindowControl;
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
 
@@ -118,6 +119,7 @@
         public PerfGraphToolWindowControl()
         {
             this.InitializeComponent();
+            g_PerfGraphToolWindowControl = this;
             try
             {
                 if (this.IsLeakTrackerServiceSupported())
@@ -561,7 +563,10 @@
 
         public void LogMessage(string msg, params object[] args)
         {
-            _ = AddStatusMsgAsync(msg, args);
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await AddStatusMsgAsync(msg, args);
+            });
         }
 
         const int statusTextLenThresh = 100000;
@@ -607,21 +612,22 @@
             }
         }
 
-#pragma warning disable VSTHRD100 // Avoid async void methods
-        async void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
-#pragma warning restore VSTHRD100 // Avoid async void methods
+        void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
         {
-            btnClrObjExplorer.IsEnabled = false;
-            await WaitForInitializationCompleteAsync();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            DoGC(); //must be on main thread
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            await measurementHolderInteractiveUser.CreateDumpAsync(
-                System.Diagnostics.Process.GetCurrentProcess().Id,
-                MemoryAnalysisType.StartClrObjExplorer,
-                desc: "InteractiveDump");
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                btnClrObjExplorer.IsEnabled = false;
+                await WaitForInitializationCompleteAsync();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                DoGC(); //must be on main thread
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                await measurementHolderInteractiveUser.CreateDumpAsync(
+                    System.Diagnostics.Process.GetCurrentProcess().Id,
+                    MemoryAnalysisType.StartClrObjExplorer,
+                    desc: "InteractiveDump");
 
-            btnClrObjExplorer.IsEnabled = true;
+                btnClrObjExplorer.IsEnabled = true;
+            });
         }
 
         private async Task WaitForInitializationCompleteAsync()
@@ -633,67 +639,69 @@
             }
         }
 
-#pragma warning disable VSTHRD100 // Avoid async void methods
-        private async void BtnExecCode_Click(object sender, RoutedEventArgs e)
-#pragma warning restore VSTHRD100 // Avoid async void methods
+        public void BtnExecCode_Click(object sender, RoutedEventArgs e)
         {
-            try
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                await WaitForInitializationCompleteAsync();
-                if (this.UpdateInterval != 0)
+                try
                 {
-                    this.UpdateInterval = 0;
-                    await ResetPerfCounterMonitorAsync();
-                }
-                if (_ctsExecuteCode == null)
-                {
-//                    this.tabControl.SelectedIndex = 0; // select graph tab
-                    var CodeFileToRun = _codeSampleControl.GetSelectedFile();
-                    
-                    if (string.IsNullOrEmpty(CodeFileToRun))
+                    await WaitForInitializationCompleteAsync();
+                    if (this.UpdateInterval != 0)
                     {
-                        LogMessage($"No single Code file selected");
-                        return;
+                        this.UpdateInterval = 0;
+                        await ResetPerfCounterMonitorAsync();
                     }
-                    CodeFileToRun = Path.Combine(CodeSampleDirectory, CodeFileToRun);
+                    if (_ctsExecuteCode == null)
+                    {
+                        //                    this.tabControl.SelectedIndex = 0; // select graph tab
+                        var CodeFileToRun = _codeSampleControl.GetSelectedFile();
 
-                    this.btnExecCode.Content = "Cancel Code Execution";
-                    await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
-                    _ctsExecuteCode = new CancellationTokenSource();
-                    if (_codeExecutor == null)
-                    {
-                        _codeExecutor = new CodeExecutor(this);
-                    }
-                    var sw = Stopwatch.StartNew();
-                    var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
-                    if (res is Task task)
-                    {
-                        //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
-                        await task;
-                        await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                        if (string.IsNullOrEmpty(CodeFileToRun))
+                        {
+                            LogMessage($"No single Code file selected");
+                            return;
+                        }
+                        CodeFileToRun = Path.Combine(CodeSampleDirectory, CodeFileToRun);
+
+                        this.btnExecCode.Content = "Cancel Code Execution";
+                        await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+                        _ctsExecuteCode = new CancellationTokenSource();
+                        if (_codeExecutor == null)
+                        {
+                            _codeExecutor = new CodeExecutor(this);
+                        }
+                        var sw = Stopwatch.StartNew();
+                        var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
+                        if (res is Task task)
+                        {
+                            //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                            await task;
+                            await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                        }
+                        else
+                        {
+                            await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                        }
+                        _ctsExecuteCode = null;
+                        this.btnExecCode.Content = "ExecCode";
+                        this.btnExecCode.IsEnabled = true;
                     }
                     else
                     {
-                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                        await AddStatusMsgAsync("cancelling Code Execution");
+                        _ctsExecuteCode.Cancel();
+                        this.btnExecCode.IsEnabled = false;
                     }
-                    _ctsExecuteCode = null;
+                }
+                catch (Exception ex)
+                {
+                    LogMessage(ex.ToString());
                     this.btnExecCode.Content = "ExecCode";
                     this.btnExecCode.IsEnabled = true;
+                    _ctsExecuteCode = null;
                 }
-                else
-                {
-                    await AddStatusMsgAsync("cancelling Code Execution");
-                    _ctsExecuteCode.Cancel();
-                    this.btnExecCode.IsEnabled = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage(ex.ToString());
-                this.btnExecCode.Content = "ExecCode";
-                this.btnExecCode.IsEnabled = true;
-                _ctsExecuteCode = null;
-            }
+
+            });
         }
     }
 
