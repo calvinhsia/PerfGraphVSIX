@@ -76,13 +76,6 @@
                     <WindowsFormsHost Name="wfhost"/>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="User Content">
-                <Grid x:Name="gridUser">
-                    <TextBlock>
-                            User content can be placed here from Code Executed from Code Samples
-                    </TextBlock>
-                </Grid>
-            </TabItem>
             <TabItem Header = "TextViewTracker" ToolTip="Track Editor TextView instances via ITextViewCreationListener">
                 <StackPanel Orientation="Vertical">
                     <Label Content="Opened TextViews" ToolTip="Views that are currently opened. (Refreshed by UpdateInterval, which does GC)"/>

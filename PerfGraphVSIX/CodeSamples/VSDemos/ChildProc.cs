@@ -62,9 +62,6 @@ namespace MyCodeToExecute
         public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
         private object package;
 
-        public MyClass()
-        {
-        }
         async Task InitializeAsync(object[] args)
         {
             FileToExecute = args[0] as string;
@@ -75,8 +72,26 @@ namespace MyCodeToExecute
             //logger.LogMessage("Registering events ");
             await Task.Yield();
             var perfGraphToolWindowControl = itakeSample as PerfGraphToolWindowControl;
-            perfGraphToolWindowControl.TabControl.SelectedIndex = 2; // select User output tab
-            var gridUser = perfGraphToolWindowControl.GridUser;
+            TabItem tabItemTabProc = null;
+            int iTabItemIndex = 0;
+            foreach (TabItem tabitem in perfGraphToolWindowControl.TabControl.Items)
+            {
+                if (tabitem.Header.ToString() == "ChildProc")
+                {
+                    tabItemTabProc = tabitem;
+                    break;
+                }
+                iTabItemIndex++;
+            }
+            if (tabItemTabProc == null)
+            {
+                tabItemTabProc = new TabItem() { Header = "ChildProc" };
+                perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
+            }
+            perfGraphToolWindowControl.TabControl.SelectedIndex = iTabItemIndex; // select User output tab
+            var gridUser = new Grid();
+            tabItemTabProc.Content = gridUser;
+
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 gridUser.Children.Clear();
@@ -115,7 +130,7 @@ namespace MyCodeToExecute
                 {
                 }
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                childProcTree.Background = Brushes.AliceBlue;
+                childProcTree.Background = Brushes.Cornsilk;
             });
         }
 

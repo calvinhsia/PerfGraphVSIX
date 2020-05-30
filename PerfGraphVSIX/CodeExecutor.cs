@@ -1,4 +1,5 @@
 ﻿using Microsoft.Test.Stress;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -34,19 +35,16 @@ namespace PerfGraphVSIX
         int _hashOfPriorCodeToExecute;
         Assembly _priorCompiledAssembly;
         HashSet<string> _lstRefDirs = new HashSet<string>();
-
+        private bool verbose;
 
         public CodeExecutor(ILogger logger)
         {
             this._logger = logger;
         }
-        public object CompileAndExecute(
-            ITakeSample itakeSample,
-            string pathFileToExecute,
-            CancellationToken token,
-            bool fExecuteToo = true) // for tests, we want to compile and not execute
+        (MethodInfo, Assembly) CompileTheCode(string pathFileToExecute)
         {
-            object result = string.Empty;
+            MethodInfo mainMethod = null;
+            Assembly asmCompiled = null;
             var lstFilesToCompile = new HashSet<string>();
             var IsCSharp = true;
             if (Path.GetExtension(pathFileToExecute).ToLower() == ".vb")
@@ -62,7 +60,7 @@ namespace PerfGraphVSIX
             var hashofCodeToExecute = 0;
             var GenerateInMemory = true;
             var UseCSC = true;
-            var verbose = false;
+            this.verbose = false;
             var showWarnings = false;
             //            _logger.LogMessage($"Compiling code");
             try
@@ -78,7 +76,6 @@ namespace PerfGraphVSIX
                 var vsRoot = curProcMainModule.Substring(0, ndxCommon7 - 1); //"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
                                                                              // this is old compiler. For new stuff: https://stackoverflow.com/questions/31639602/using-c-sharp-6-features-with-codedomprovider-roslyn
 
-                Assembly asmCompiled = null;
                 using (var cdProvider = CodeDomProvider.CreateProvider("C#"))
                 {
                     var compParams = new CompilerParameters();
@@ -282,7 +279,7 @@ namespace PerfGraphVSIX
                 var didGetMain = false;
                 foreach (var clas in asmCompiled.GetExportedTypes())
                 {
-                    var mainMethod = clas.GetMethod(DoMain);
+                    mainMethod = clas.GetMethod(DoMain);
                     if (mainMethod != null)
                     {
                         if (!mainMethod.IsStatic)
@@ -296,82 +293,52 @@ namespace PerfGraphVSIX
                             _fDidAddAssemblyResolver = true;
                             //                          _logger.LogMessage("Register for AssemblyResolve");
                             AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
-                              {
-                                  Assembly asm = null;
-                                  //                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
-                                  var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
-                                  if (requestName == nameof(PerfGraphVSIX))
-                                  {
-                                      asm = this.GetType().Assembly;
-                                  }
-                                  else if (requestName == nameof(Microsoft.Test.Stress))
-                                  {
-                                      asm = typeof(ILogger).Assembly;
-                                  }
-                                  else
-                                  {
-                                      foreach (var refDir in _lstRefDirs)
-                                      {
-                                          foreach (var ext in new[] { ".dll", ".exe" })
-                                          {
-                                              var fname = Path.Combine(refDir, requestName) + ext;
-                                              if (File.Exists(fname))
-                                              {
-                                                  try
-                                                  {
-                                                      asm = Assembly.Load(fname);
-                                                  }
-                                                  catch (Exception)
-                                                  {
-                                                      asm = Assembly.LoadFrom(fname);
-                                                  }
-                                                  break;
-                                              }
-                                          }
-                                          if (asm != null)
-                                          {
-                                              break;
-                                          }
-                                      }
-                                      if (asm == null)
-                                      {
-                                          _logger.LogMessage($"AssemblyResolver: Couldn't resolve {e.Name}");
-                                      }
-                                  }
-                                  return asm;
-                              };
+                            {
+                                Assembly asm = null;
+                                //                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
+                                var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
+                                if (requestName == nameof(PerfGraphVSIX))
+                                {
+                                    asm = this.GetType().Assembly;
+                                }
+                                else if (requestName == nameof(Microsoft.Test.Stress))
+                                {
+                                    asm = typeof(ILogger).Assembly;
+                                }
+                                else
+                                {
+                                    foreach (var refDir in _lstRefDirs)
+                                    {
+                                        foreach (var ext in new[] { ".dll", ".exe" })
+                                        {
+                                            var fname = Path.Combine(refDir, requestName) + ext;
+                                            if (File.Exists(fname))
+                                            {
+                                                try
+                                                {
+                                                    asm = Assembly.Load(fname);
+                                                }
+                                                catch (Exception)
+                                                {
+                                                    asm = Assembly.LoadFrom(fname);
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        if (asm != null)
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    if (asm == null)
+                                    {
+                                        _logger.LogMessage($"AssemblyResolver: Couldn't resolve {e.Name}");
+                                    }
+                                }
+                                return asm;
+                            };
                         }
                         //                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
-                        if (fExecuteToo)
-                        {
-                            // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
-                            object[] parms = new object[]
-                            {
-                            pathFileToExecute,
-                            _logger,
-                            token,
-                            itakeSample,
-                            PerfGraphToolWindowCommand.Instance?.g_dte,
-                            PerfGraphToolWindowCommand.Instance?.package
-                            };
-                            if (verbose)
-                            {
-                                _logger.LogMessage($"Calling Static Main");
-                            }
-                            var res = mainMethod.Invoke(null, new object[] { parms });
-                            if (verbose)
-                            {
-                                _logger.LogMessage($"Static Main return= {res}");
-                            }
-                            if (res is string strres)
-                            {
-                                result = strres;
-                            }
-                            if (res is Task task)
-                            {
-                                result = res;
-                            }
-                        }
                         break;
                     }
                 }
@@ -380,12 +347,77 @@ namespace PerfGraphVSIX
                     throw new InvalidOperationException($"Couldn't find static {DoMain} in {pathFileToExecute}");
                 }
             }
+            catch (Exception)
+            {
+                _hashOfPriorCodeToExecute = 0;
+                _priorCompiledAssembly = null;
+                throw;
+            }
+            return (mainMethod, asmCompiled);
+        }
+        object ExecuteTheCode(
+            string pathFileToExecute,
+            ITakeSample itakeSample,
+            CancellationToken token,
+            MethodInfo mainMethod,
+            Assembly asmCompiled)
+        {
+            object result = string.Empty;
+            //ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            //{
+            //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            //});
+            // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
+            object[] parms = new object[]
+            {
+                            pathFileToExecute,
+                            _logger,
+                            token,
+                            itakeSample,
+                            PerfGraphToolWindowCommand.Instance?.g_dte,
+                            PerfGraphToolWindowCommand.Instance?.package
+            };
+            if (verbose)
+            {
+                _logger.LogMessage($"Calling Static Main");
+            }
+            var res = mainMethod.Invoke(null, new object[] { parms });
+            if (verbose)
+            {
+                _logger.LogMessage($"Static Main return= {res}");
+            }
+            if (res is string strres)
+            {
+                result = strres;
+            }
+            if (res is System.Threading.Tasks.Task task)
+            {
+                result = res;
+            }
+            return result;
+        }
+        public object CompileAndExecute(
+            ITakeSample itakeSample,
+            string pathFileToExecute,
+            CancellationToken token,
+            bool fExecuteToo = true) // for tests, we want to compile and not execute
+        {
+            object result = string.Empty;
+            try
+            {
+                (var mainMethod, var asmCompiled) = CompileTheCode(pathFileToExecute);
+                if (fExecuteToo)
+                {
+                    result = ExecuteTheCode(pathFileToExecute, itakeSample, token, mainMethod, asmCompiled);
+                }
+            }
             catch (Exception ex)
             {
                 result = ex.ToString();
-                _hashOfPriorCodeToExecute = 0;
-                _priorCompiledAssembly = null;
             }
+
+
             return result;
         }
     }

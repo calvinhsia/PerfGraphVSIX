@@ -69,7 +69,6 @@
 
         public bool SetMaxGraphTo100 { get; set; } = false;
         public TabControl TabControl => tabControl; // so executing code can reference it
-        public System.Windows.Controls.Grid GridUser => gridUser;
 
 
         public string CodeSampleDirectory
@@ -682,6 +681,7 @@
                         {
                             await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
                         }
+                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                         _ctsExecuteCode = null;
                         this.btnExecCode.Content = "ExecCode";
                         this.btnExecCode.IsEnabled = true;
