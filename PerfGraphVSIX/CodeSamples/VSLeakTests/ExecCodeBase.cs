@@ -62,6 +62,7 @@ namespace MyCodeToExecute
         public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
         public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
         private object package;
+        public ITakeSample itakeSample;
 
         /// <summary>
         /// If true, will show graph of measurements, then launch ClrObjectExplorer automatically, with the String and Type differences text file
@@ -74,7 +75,6 @@ namespace MyCodeToExecute
 
         public BuildEvents BuildEvents; // need to get ref to these for their lifetime
         public DebuggerEvents DebuggerEvents;// need to get ref to these for their lifetime
-        public ITakeSample itakeSample;
 
         public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();

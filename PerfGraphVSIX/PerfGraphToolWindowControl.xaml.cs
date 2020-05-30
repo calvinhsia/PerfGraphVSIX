@@ -69,6 +69,7 @@
 
         public bool SetMaxGraphTo100 { get; set; } = false;
         public TabControl TabControl => tabControl; // so executing code can reference it
+        public DockPanel DpUser => dpUser;
 
 
         public string CodeSampleDirectory
@@ -653,7 +654,6 @@
                     }
                     if (_ctsExecuteCode == null)
                     {
-                        //                    this.tabControl.SelectedIndex = 0; // select graph tab
                         var CodeFileToRun = _codeSampleControl.GetSelectedFile();
 
                         if (string.IsNullOrEmpty(CodeFileToRun))

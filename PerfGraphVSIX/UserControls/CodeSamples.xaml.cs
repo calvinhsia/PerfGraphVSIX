@@ -35,6 +35,8 @@ The selection changes to be the most recent edited when the directory changes co
 Ctrl-Enter on highlighted item will execute it too.
 ";
             MaxHeight = 200;
+            MaxWidth = 200;
+            HorizontalAlignment = HorizontalAlignment.Left;
             AddItems(this, new DirectoryInfo(codeSampleDirectory));
         }
         bool AddItems(ItemsControl ctrl, DirectoryInfo dirInfo)

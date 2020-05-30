@@ -1,12 +1,35 @@
 ﻿//Desc: Show how to get the child processes of Devenv and possibly monitor them
-//Include: ..\VSLeakTests\ExecCodeBase.cs
-// 
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
+//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll"
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
+
+
+//Ref: %PerfGraphVSIX%
+
+
+////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
+
+
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
+
 //Pragma: showwarnings=true
+//Ref: %PerfGraphVSIX%
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using PerfGraphVSIX;
+using Microsoft.Test.Stress;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,28 +40,109 @@ using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using Microsoft.VisualStudio.Shell.Interop;
 using System.Linq;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace MyCodeToExecute
 {
 
-    public class MyClass : ExecCodeBase
+    public class MyClass
     {
         public static async Task DoMain(object[] args)
         {
-            using (var oMyClass = new MyClass(args))
-            {
-                await oMyClass.DoTheTest(numIterations: 1);
-            }
+            var oMyClass = new MyClass();
+            await oMyClass.InitializeAsync(args);
         }
-        public MyClass(object[] args) : base(args)
+        public string FileToExecute;
+        public ILogger _logger;
+        public CancellationToken _CancellationTokenExecuteCode;
+        public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
+        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
+        private object package;
+
+        public MyClass()
         {
-            ShowUI = false;
-            NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
+        }
+        async Task InitializeAsync(object[] args)
+        {
+            FileToExecute = args[0] as string;
+            _logger = args[1] as ILogger;
+            _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
+            var itakeSample = args[3] as ITakeSample;
+            package = args[5] as object;// IAsyncPackage;
+            //logger.LogMessage("Registering events ");
+            await Task.Yield();
+            var perfGraphToolWindowControl = itakeSample as PerfGraphToolWindowControl;
+            var dpUser = perfGraphToolWindowControl.DpUser;
+            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await TaskScheduler.Default;
+                while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    dpUser.Children.Clear();
+                    dpUser.Children.Add(new ChildProcTree(this));
+                    _logger.LogMessage("in loop");
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
+            });
         }
 
-        public override async Task DoInitializeAsync()
+        class ChildProcTree : TreeView
         {
-            await base.DoInitializeAsync();
+            public ChildProcTree(MyClass myClass)
+            {
+                this.FontFamily = new FontFamily("Consolas");
+                this.FontSize = 10;
+                this.Items.Clear();
+                var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                var itemsControl = this;
+                void AddNode(ItemsControl itemsControl, List<ProcessEx.ProcNode> lstNodes)
+                {
+                    foreach (var node in lstNodes)
+                    {
+                        if (node.ProcEntry.szExeFile != "conhost.exe")
+                        {
+                            var newItem = new TreeViewItem() { 
+                                Header = @$"{node.ProcEntry.th32ProcessID,5
+                                } {node.ProcEntry.szExeFile}" };
+                            newItem.IsExpanded = true;
+                            itemsControl.Items.Add(newItem);
+                            if (node.Children != null)
+                            {
+                                AddNode(newItem, node.Children);
+                            }
+                        }
+                    }
+                }
+                AddNode(this, devenvTree);
+                //IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                //{
+                //    var newItem = new TreeViewItem() { Header = $"{node.ProcEntry.th32ProcessID} {node.ProcEntry.szExeFile}"};
+                //    itemsControl.Children.Add()
+                //    //if (node.ProcEntry.szExeFile.IndexOf(procToMonitor, StringComparison.OrdinalIgnoreCase) >= 0)
+                //    //{
+                //    //    curlstProcToMonitor.Add(node);
+                //    //}
+                //    return true;
+                //});
+                //this.Items.Add(newItem);
+            }
+            //public static async Task<ChildProcTree> CreateTreeView(DockPanel dpUser, MyClass myClass)
+            //{
+            //    await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            //    {
+            //        await TaskScheduler.Default;
+            //        while (!myClass._CancellationTokenExecuteCode.IsCancellationRequested)
+            //        {
+            //            myClass._logger.LogMessage("in loop");
+            //            await Task.Delay(TimeSpan.FromSeconds(1));
+            //        }
+            //    });
+
+            //    var childProcTree = new ChildProcTree(dpUser);
+            //    return childProcTree;
+            //}
         }
 
         bool StopIter = false;
@@ -68,13 +172,12 @@ namespace MyCodeToExecute
             }
         }
 
-        public override async Task DoIterationBodyAsync(int iteration, CancellationToken token)
+        public async Task DoIterationBodyAsync(int iteration, CancellationToken token)
         {
             await TaskScheduler.Default;
             var procToMonitor = "XDesProc.exe";
             var lstProcToMonitor = new List<ProcessEx.ProcNode>();
-           _logger.LogMessage("Monitoring Child Processes " + procToMonitor);
-            _OutputPane.Activate();
+            _logger.LogMessage("Monitoring Child Processes " + procToMonitor);
             while (!token.IsCancellationRequested)
             {
                 await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -99,7 +202,7 @@ namespace MyCodeToExecute
                         int level = 0;
                         foreach (var node in curlstProcToMonitor)
                         {
-                           _logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
+                            _logger.LogMessage(string.Format("{0} {1} {2} {3}", new string(' ', level * 2), node.procId, node.ParentProcId, node.ProcEntry.szExeFile));
                         }
                         lstProcToMonitor.Clear();
                         lstProcToMonitor.AddRange(curlstProcToMonitor);
@@ -118,11 +221,8 @@ namespace MyCodeToExecute
             }
         }
 
-        public override async Task DoCleanupAsync()
-        {
-            await Task.Yield();
-        }
     }
+
     class ProcessEx
     {
         //inner enum used only internally
