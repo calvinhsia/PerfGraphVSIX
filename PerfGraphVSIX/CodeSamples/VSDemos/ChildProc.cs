@@ -40,8 +40,10 @@ using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using Microsoft.VisualStudio.Shell.Interop;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Runtime.Remoting.Messaging;
 
 namespace MyCodeToExecute
 {
@@ -101,18 +103,18 @@ namespace MyCodeToExecute
                             childProcTree.Items.Clear();
                             childProcTree.AddNodes(childProcTree, devenvTree);
                             childProcTree.ToolTip = $"Refreshed {dtlastTree}";
-                            hashLastTree = curHash;
+                            //                            hashLastTree = curHash;
                         }
                         //_logger.LogMessage("in loop");
                         await Task.Delay(TimeSpan.FromSeconds(1), _CancellationTokenExecuteCode);
                     }
 
                 }
-                catch (OperationCanceledException )
+                catch (OperationCanceledException)
                 {
                 }
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                dpUser.Children.Clear();
+//                dpUser.Children.Clear();
 
             });
         }
@@ -130,11 +132,37 @@ namespace MyCodeToExecute
                 {
                     if (node.ProcEntry.szExeFile != "conhost.exe")
                     {
-                        var newItem = new TreeViewItem()
+                        long memsize = 0;
+                        try
                         {
-                            Header = @$"{node.ProcEntry.th32ProcessID,5
-                            } {node.ProcEntry.szExeFile}"
+                            var proc = Process.GetProcessById(node.procId);
+                            memsize = proc.PrivateMemorySize64;
+                        }
+                        catch (ArgumentException) // process is not running
+                        {
+
+                        }
+                        var spData = new StackPanel() { Orientation = Orientation.Horizontal };
+                        var tb = new TextBlock()
+                        {
+                            Text = $"{node.ProcEntry.th32ProcessID,5} {node.ProcEntry.szExeFile}"
                         };
+                        spData.Children.Add(tb);
+                        var tbThrds = new TextBlock()
+                        {
+                            Margin = new Thickness(3, 0, 0, 0),
+                            Text = $"Thds={node.ProcEntry.cntThreads}",
+                            Background = Brushes.LightBlue
+                        };
+                        spData.Children.Add(tbThrds);
+                        var tbMem = new TextBlock()
+                        {
+                            Text = $"Mem={memsize:n0}",
+                            Margin = new Thickness(3, 0, 0, 0),
+                            Background = Brushes.LightSalmon
+                        };
+                        spData.Children.Add(tbMem);
+                        var newItem = new TreeViewItem() { Header = spData };
                         newItem.IsExpanded = true;
                         itemsControl.Items.Add(newItem);
                         if (node.Children != null)

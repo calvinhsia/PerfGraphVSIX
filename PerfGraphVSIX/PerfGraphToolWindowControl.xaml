@@ -163,7 +163,7 @@
         <StackPanel Grid.Row="2" Orientation="Vertical">
             <StackPanel Orientation="Horizontal">
                 <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" 
-                        ToolTip="Take a Sample to graph, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)&#x0a;Also updates trackers on other tabs"  
+                        ToolTip="Take a Measurement to graph, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)&#x0a;Also updates trackers on other tabs"  
                          />
                 <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
                         ToolTip="Execute the code file selected in the Options Tab Code samples. This code typically iterates a scenario. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
