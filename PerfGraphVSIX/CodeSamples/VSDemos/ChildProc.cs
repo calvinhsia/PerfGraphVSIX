@@ -75,12 +75,13 @@ namespace MyCodeToExecute
             //logger.LogMessage("Registering events ");
             await Task.Yield();
             var perfGraphToolWindowControl = itakeSample as PerfGraphToolWindowControl;
-            var dpUser = perfGraphToolWindowControl.DpUser;
+            perfGraphToolWindowControl.TabControl.SelectedIndex = 2; // select User output tab
+            var gridUser = perfGraphToolWindowControl.GridUser;
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                dpUser.Children.Clear();
+                gridUser.Children.Clear();
                 var childProcTree = new ChildProcTree();
-                dpUser.Children.Add(childProcTree);
+                gridUser.Children.Add(childProcTree);
                 await TaskScheduler.Default;
                 int hashLastTree = 0;
                 DateTime dtlastTree;
@@ -114,8 +115,7 @@ namespace MyCodeToExecute
                 {
                 }
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-//                dpUser.Children.Clear();
-
+                childProcTree.Background = Brushes.AliceBlue;
             });
         }
 
@@ -143,25 +143,26 @@ namespace MyCodeToExecute
 
                         }
                         var spData = new StackPanel() { Orientation = Orientation.Horizontal };
-                        var tb = new TextBlock()
-                        {
-                            Text = $"{node.ProcEntry.th32ProcessID,5} {node.ProcEntry.szExeFile}"
-                        };
-                        spData.Children.Add(tb);
                         var tbThrds = new TextBlock()
                         {
                             Margin = new Thickness(3, 0, 0, 0),
-                            Text = $"Thds={node.ProcEntry.cntThreads}",
+                            Text = $"Thds={node.ProcEntry.cntThreads,3}",
                             Background = Brushes.LightBlue
                         };
                         spData.Children.Add(tbThrds);
                         var tbMem = new TextBlock()
                         {
-                            Text = $"Mem={memsize:n0}",
+                            Text = $"Mem={memsize,12:n0}",
                             Margin = new Thickness(3, 0, 0, 0),
                             Background = Brushes.LightSalmon
                         };
                         spData.Children.Add(tbMem);
+                        var tb = new TextBlock()
+                        {
+                            Text = $"{node.ProcEntry.th32ProcessID,-5} {node.ProcEntry.szExeFile}",
+                            Margin = new Thickness(3, 0, 0, 0),
+                        };
+                        spData.Children.Add(tb);
                         var newItem = new TreeViewItem() { Header = spData };
                         newItem.IsExpanded = true;
                         itemsControl.Items.Add(newItem);

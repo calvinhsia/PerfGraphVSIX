@@ -69,7 +69,7 @@
 
         public bool SetMaxGraphTo100 { get; set; } = false;
         public TabControl TabControl => tabControl; // so executing code can reference it
-        public DockPanel DpUser => dpUser;
+        public System.Windows.Controls.Grid GridUser => gridUser;
 
 
         public string CodeSampleDirectory

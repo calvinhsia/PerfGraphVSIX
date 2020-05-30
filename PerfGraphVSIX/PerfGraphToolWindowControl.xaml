@@ -69,17 +69,19 @@
                     <StackPanel x:Name="spCodeSamples" Grid.Column="0">
                     </StackPanel>
                     <GridSplitter Grid.Column="1" Width="5" VerticalAlignment="Stretch"/>
-                    <DockPanel x:Name="dpUser" Grid.Column="2">
-                        <TextBlock>
-                            User content can be placed here
-                        </TextBlock>
-                    </DockPanel>
                 </Grid>
             </TabItem>
             <TabItem Header="Graph">
                 <StackPanel Orientation="Vertical" Name = "spGraph">
                     <WindowsFormsHost Name="wfhost"/>
                 </StackPanel>
+            </TabItem>
+            <TabItem Header="User Content">
+                <Grid x:Name="gridUser">
+                    <TextBlock>
+                            User content can be placed here from Code Executed from Code Samples
+                    </TextBlock>
+                </Grid>
             </TabItem>
             <TabItem Header = "TextViewTracker" ToolTip="Track Editor TextView instances via ITextViewCreationListener">
                 <StackPanel Orientation="Vertical">
