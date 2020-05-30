@@ -96,7 +96,6 @@ namespace PerfGraphVSIX
                         var strCodeToExecute = File.ReadAllText(fileToCompile);
                         hashofCodeToExecute += strCodeToExecute.GetHashCode();
                         var srcLines = strCodeToExecute.Split("\r\n".ToArray());
-                        _lstRefDirs.Add(Path.GetDirectoryName(fileToCompile)); // add dir of source code
                         foreach (var srcline in srcLines.Where(
                             s => s.StartsWith(refPathPrefix) ||
                             s.StartsWith(pragmaPrefix) ||
@@ -131,6 +130,10 @@ namespace PerfGraphVSIX
                                 if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
                                 {
                                     refAsm = refAsm.Replace("\"", string.Empty);
+                                }
+                                if (string.IsNullOrEmpty(Path.GetDirectoryName(pathFileToExecute))) // a locally referenced DLL
+                                {
+
                                 }
                                 if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                                 {

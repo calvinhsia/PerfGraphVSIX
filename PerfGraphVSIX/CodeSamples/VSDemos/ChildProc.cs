@@ -1,4 +1,4 @@
-﻿//Desc: Show how to get the child processes of Devenv and possibly monitor them
+﻿//Desc: Show the child processes of Devenv and Shows them in a treeview
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
@@ -76,73 +76,74 @@ namespace MyCodeToExecute
             var dpUser = perfGraphToolWindowControl.DpUser;
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
+                dpUser.Children.Clear();
+                var childProcTree = new ChildProcTree();
+                dpUser.Children.Add(childProcTree);
                 await TaskScheduler.Default;
-                while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                int hashLastTree = 0;
+                DateTime dtlastTree;
+                try
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    dpUser.Children.Clear();
-                    dpUser.Children.Add(new ChildProcTree(this));
-                    _logger.LogMessage("in loop");
-                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                    {
+                        await TaskScheduler.Default;
+                        var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                        var curHash = 0;
+                        IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                        {
+                            curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
+                            return true;
+                        });
+                        if (curHash != hashLastTree)
+                        {
+                            dtlastTree = DateTime.Now;
+                            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                            childProcTree.Items.Clear();
+                            childProcTree.AddNodes(childProcTree, devenvTree);
+                            childProcTree.ToolTip = $"Refreshed {dtlastTree}";
+                            hashLastTree = curHash;
+                        }
+                        //_logger.LogMessage("in loop");
+                        await Task.Delay(TimeSpan.FromSeconds(1), _CancellationTokenExecuteCode);
+                    }
+
                 }
+                catch (OperationCanceledException )
+                {
+                }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                dpUser.Children.Clear();
+
             });
         }
 
         class ChildProcTree : TreeView
         {
-            public ChildProcTree(MyClass myClass)
+            public ChildProcTree()
             {
                 this.FontFamily = new FontFamily("Consolas");
                 this.FontSize = 10;
-                this.Items.Clear();
-                var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
-                var itemsControl = this;
-                void AddNode(ItemsControl itemsControl, List<ProcessEx.ProcNode> lstNodes)
+            }
+            public void AddNodes(ItemsControl itemsControl, List<ProcessEx.ProcNode> lstNodes)
+            {
+                foreach (var node in lstNodes)
                 {
-                    foreach (var node in lstNodes)
+                    if (node.ProcEntry.szExeFile != "conhost.exe")
                     {
-                        if (node.ProcEntry.szExeFile != "conhost.exe")
+                        var newItem = new TreeViewItem()
                         {
-                            var newItem = new TreeViewItem() { 
-                                Header = @$"{node.ProcEntry.th32ProcessID,5
-                                } {node.ProcEntry.szExeFile}" };
-                            newItem.IsExpanded = true;
-                            itemsControl.Items.Add(newItem);
-                            if (node.Children != null)
-                            {
-                                AddNode(newItem, node.Children);
-                            }
+                            Header = @$"{node.ProcEntry.th32ProcessID,5
+                            } {node.ProcEntry.szExeFile}"
+                        };
+                        newItem.IsExpanded = true;
+                        itemsControl.Items.Add(newItem);
+                        if (node.Children != null)
+                        {
+                            AddNodes(newItem, node.Children);
                         }
                     }
                 }
-                AddNode(this, devenvTree);
-                //IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
-                //{
-                //    var newItem = new TreeViewItem() { Header = $"{node.ProcEntry.th32ProcessID} {node.ProcEntry.szExeFile}"};
-                //    itemsControl.Children.Add()
-                //    //if (node.ProcEntry.szExeFile.IndexOf(procToMonitor, StringComparison.OrdinalIgnoreCase) >= 0)
-                //    //{
-                //    //    curlstProcToMonitor.Add(node);
-                //    //}
-                //    return true;
-                //});
-                //this.Items.Add(newItem);
             }
-            //public static async Task<ChildProcTree> CreateTreeView(DockPanel dpUser, MyClass myClass)
-            //{
-            //    await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            //    {
-            //        await TaskScheduler.Default;
-            //        while (!myClass._CancellationTokenExecuteCode.IsCancellationRequested)
-            //        {
-            //            myClass._logger.LogMessage("in loop");
-            //            await Task.Delay(TimeSpan.FromSeconds(1));
-            //        }
-            //    });
-
-            //    var childProcTree = new ChildProcTree(dpUser);
-            //    return childProcTree;
-            //}
         }
 
         bool StopIter = false;
