@@ -29,11 +29,10 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileAndMaybeExecute(
+        public object CompileTheCode(
             ITakeSample itakeSample, // pass this to executing code, which may not reference WPF asms
             string pathFileToExecute,
-            CancellationToken token,
-            bool fExecuteToo = true) // for tests, we want to compile and not execute
+            CancellationToken token)
         {
             object result = string.Empty;
             try
@@ -41,10 +40,6 @@ namespace PerfGraphVSIX
                 var compilerHelper = new CompileHelper(pathFileToExecute, _logger, itakeSample, token);
                 compilerHelper.CompileTheCode();
                 result = compilerHelper;
-                if (fExecuteToo)
-                {
-                    result = compilerHelper.ExecuteTheCode();
-                }
             }
             catch (Exception ex)
             {

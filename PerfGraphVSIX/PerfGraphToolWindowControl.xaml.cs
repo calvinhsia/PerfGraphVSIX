@@ -156,7 +156,7 @@
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
-                        if (!file.Contains("LeakBaseClass"))
+                        if (!file.Contains(@"\Util\"))// utility folder doesn't contain code with Main program
                         {
                             var finfo = new FileInfo(file);
                             if (mostRecentFileInfo == null || finfo.LastWriteTime > mostRecentFileInfo.LastWriteTime)
@@ -673,7 +673,7 @@
                             _codeExecutor = new CodeExecutor(this);
                         }
                         var sw = Stopwatch.StartNew();
-                        var res = _codeExecutor.CompileAndMaybeExecute(this, CodeFileToRun, _ctsExecuteCode.Token, fExecuteToo: false);
+                        var res = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token);
                         if (res is CodeExecutor.CompileHelper cHelper)
                         {
                             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();

@@ -1,4 +1,4 @@
-﻿//Desc: Show the child processes of Devenv and Shows them in a treeview
+﻿//Desc: Show the child processes of Devenv in a treeview
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Include: ..\Util\CloseableTabItem.cs
@@ -55,22 +55,26 @@ namespace MyCodeToExecute
             await Task.Yield();
             CloseableTabItem tabItemTabProc = null;
             int iTabItemIndex = 0;
-            foreach (TabItem tabitem in _perfGraphToolWindowControl.TabControl.Items)
+            foreach (var tabitem in _perfGraphToolWindowControl.TabControl.Items)
             {
-                if (tabitem.Header.ToString() == Path.GetFileNameWithoutExtension(_FileToExecute))
+                if ((tabitem as CloseableTabItem)?.tabName == Path.GetFileNameWithoutExtension(_FileToExecute))
                 {
-                    tabItemTabProc = (CloseableTabItem)tabitem;
+                    tabItemTabProc = (CloseableTabItem)tabitem; // found an existing one. Need to close it
+                    tabItemTabProc.CloseTabItem();
+                    tabItemTabProc = null;
                     break;
                 }
                 iTabItemIndex++;
             }
-            var IsClosed = false;
+            var ctsCancelMonitor = new CancellationTokenSource();
             if (tabItemTabProc == null)
             {
                 tabItemTabProc = new CloseableTabItem(Path.GetFileNameWithoutExtension(_FileToExecute), "Monitor Child Processes");
                 tabItemTabProc.TabItemClosed += (o, e) =>
                  {
-                     IsClosed = true;
+                     //_logger.LogMessage("close event");
+                     ctsCancelMonitor.Cancel();
+                     _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
                  };
                 _perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
             }
@@ -120,7 +124,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 ToolTip=""Monitor Child Processes""/>
             <CheckBox Margin=""15,0,0,10"" Content=""Update if change in processes only""  IsChecked=""{{Binding OnlyChanges}}"" 
                 ToolTip=""If the child processes are the same each refresh, then don't update the UI.""/>
-            <Button Name=""BtnClose"" Content=""Close""/>
         </StackPanel>
         <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
     </Grid>
@@ -132,14 +135,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
-            var BtnClose = (Button)grid.FindName("BtnClose");
-            BtnClose.Click += (o, e) =>
-            {
-                IsClosed = true;
-                _perfGraphToolWindowControl.TabControl.Items.Remove(tabItemTabProc);
-            };
 
-            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 ChildProcTree childProcTree = new ChildProcTree();
                 try
@@ -148,14 +145,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     gridUser.Children.Add(childProcTree);
                     int hashLastTree = 0;
                     DateTime dtlastTree;
-                    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                    while (!ctsCancelMonitor.IsCancellationRequested)
                     {
                         await TaskScheduler.Default;
-                        if (IsClosed)
-                        {
-                            break;
-                        }
-
                         if (Monitor)
                         {
                             var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
@@ -180,9 +172,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                             }
                         }
                         //_logger.LogMessage("in loop");
-                        await Task.Delay(TimeSpan.FromSeconds(RefreshRate), _CancellationTokenExecuteCode);
+                        await Task.Delay(TimeSpan.FromSeconds(RefreshRate), ctsCancelMonitor.Token);
                     }
-
                 }
                 catch (OperationCanceledException)
                 {
@@ -191,8 +182,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 {
                     _logger.LogMessage(ex.ToString());
                 }
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                childProcTree.Background = Brushes.Cornsilk;
+                //_logger.LogMessage("Monitor done");
+                //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                //childProcTree.Background = Brushes.Cornsilk;
             });
         }
 

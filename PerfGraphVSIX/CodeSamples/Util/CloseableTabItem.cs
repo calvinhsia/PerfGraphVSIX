@@ -9,7 +9,7 @@ namespace MyCodeToExecute
 {
     public class CloseableTabItem : TabItem
     {
-        private readonly string tabName;
+        public readonly string tabName;
         private readonly Action<CloseableTabItem, string> OnActivatedFirstTimeCreateContent;
         bool fDidCreateContent = false;
         public event EventHandler TabItemClosed;
@@ -63,7 +63,7 @@ namespace MyCodeToExecute
             }
         }
 
-        private void CloseTabItem()
+        public void CloseTabItem()
         {
             DependencyObject obj = this;
             while (true)
