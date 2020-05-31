@@ -700,7 +700,7 @@ public class foo {}
             {
                 //LogMessage($"Compiling {codesample}");
                 {
-                    if (!codesample.Contains("ExecCodeBase"))
+                    if (!codesample.Contains(@"Util\"))
                     {
                         //                    if (codesample.Contains("Fish"))
                         {
@@ -710,7 +710,7 @@ public class foo {}
                             var res = codeExecutor.CompileAndMaybeExecute(null, codesample, CancellationToken.None, fExecuteToo: false);
                             if (res is string && !string.IsNullOrEmpty(res as string))
                             {
-                                if (!(codesample.Contains("ExecCodeBase") && res.ToString().Contains("Couldn't find static Main")))
+//                                if (!(codesample.Contains("LeakBaseClass") && res.ToString().Contains("Couldn't find static Main")))
                                 {
                                     nErrors++;
                                     LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());

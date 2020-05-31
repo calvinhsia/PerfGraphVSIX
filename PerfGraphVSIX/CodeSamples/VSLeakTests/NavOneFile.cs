@@ -1,5 +1,5 @@
 ﻿//Desc: Repeatedly navigate in a file to find leaks. Modify the code to point to a file
-//Include: ExecCodeBase.cs
+//Include: ..\Util\LeakBaseClass.cs
 
 
 using System;
@@ -14,7 +14,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace MyCodeToExecute
 {
-    public class MyClass : ExecCodeBase
+    public class MyClass : LeakBaseClass
     {
         public static async Task DoMain(object[] args)
         {

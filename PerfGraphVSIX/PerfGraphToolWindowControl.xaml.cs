@@ -156,7 +156,7 @@
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
-                        if (!file.Contains("ExecCodeBase"))
+                        if (!file.Contains("LeakBaseClass"))
                         {
                             var finfo = new FileInfo(file);
                             if (mostRecentFileInfo == null || finfo.LastWriteTime > mostRecentFileInfo.LastWriteTime)

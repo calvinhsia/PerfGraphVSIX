@@ -1,4 +1,4 @@
-﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
+﻿//Include: ..\Util\LeakBaseClass.cs
 //Desc: this will demonstrate EventHandler leaks
 
 using System;
@@ -17,7 +17,7 @@ using System.Linq;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : ExecCodeBase
+    public class MyClass : LeakBaseClass
     {
         public event EventHandler Myevent;
         class BigStuffWithLongNameSoICanSeeItBetter

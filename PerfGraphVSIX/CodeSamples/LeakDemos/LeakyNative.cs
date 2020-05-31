@@ -1,4 +1,4 @@
-﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
+﻿//Include: ..\Util\LeakBaseClass.cs
 //Desc: Demonstrate leak detection of native heap memory
 
 using System;
@@ -20,7 +20,7 @@ using HANDLE = System.IntPtr;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : ExecCodeBase
+    public class MyClass : LeakBaseClass
     {
         class BigStuffWithLongNameSoICanSeeItBetter : IDisposable
         {

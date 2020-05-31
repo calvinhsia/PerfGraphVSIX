@@ -53,7 +53,7 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-    public class ExecCodeBase : IDisposable
+    public class LeakBaseClass : IDisposable
     {
         public string FileToExecute;
         public ILogger _logger;
@@ -86,7 +86,7 @@ namespace MyCodeToExecute
         public IVsUIShell _vsUIShell;
 
 
-        public ExecCodeBase(object[] args)
+        public LeakBaseClass(object[] args)
         {
             FileToExecute = args[0] as string;
             _logger = args[1] as ILogger;

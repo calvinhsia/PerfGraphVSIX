@@ -1,4 +1,4 @@
-﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
+﻿//Include: ..\Util\LeakBaseClass.cs
 //Desc: This will demonstrate leak detection
 //Desc: It has a big class that consumes lots of memory
 
@@ -17,7 +17,7 @@ using Task = System.Threading.Tasks.Task;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : ExecCodeBase
+    public class MyClass : LeakBaseClass
     {
         class BigStuffWithLongNameSoICanSeeItBetter
         {

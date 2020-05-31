@@ -1,6 +1,6 @@
 ﻿//Desc: Repeatedly Open/close a folder. Modify the code to point to a folder
 
-//Include: ExecCodeBase.cs
+//Include: ..\Util\LeakBaseClass.cs
 
 using System;
 using System.Threading;
@@ -13,7 +13,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace MyCodeToExecute
 {
-    public class MyClass : ExecCodeBase
+    public class MyClass : LeakBaseClass
     {
         public TaskCompletionSource<int> _tcs = new TaskCompletionSource<int>();
 

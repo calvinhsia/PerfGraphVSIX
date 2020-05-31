@@ -1,4 +1,4 @@
-﻿//Include: ..\VSLeakTests\ExecCodeBase.cs
+﻿//Include: ..\Util\LeakBaseClass.cs
 //Desc: Demonstrate using a file on disk or system page file for backing store for an IDictionary<K,V> or IList<T>
 // 
 //Ref: MapFileDict.dll
@@ -19,7 +19,7 @@ using MapFileDict;
 namespace MyCodeToExecute
 {
 
-    public class MyClass : ExecCodeBase
+    public class MyClass : LeakBaseClass
     {
         public static async Task DoMain(object[] args)
         {
