@@ -1,42 +1,8 @@
 ﻿//Desc: Andrew Arnott's sample Async Thread demo
 //Desc: https://github.com/AArnott/AsyncAndThreadingDemo.Wpf
-// This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
-// This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
-
-//  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
-//                      %VSRoot% will be changed to the fullpath to VS: e.g. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
-
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.12.1.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.0.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.8.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll"
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.ComponentModelHost.dll
-
-//Ref:"%VSRoot%\Common7\IDE\PublicAssemblies\envdte.dll"
-
-//Pragma: showwarnings=true
-//Ref: %PerfGraphVSIX%
-//Pragma: verbose = False
-
-
-////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
-
-
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.dll
+//Include: ..\Util\MyCodeBaseClass.cs
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.ComponentModel.Composition.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.ComponentModelHost.dll
 
 
 using System;
@@ -67,33 +33,24 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-    public class MyClass
+    public class MyClass: MyCodeBaseClass
     {
-        public IServiceProvider _serviceProvider { get { return _package as IServiceProvider; } }
-        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider _asyncServiceProvider { get { return _package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
-        private object _package;
-        public ILogger _logger; // log to PerfGraph ToolWindow
-        public CancellationToken _CancellationTokenExecuteCode;
 
         Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
         public IVsOutputWindowPane _OutputPane;
 
         public static async Task DoMain(object[] args)
         {
-            var o = new MyClass();
-            await o.DoInitializeAsync(args);
+            var o = new MyClass(args);
+            await o.DoInitializeAsync();
         }
         MainWindow _MyWindow;
-        async Task DoInitializeAsync(object[] args)
+        MyClass(object[] args): base(args)
         {
-            await Task.Yield();
-            var FullPathToThisSourceFile = args[0] as string;
-            _logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2];
-            var itakeSample = args[3] as ITakeSample; // for taking perf counter measurements
-            var g_dte = args[4] as EnvDTE.DTE; // if needed
-            _package = args[5] as object;// IAsyncPackage, IServiceProvider
-            await TaskScheduler.Default; // switch to bgd thread
+
+        }
+        async Task DoInitializeAsync()
+        {
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -159,14 +116,14 @@ namespace MyCodeToExecute
     }
     public partial class MainWindow : Window
     {
-        public MainWindow(IServiceProvider serviceProvider)
+        public MainWindow(IServiceProvider _serviceProvider)
         {
-            this.serviceProvider = serviceProvider;
+            this._serviceProvider = _serviceProvider;
             this.joinableTaskCollection = this.joinableTaskContext.CreateCollection();
             this.joinableTaskFactory = this.joinableTaskContext.CreateFactory(this.joinableTaskCollection);
             this.Loaded += MainWindow_Loaded;
         }
-        private IServiceProvider serviceProvider;
+        private IServiceProvider _serviceProvider;
         private JoinableTaskContext jtContext;
         private Label Label1;
         private Label Label2;
@@ -188,7 +145,7 @@ namespace MyCodeToExecute
             try
             {
 
-                //jtContext = serviceProvider.GetService<JoinableTaskContext>();
+                //jtContext = _serviceProvider.GetService<JoinableTaskContext>();
                 //jtf = jtContext.Factory;
 
 

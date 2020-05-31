@@ -34,12 +34,12 @@ namespace MyCodeToExecute
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             _tcsProject = new TaskCompletionSource<int>();
-            g_dte.ExecuteCommand("Build.CleanSolution", @"");
+            _dte.ExecuteCommand("Build.CleanSolution", @"");
             await _tcsProject.Task;
 
             //                   _logger.LogMessage("Build.BuildSolution");
             _tcsProject = new TaskCompletionSource<int>();
-            g_dte.ExecuteCommand("Build.BuildSolution", @"");
+            _dte.ExecuteCommand("Build.BuildSolution", @"");
             await _tcsProject.Task;
         }
         public override async Task DoCleanupAsync()

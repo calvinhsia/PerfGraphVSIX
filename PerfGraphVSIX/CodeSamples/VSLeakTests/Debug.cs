@@ -34,14 +34,14 @@ namespace MyCodeToExecute
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             _tcsDebug = new TaskCompletionSource<int>();
-            g_dte.ExecuteCommand("Debug.Start", @"");
+            _dte.ExecuteCommand("Debug.Start", @"");
             //await Task.Delay(10000 * DelayMultiplier);
             await _tcsDebug.Task;
 
             await Task.Delay(TimeSpan.FromSeconds(15 * DelayMultiplier));
 
             _tcsDebug = new TaskCompletionSource<int>();
-            g_dte.ExecuteCommand("Debug.StopDebugging", @"");
+            _dte.ExecuteCommand("Debug.StopDebugging", @"");
             //                    await Task.Delay(10000 * DelayMultiplier);
             await _tcsDebug.Task;
         }

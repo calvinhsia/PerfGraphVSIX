@@ -29,26 +29,26 @@ namespace MyCodeToExecute
         {
             await OpenASolutionAsync();
             /// Note: replace this with an existing file on your machine!
-            g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
+            _dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
             await Task.Delay(TimeSpan.FromSeconds(1 * DelayMultiplier));
         }
 
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
             int nScroll = 50;
-            g_dte.ExecuteCommand("Edit.DocumentStart", @"");
+            _dte.ExecuteCommand("Edit.DocumentStart", @"");
             for (int r = 0; r < nScroll && !_CancellationTokenExecuteCode.IsCancellationRequested; r++)
             {
-                //                        g_dte.ExecuteCommand("Edit.CharRight", @"");
-                g_dte.ExecuteCommand("Edit.ScrollPageDown", @"");
+                //                        _dte.ExecuteCommand("Edit.CharRight", @"");
+                _dte.ExecuteCommand("Edit.ScrollPageDown", @"");
 
                 await Task.Delay(TimeSpan.FromMilliseconds(1000), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
             }
 
             for (int r = 0; r < nScroll && !_CancellationTokenExecuteCode.IsCancellationRequested; r++)
             {
-                //                        g_dte.ExecuteCommand("Edit.CharRight", @"");
-                g_dte.ExecuteCommand("Edit.ScrollPageUp", @"");
+                //                        _dte.ExecuteCommand("Edit.CharRight", @"");
+                _dte.ExecuteCommand("Edit.ScrollPageUp", @"");
 
                 await Task.Delay(TimeSpan.FromMilliseconds(1000), _CancellationTokenExecuteCode); // wait to allow UI thread to catch  up
             }

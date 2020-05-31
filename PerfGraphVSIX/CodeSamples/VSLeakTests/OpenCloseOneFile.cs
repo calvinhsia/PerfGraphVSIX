@@ -33,11 +33,11 @@ namespace MyCodeToExecute
 
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
-            g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
+            _dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
 
             await Task.Delay(3000, _CancellationTokenExecuteCode);
 
-            g_dte.ExecuteCommand("File.Close", @"");
+            _dte.ExecuteCommand("File.Close", @"");
         }
         public virtual async Task DoCleanupAsync()
         {

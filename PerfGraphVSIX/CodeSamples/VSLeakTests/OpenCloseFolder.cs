@@ -50,7 +50,7 @@ namespace MyCodeToExecute
         {
             _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.ExecuteCommand("File.OpenFolder", @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
+            _dte.ExecuteCommand("File.OpenFolder", @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
             await _tcs.Task;
             if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
@@ -62,7 +62,7 @@ namespace MyCodeToExecute
         {
             _tcs = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.Solution.Close();
+            _dte.Solution.Close();
 
             if (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {

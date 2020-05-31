@@ -622,6 +622,8 @@ public class foo {}
         {
             var strCodeToExecute = @"
 // can add the fullpath to an assembly for reference like so:
+//Pragma: verbose=true
+
 //Pragma: GenerateInMemory=false
 
 using System;
@@ -702,7 +704,7 @@ public class foo {}
                 {
                     if (!codesample.Contains(@"Util\"))
                     {
-                        //                    if (codesample.Contains("Fish"))
+//                        if (codesample.Contains("AAr"))
                         {
 //                            LogMessage($"Compiling {codesample}");
                             nCompiled++;

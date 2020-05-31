@@ -37,10 +37,10 @@ namespace MyNameSpace
 
         async Task DoItAsync(object[] args)
         {
-            var FileToExecute = args[0] as string;
+            var _FileToExecute = args[0] as string;
             _logger = args[1] as ILogger;
             _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
-            var itakeSample = args[3] as ITakeSample;
+            var _itakeSample = args[3] as ITakeSample;
             var package = args[5] as object;// IAsyncPackage;
             while (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {

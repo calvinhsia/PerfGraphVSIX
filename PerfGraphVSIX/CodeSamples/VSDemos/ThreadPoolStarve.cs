@@ -37,7 +37,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
-
+//Include: ..\Util\MyCodeBaseClass.cs
 
 using System;
 using System.Linq;
@@ -67,32 +67,21 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-    public class MyClass
+    public class MyClass : MyCodeBaseClass
     {
-        public IServiceProvider _serviceProvider { get { return _package as IServiceProvider; } }
-        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider _asyncServiceProvider { get { return _package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
-        private object _package;
-        public ILogger _logger; // log to PerfGraph ToolWindow
-        public CancellationToken _CancellationTokenExecuteCode;
-
         Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
         public IVsOutputWindowPane _OutputPane;
 
         public static async Task DoMain(object[] args)
         {
-            var o = new MyClass();
-            await o.DoInitializeAsync(args);
+            var o = new MyClass(args);
+            await o.DoInitializeAsync();
         }
         MainWindow _MyWindow;
-        async Task DoInitializeAsync(object[] args)
+        MyClass(object[] args) : base(args) { }
+        async Task DoInitializeAsync()
         {
             await Task.Yield();
-            var FullPathToThisSourceFile = args[0] as string;
-            _logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2];
-            var itakeSample = args[3] as ITakeSample; // for taking perf counter measurements
-            var g_dte = args[4] as EnvDTE.DTE; // if needed
-            _package = args[5] as object;// IAsyncPackage, IServiceProvider
             _MyWindow = new MainWindow(_CancellationTokenExecuteCode);
 
             var timer = new DispatcherTimer()

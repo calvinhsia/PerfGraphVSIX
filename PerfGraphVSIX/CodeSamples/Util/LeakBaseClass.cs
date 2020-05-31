@@ -33,7 +33,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
-
+//Include: MyCodeBaseClass.cs
 
 using System;
 using System.Linq;
@@ -53,16 +53,8 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-    public class LeakBaseClass : IDisposable
+    public class LeakBaseClass : MyCodeBaseClass, IDisposable
     {
-        public string FileToExecute;
-        public ILogger _logger;
-        public CancellationToken _CancellationTokenExecuteCode;
-        public EnvDTE.DTE g_dte;
-        public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
-        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
-        private object package;
-        public ITakeSample itakeSample;
 
         /// <summary>
         /// If true, will show graph of measurements, then launch ClrObjectExplorer automatically, with the String and Type differences text file
@@ -79,28 +71,18 @@ namespace MyCodeToExecute
         public TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsDebug = new TaskCompletionSource<int>();
-        public string TestName { get { return Path.GetFileNameWithoutExtension(FileToExecute); } }
 
         Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
         public IVsOutputWindowPane _OutputPane;
         public IVsUIShell _vsUIShell;
 
 
-        public LeakBaseClass(object[] args)
+        public LeakBaseClass(object[] args) : base(args)
         {
-            FileToExecute = args[0] as string;
-            _logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
-            itakeSample = args[3] as ITakeSample;
-            g_dte = args[4] as EnvDTE.DTE;
-            package = args[5] as object;// IAsyncPackage;
-            //logger.LogMessage("Registering events ");
+            _perfGraphToolWindowControl.TabControl.SelectedIndex = 1; // select graph tab
 
-            var perfGraphToolWindowControl = itakeSample as PerfGraphToolWindowControl;
-            perfGraphToolWindowControl.TabControl.SelectedIndex = 1; // select graph tab
-
-            BuildEvents = g_dte.Events.BuildEvents;
-            DebuggerEvents = g_dte.Events.DebuggerEvents;
+            BuildEvents = _dte.Events.BuildEvents;
+            DebuggerEvents = _dte.Events.DebuggerEvents;
 
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterBackgroundSolutionLoadComplete += SolutionEvents_OnAfterBackgroundSolutionLoadComplete;
             Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterCloseSolution += SolutionEvents_OnAfterCloseSolution;
@@ -134,7 +116,7 @@ namespace MyCodeToExecute
                 // you can add ref to a DLL if needed, and add Using's if needed
                 // if you're outputting to the OutputWindow, be aware that the OutputPanes are editor instances, which will
                 // look like a leak as they accumulate data.
-                IVsOutputWindow outputWindow = await asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
+                IVsOutputWindow outputWindow = await _asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
                 var crPane = outputWindow.CreatePane(
                     ref _guidPane,
                     "PerfGraphVSIX",
@@ -145,7 +127,7 @@ namespace MyCodeToExecute
 //                _OutputPane.Activate();
                 //logger.LogMessage(string.Format("got output Window CreatePane={0} OutputWindow = {1}  Pane {2}", crPane, outputWindow, _OutputPane));
 
-                _vsUIShell = await asyncServiceProvider.GetServiceAsync(typeof(SVsUIShell)) as IVsUIShell;
+                _vsUIShell = await _asyncServiceProvider.GetServiceAsync(typeof(SVsUIShell)) as IVsUIShell;
                 //logger.LogMessage(string.Format("Got vsuishell {0}", _vsUIShell));
 
                 await DoInitializeAsync();
@@ -202,7 +184,7 @@ namespace MyCodeToExecute
                         await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
                         var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
                         // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
-                        await itakeSample.DoSampleAsync(measurementHolder, desc);
+                        await _itakeSample.DoSampleAsync(measurementHolder, desc);
 
                         if (_CancellationTokenExecuteCode.IsCancellationRequested)
                         {
@@ -244,11 +226,11 @@ namespace MyCodeToExecute
             {
                 slnFile = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
             }
-            if (g_dte.Solution != null && g_dte.Solution.FullName.ToLower() != slnFile.ToLower())
+            if (_dte.Solution != null && _dte.Solution.FullName.ToLower() != slnFile.ToLower())
             {
                 _tcsSolution = new TaskCompletionSource<int>();
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                g_dte.Solution.Open(slnFile);
+                _dte.Solution.Open(slnFile);
                 await _tcsSolution.Task;
                 if (!_CancellationTokenExecuteCode.IsCancellationRequested)
                 {
@@ -261,7 +243,7 @@ namespace MyCodeToExecute
         {
             _tcsSolution = new TaskCompletionSource<int>();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            g_dte.Solution.Close();
+            _dte.Solution.Close();
             if (!_CancellationTokenExecuteCode.IsCancellationRequested && delayAfterClose > 0)
             {
                 await Task.Delay(TimeSpan.FromSeconds(delayAfterClose * DelayMultiplier), _CancellationTokenExecuteCode);
@@ -303,7 +285,7 @@ namespace MyCodeToExecute
         bool stopIter = false;
         public async Task IterateSolutionItemsAsync(Func<Project, ProjectItem, int, Task<bool>> func)
         {
-            var projs = g_dte.Solution.Projects;
+            var projs = _dte.Solution.Projects;
             stopIter = false;
             foreach (Project proj in projs)
             {
@@ -341,7 +323,7 @@ namespace MyCodeToExecute
 
 /*
                     //await OpenASolutionAsync();
-                    //foreach (EnvDTE.Window win in g_dte.Windows)
+                    //foreach (EnvDTE.Window win in _dte.Windows)
                     //{
                     //   _logger.LogMessage("Win " + win.Kind + " " + win.ToString());
                     //    if (win.Kind == "Document") // "Tool"
@@ -349,8 +331,8 @@ namespace MyCodeToExecute
                     //       _logger.LogMessage("   " + win.Document.Name);
                     //    }
                     //}
-                    //g_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
-                    //g_dte.ExecuteCommand("File.NewFile", "temp.cs");
+                    //_dte.ExecuteCommand("File.OpenFile", @"C:\Users\calvinh\Source\repos\hWndHost\Reflect\Reflect.xaml.cs");
+                    //_dte.ExecuteCommand("File.NewFile", "temp.cs");
                     //System.Windows.Forms.SendKeys.Send("using System;{ENTER}");
                     //await Task.Delay(1000);
                     //System.Windows.Forms.SendKeys.Send("class testing {{}");
@@ -364,7 +346,7 @@ namespace MyCodeToExecute
                     //          try
                     //          {
                     //             _logger.LogMessage(" in undo loop");
-                    //              g_dte.ExecuteCommand("Edit.Undo");
+                    //              _dte.ExecuteCommand("Edit.Undo");
                     //              await Task.Delay(100);
                     //          }
                     //          catch (Exception)
@@ -375,7 +357,7 @@ namespace MyCodeToExecute
                     //      }
                     //  };
                     //await undoAll();
-                    //g_dte.ExecuteCommand("File.Close", @"");
+                    //_dte.ExecuteCommand("File.Close", @"");
                     //await Task.Delay(1000);
 
 

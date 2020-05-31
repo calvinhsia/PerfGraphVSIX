@@ -1,29 +1,7 @@
 ﻿//Desc: Show the child processes of Devenv and Shows them in a treeview
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll"
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
 
-
-//Ref: %PerfGraphVSIX%
-
-
-////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
-
-
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
-
-//Pragma: showwarnings=true
-//Ref: %PerfGraphVSIX%
+//Include: ..\Util\MyCodeBaseClass.cs
+//Include: ..\Util\CloseableTabItem.cs
 
 using System;
 using System.Threading;
@@ -51,14 +29,14 @@ using System.IO;
 namespace MyCodeToExecute
 {
 
-    public class MyClass
+    public class MyClass : MyCodeBaseClass
     {
         public static async Task DoMain(object[] args)
         {
-            var oMyClass = new MyClass();
+            var oMyClass = new MyClass(args);
             try
             {
-                await oMyClass.InitializeAsync(args);
+                await oMyClass.InitializeAsync();
             }
             catch (Exception ex)
             {
@@ -66,44 +44,37 @@ namespace MyCodeToExecute
                 _logger.LogMessage(ex.ToString());
             }
         }
-        public string FileToExecute;
-        public ILogger _logger;
-        public CancellationToken _CancellationTokenExecuteCode;
-        public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
-        public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
-        private object package;
 
         public double RefreshRate { get; set; } = 1;
         public bool Monitor { get; set; } = true;
         public bool OnlyChanges { get; set; } = false;
 
-        async Task InitializeAsync(object[] args)
+        MyClass(object[] args) : base(args) { }
+        async Task InitializeAsync()
         {
-            FileToExecute = args[0] as string;
-            _logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2]; // value type
-            var itakeSample = args[3] as ITakeSample;
-            package = args[5] as object;// IAsyncPackage;
-            //logger.LogMessage("Registering events ");
             await Task.Yield();
-            var perfGraphToolWindowControl = itakeSample as PerfGraphToolWindowControl;
-            TabItem tabItemTabProc = null;
+            CloseableTabItem tabItemTabProc = null;
             int iTabItemIndex = 0;
-            foreach (TabItem tabitem in perfGraphToolWindowControl.TabControl.Items)
+            foreach (TabItem tabitem in _perfGraphToolWindowControl.TabControl.Items)
             {
-                if (tabitem.Header.ToString() == Path.GetFileNameWithoutExtension(FileToExecute))
+                if (tabitem.Header.ToString() == Path.GetFileNameWithoutExtension(_FileToExecute))
                 {
-                    tabItemTabProc = tabitem;
+                    tabItemTabProc = (CloseableTabItem)tabitem;
                     break;
                 }
                 iTabItemIndex++;
             }
+            var IsClosed = false;
             if (tabItemTabProc == null)
             {
-                tabItemTabProc = new TabItem() { Header = Path.GetFileNameWithoutExtension(FileToExecute) };
-                perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
+                tabItemTabProc = new CloseableTabItem(Path.GetFileNameWithoutExtension(_FileToExecute), "Monitor Child Processes");
+                tabItemTabProc.TabItemClosed += (o, e) =>
+                 {
+                     IsClosed = true;
+                 };
+                _perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
             }
-            perfGraphToolWindowControl.TabControl.SelectedIndex = iTabItemIndex; // select User output tab
+            _perfGraphToolWindowControl.TabControl.SelectedIndex = iTabItemIndex; // select User output tab
 
             var strxaml =
 $@"<Grid
@@ -162,11 +133,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
             var BtnClose = (Button)grid.FindName("BtnClose");
-            var IsClosed = false;
             BtnClose.Click += (o, e) =>
             {
                 IsClosed = true;
-                perfGraphToolWindowControl.TabControl.Items.Remove(tabItemTabProc);
+                _perfGraphToolWindowControl.TabControl.Items.Remove(tabItemTabProc);
             };
 
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
