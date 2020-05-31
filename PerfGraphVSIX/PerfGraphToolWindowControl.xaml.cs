@@ -664,13 +664,21 @@
 
                         this.btnExecCode.Content = "Cancel Code Execution";
                         await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+
+                        await TaskScheduler.Default; // tpool
+
                         _ctsExecuteCode = new CancellationTokenSource();
                         if (_codeExecutor == null)
                         {
                             _codeExecutor = new CodeExecutor(this);
                         }
                         var sw = Stopwatch.StartNew();
-                        var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
+                        var res = _codeExecutor.CompileAndMaybeExecute(this, CodeFileToRun, _ctsExecuteCode.Token, fExecuteToo: false);
+                        if (res is CodeExecutor.CompileHelper cHelper)
+                        {
+                            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                            res = cHelper.ExecuteTheCode();
+                        }
                         if (res is Task task)
                         {
                             //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");

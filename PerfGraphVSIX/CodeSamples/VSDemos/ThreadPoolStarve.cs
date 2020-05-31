@@ -301,8 +301,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	7,36
 Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,366.488	WpfApp1 (7260)	Starvation  	     0.000       
 
 #endif
-        private 
-            async void BtnGo_Click(object sender, RoutedEventArgs e)
+        private async void BtnGo_Click(object sender, RoutedEventArgs e)
         {
             try
             {
