@@ -146,17 +146,27 @@ namespace PerfGraphVSIX
                                     {
                                         case "generateinmemory":
                                             GenerateInMemory = bool.Parse(splitPragma[1]);
-                                            _logger.LogMessage($"Pragma {nameof(GenerateInMemory)}  = {GenerateInMemory} {Path.GetFileName(fileToCompile)}");
+                                            if (verbose)
+                                            {
+                                                _logger.LogMessage($"Pragma {nameof(GenerateInMemory)}  = {GenerateInMemory} {Path.GetFileName(fileToCompile)}");
+                                            }
                                             break;
                                         case "usecsc":
                                             UseCSC = bool.Parse(splitPragma[1]);
-                                            _logger.LogMessage($"Pragma {nameof(UseCSC)}  = {UseCSC} {Path.GetFileName(fileToCompile)}");
+                                            if (verbose)
+                                            {
+                                                _logger.LogMessage($"Pragma {nameof(UseCSC)}  = {UseCSC} {Path.GetFileName(fileToCompile)}");
+                                            }
                                             break;
                                         case "verbose":
                                             verbose = bool.Parse(splitPragma[1]);
                                             break;
                                         case "showwarnings":
                                             showWarnings = true;
+                                            if (verbose)
+                                            {
+                                                _logger.LogMessage($"Pragma {nameof(showWarnings)} = {showWarnings} {Path.GetFileName(fileToCompile)}");
+                                            }
                                             break;
                                         default:
                                             throw new InvalidOperationException($"Unknown Pragma {srcline}");
@@ -318,6 +328,11 @@ namespace PerfGraphVSIX
                         _logger.LogMessage($"Looking for Static Main");
                     }
                     var didGetMain = false;
+                    if (!_fDidAddAssemblyResolver)
+                    {
+                        _fDidAddAssemblyResolver = true;
+                        AppDomain.CurrentDomain.AssemblyResolve += AssemblyResolver;
+                    }
                     foreach (var clas in asmCompiled.GetExportedTypes())
                     {
                         mainMethod = clas.GetMethod(DoMain);
@@ -329,56 +344,6 @@ namespace PerfGraphVSIX
                             }
 
                             didGetMain = true;
-                            if (!_fDidAddAssemblyResolver)
-                            {
-                                _fDidAddAssemblyResolver = true;
-                                //                          _logger.LogMessage("Register for AssemblyResolve");
-                                AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
-                                {
-                                    Assembly asm = null;
-                                    //                                  _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
-                                    var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
-                                    if (requestName == nameof(PerfGraphVSIX))
-                                    {
-                                        asm = this.GetType().Assembly;
-                                    }
-                                    else if (requestName == nameof(Microsoft.Test.Stress))
-                                    {
-                                        asm = typeof(ILogger).Assembly;
-                                    }
-                                    else
-                                    {
-                                        foreach (var refDir in _lstRefDirs)
-                                        {
-                                            foreach (var ext in new[] { ".dll", ".exe" })
-                                            {
-                                                var fname = Path.Combine(refDir, requestName) + ext;
-                                                if (File.Exists(fname))
-                                                {
-                                                    try
-                                                    {
-                                                        asm = Assembly.Load(fname);
-                                                    }
-                                                    catch (Exception)
-                                                    {
-                                                        asm = Assembly.LoadFrom(fname);
-                                                    }
-                                                    break;
-                                                }
-                                            }
-                                            if (asm != null)
-                                            {
-                                                break;
-                                            }
-                                        }
-                                        if (asm == null)
-                                        {
-                                            _logger.LogMessage($"AssemblyResolver: Couldn't resolve {e.Name}");
-                                        }
-                                    }
-                                    return asm;
-                                };
-                            }
                             //                        _logger.LogMessage($"mainmethod rettype = {mainMethod.ReturnType.Name}");
                             break;
                         }
@@ -394,7 +359,58 @@ namespace PerfGraphVSIX
                     _priorCompiledAssembly = null;
                     throw;
                 }
-
+                finally
+                {
+                    if (_fDidAddAssemblyResolver)
+                    {
+                        AppDomain.CurrentDomain.AssemblyResolve -= AssemblyResolver;
+                    }
+                }
+            }
+            Assembly AssemblyResolver(object sender, ResolveEventArgs e)
+            {
+                Assembly asm = null;
+                _logger.LogMessage($"AssmblyResolve {e.Name}  Requesting asm = {e.RequestingAssembly}");
+                var requestName = e.Name.Substring(0, e.Name.IndexOf(","));
+                if (requestName == nameof(PerfGraphVSIX))
+                {
+                    asm = this.GetType().Assembly;
+                }
+                else if (requestName == nameof(Microsoft.Test.Stress))
+                {
+                    asm = typeof(ILogger).Assembly;
+                }
+                else
+                {
+                    foreach (var refDir in _lstRefDirs)
+                    {
+                        foreach (var ext in new[] { ".dll", ".exe" })
+                        {
+                            var fname = Path.Combine(refDir, requestName) + ext;
+                            if (File.Exists(fname))
+                            {
+                                try
+                                {
+                                    asm = Assembly.Load(fname);
+                                }
+                                catch (Exception)
+                                {
+                                    asm = Assembly.LoadFrom(fname);
+                                }
+                                break;
+                            }
+                        }
+                        if (asm != null)
+                        {
+                            break;
+                        }
+                    }
+                    if (asm == null)
+                    {
+                        _logger.LogMessage($"AssemblyResolver: Couldn't resolve {e.Name}");
+                    }
+                }
+                return asm;
             }
             // must be called on UI thread
             public object ExecuteTheCode()
@@ -426,7 +442,6 @@ namespace PerfGraphVSIX
                 {
                     result = res;
                 }
-
                 return result;
             }
         }

@@ -75,6 +75,7 @@ namespace MyCodeToExecute
 
         public double RefreshRate { get; set; } = 1;
         public bool Monitor { get; set; } = true;
+        public bool OnlyChanges { get; set; } = false;
 
         async Task InitializeAsync(object[] args)
         {
@@ -110,7 +111,7 @@ xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
     System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
-        Margin=""5,5,5,5"">
+        >
         <Grid.RowDefinitions>
             <RowDefinition Height=""auto""/>
             <RowDefinition Height=""*""/>
@@ -129,15 +130,26 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                             </Storyboard>
                         </BeginStoryboard>
                     </EventTrigger>
+<!--                    <EventTrigger RoutedEvent=""CheckBox.Checked"" SourceName=""ChkBoxMonitor"">
+                      <PauseStoryboard BeginStoryboardName=""MyBeginStoryboard"" />
+                    </EventTrigger>
+                    <EventTrigger RoutedEvent=""CheckBox.Unchecked"" SourceName=""ChkBoxMonitor"">
+                      <ResumeStoryboard BeginStoryboardName=""MyBeginStoryboard"" />
+                    </EventTrigger>
+-->
+
                 </Ellipse.Triggers>
             </Ellipse>
         </Canvas>
 
-        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
+        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""25"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <Label Content=""Refresh Rate""/>
-            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" ToolTip=""Seconds. Refresh means check child proces. UI won't update UI if tree is same"" />
-            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" 
+            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""Seconds. Refresh means check child proces. UI won't update UI if tree is same"" />
+            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
+            <CheckBox Margin=""15,0,0,10"" Content=""Update if change in processes only""  IsChecked=""{{Binding OnlyChanges}}"" 
+                ToolTip=""If the child processes are the same each refresh, then don't update the UI.""/>
+            <Button Name=""BtnClose"" Content=""Close""/>
         </StackPanel>
         <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
     </Grid>
@@ -149,6 +161,13 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
+            var BtnClose = (Button)grid.FindName("BtnClose");
+            var IsClosed = false;
+            BtnClose.Click += (o, e) =>
+            {
+                IsClosed = true;
+                perfGraphToolWindowControl.TabControl.Items.Remove(tabItemTabProc);
+            };
 
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
@@ -162,6 +181,11 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     while (!_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         await TaskScheduler.Default;
+                        if (IsClosed)
+                        {
+                            break;
+                        }
+
                         if (Monitor)
                         {
                             var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
@@ -179,7 +203,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                                 childProcTree.AddNodes(childProcTree, devenvTree);
                                 childProcTree.ToolTip = $"Refreshed {dtlastTree}";
                                 await TaskScheduler.Default;
-                                //                            hashLastTree = curHash;
+                                if (OnlyChanges)
+                                {
+                                    hashLastTree = curHash;
+                                }
                             }
                         }
                         //_logger.LogMessage("in loop");
@@ -330,8 +357,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 await Task.Delay(TimeSpan.FromSeconds(1), token);
             }
         }
-
     }
+
 
     class ProcessEx
     {

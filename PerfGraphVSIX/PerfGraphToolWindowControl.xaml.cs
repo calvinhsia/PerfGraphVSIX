@@ -687,7 +687,10 @@
                         }
                         else
                         {
-                            await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                            if (!string.IsNullOrEmpty(res.ToString()))
+                            {
+                                await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                            }
                         }
                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                         _ctsExecuteCode = null;

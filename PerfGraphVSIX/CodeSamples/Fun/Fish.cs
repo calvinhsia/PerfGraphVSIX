@@ -25,10 +25,9 @@
 //Pragma: GenerateInMemory = False
 //Pragma: UseCSC = true
 //Pragma: showwarnings = true
-//Pragma: verbose = true
+//Pragma: verbose = false
 
 ////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
-
 
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
