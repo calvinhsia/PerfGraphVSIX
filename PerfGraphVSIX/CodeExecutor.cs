@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Configuration;
 using System.Windows;
 
 namespace PerfGraphVSIX
@@ -35,19 +36,16 @@ namespace PerfGraphVSIX
         int _hashOfPriorCodeToExecute;
         Assembly _priorCompiledAssembly;
         HashSet<string> _lstRefDirs = new HashSet<string>();
-        private bool verbose;
 
         public CodeExecutor(ILogger logger)
         {
             this._logger = logger;
         }
-        (MethodInfo, Assembly) CompileTheCode(string pathFileToExecute)
+        CompileResult CompileTheCode(CompileResult compileResult)
         {
-            MethodInfo mainMethod = null;
-            Assembly asmCompiled = null;
             var lstFilesToCompile = new HashSet<string>();
             var IsCSharp = true;
-            if (Path.GetExtension(pathFileToExecute).ToLower() == ".vb")
+            if (Path.GetExtension(compileResult.pathFileToExecute).ToLower() == ".vb")
             {
                 IsCSharp = false;
                 CommentPrefix = "'";
@@ -60,7 +58,7 @@ namespace PerfGraphVSIX
             var hashofCodeToExecute = 0;
             var GenerateInMemory = true;
             var UseCSC = true;
-            this.verbose = false;
+            compileResult.verbose = false;
             var showWarnings = false;
             //            _logger.LogMessage($"Compiling code");
             try
@@ -81,7 +79,7 @@ namespace PerfGraphVSIX
                     var compParams = new CompilerParameters();
                     _lstRefDirs = new HashSet<string>
                     {
-                        Path.GetDirectoryName(pathFileToExecute)// add the dir of the source file as a ref dir
+                        Path.GetDirectoryName(compileResult.pathFileToExecute)// add the dir of the source file as a ref dir
                     };
                     void AddFileToCompileList(string fileToCompile)
                     {
@@ -112,7 +110,7 @@ namespace PerfGraphVSIX
                                         _logger.LogMessage($"Pragma {nameof(UseCSC)}  = {UseCSC} {Path.GetFileName(fileToCompile)}");
                                         break;
                                     case "verbose":
-                                        verbose = bool.Parse(splitPragma[1]);
+                                        compileResult.verbose = bool.Parse(splitPragma[1]);
                                         break;
                                     case "showwarnings":
                                         showWarnings = true;
@@ -128,7 +126,7 @@ namespace PerfGraphVSIX
                                 {
                                     refAsm = refAsm.Replace("\"", string.Empty);
                                 }
-                                if (string.IsNullOrEmpty(Path.GetDirectoryName(pathFileToExecute))) // a locally referenced DLL
+                                if (string.IsNullOrEmpty(Path.GetDirectoryName(compileResult.pathFileToExecute))) // a locally referenced DLL
                                 {
 
                                 }
@@ -152,7 +150,7 @@ namespace PerfGraphVSIX
                                     var dir = System.IO.Path.GetDirectoryName(refAsm);
                                     if (string.IsNullOrEmpty(dir))
                                     {
-                                        var temp = Path.Combine(Path.GetDirectoryName(pathFileToExecute), refAsm);
+                                        var temp = Path.Combine(Path.GetDirectoryName(compileResult.pathFileToExecute), refAsm);
                                         if (File.Exists(temp))
                                         {
                                             refAsm = temp;
@@ -189,11 +187,11 @@ namespace PerfGraphVSIX
                             }
                         }
                     }
-                    AddFileToCompileList(pathFileToExecute);
+                    AddFileToCompileList(compileResult.pathFileToExecute);
                     if (_priorCompiledAssembly != null && _hashOfPriorCodeToExecute == hashofCodeToExecute) // if we can use prior compile results
                     {
-                        _logger.LogMessage($"No Compilation required: Using prior compiled assembly for {pathFileToExecute}");
-                        asmCompiled = _priorCompiledAssembly;
+                        _logger.LogMessage($"No Compilation required: Using prior compiled assembly for {compileResult.pathFileToExecute}");
+                        compileResult.asmCompiled = _priorCompiledAssembly;
                     }
                     else
                     {
@@ -219,7 +217,7 @@ namespace PerfGraphVSIX
                                 strb.AppendLine($"# errors = {nErrors}");
                                 throw new InvalidOperationException(strb.ToString());
                             }
-                            asmCompiled = resCompile.CompiledAssembly;
+                            compileResult.asmCompiled = resCompile.CompiledAssembly;
                         }
                         else
                         {// C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\MSBuild\Current\bin\Roslyn\csc.exe
@@ -246,7 +244,7 @@ namespace PerfGraphVSIX
                             }
                             // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/reference-compiler-option
                             var args = $@"{srcFiles} /target:library /nologo /out:""{outfile}"" {refs}";
-                            if (verbose)
+                            if (compileResult.verbose)
                             {
                                 _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args);
                             }
@@ -266,23 +264,23 @@ namespace PerfGraphVSIX
                             {
                                 _logger.LogMessage(sb.ToString());
                             }
-                            asmCompiled = Assembly.LoadFrom(outfile);
+                            compileResult.asmCompiled = Assembly.LoadFrom(outfile);
                         }
                     }
                 }
                 _hashOfPriorCodeToExecute = hashofCodeToExecute;
-                _priorCompiledAssembly = asmCompiled;
-                if (verbose)
+                _priorCompiledAssembly = compileResult.asmCompiled;
+                if (compileResult.verbose)
                 {
                     _logger.LogMessage($"Looking for Static Main");
                 }
                 var didGetMain = false;
-                foreach (var clas in asmCompiled.GetExportedTypes())
+                foreach (var clas in compileResult.asmCompiled.GetExportedTypes())
                 {
-                    mainMethod = clas.GetMethod(DoMain);
-                    if (mainMethod != null)
+                    compileResult.mainMethod = clas.GetMethod(DoMain);
+                    if (compileResult.mainMethod != null)
                     {
-                        if (!mainMethod.IsStatic)
+                        if (!compileResult.mainMethod.IsStatic)
                         {
                             throw new InvalidOperationException("DoMain must be static");
                         }
@@ -344,7 +342,7 @@ namespace PerfGraphVSIX
                 }
                 if (!didGetMain)
                 {
-                    throw new InvalidOperationException($"Couldn't find static {DoMain} in {pathFileToExecute}");
+                    throw new InvalidOperationException($"Couldn't find static {DoMain} in {compileResult.pathFileToExecute}");
                 }
             }
             catch (Exception)
@@ -353,50 +351,50 @@ namespace PerfGraphVSIX
                 _priorCompiledAssembly = null;
                 throw;
             }
-            return (mainMethod, asmCompiled);
+            return compileResult;
         }
-        object ExecuteTheCode(
-            string pathFileToExecute,
-            ITakeSample itakeSample,
-            CancellationToken token,
-            MethodInfo mainMethod,
-            Assembly asmCompiled)
-        {
-            object result = string.Empty;
-            //ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            //{
-            //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        //object ExecuteTheCode(
+        //    string pathFileToExecute,
+        //    ITakeSample itakeSample,
+        //    CancellationToken token,
+        //    MethodInfo mainMethod,
+        //    Assembly asmCompiled)
+        //{
+        //    object result = string.Empty;
+        //    //ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        //    //{
+        //    //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            //});
-            // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
-            object[] parms = new object[]
-            {
-                            pathFileToExecute,
-                            _logger,
-                            token,
-                            itakeSample,
-                            PerfGraphToolWindowCommand.Instance?.g_dte,
-                            PerfGraphToolWindowCommand.Instance?.package
-            };
-            if (verbose)
-            {
-                _logger.LogMessage($"Calling Static Main");
-            }
-            var res = mainMethod.Invoke(null, new object[] { parms });
-            if (verbose)
-            {
-                _logger.LogMessage($"Static Main return= {res}");
-            }
-            if (res is string strres)
-            {
-                result = strres;
-            }
-            if (res is System.Threading.Tasks.Task task)
-            {
-                result = res;
-            }
-            return result;
-        }
+        //    //});
+        //    // Types we pass must be very simple for compilation: e.g. don't want to bring in all of WPF...
+        //    object[] parms = new object[]
+        //    {
+        //                    pathFileToExecute,
+        //                    _logger,
+        //                    token,
+        //                    itakeSample,
+        //                    PerfGraphToolWindowCommand.Instance?.g_dte,
+        //                    PerfGraphToolWindowCommand.Instance?.package
+        //    };
+        //    if (verbose)
+        //    {
+        //        _logger.LogMessage($"Calling Static Main");
+        //    }
+        //    var res = mainMethod.Invoke(null, new object[] { parms });
+        //    if (verbose)
+        //    {
+        //        _logger.LogMessage($"Static Main return= {res}");
+        //    }
+        //    if (res is string strres)
+        //    {
+        //        result = strres;
+        //    }
+        //    if (res is System.Threading.Tasks.Task task)
+        //    {
+        //        result = res;
+        //    }
+        //    return result;
+        //}
         public object CompileAndExecute(
             ITakeSample itakeSample,
             string pathFileToExecute,
@@ -406,19 +404,84 @@ namespace PerfGraphVSIX
             object result = string.Empty;
             try
             {
-                (var mainMethod, var asmCompiled) = CompileTheCode(pathFileToExecute);
+                //if (jtf == null) // from tests
+                //{
+                //    jtf = ThreadHelper.JoinableTaskContext.Factory;
+                //    //var jtfContext = new JoinableTaskContext();
+                //    //jtf = jtfContext.Factory;
+
+                //}
+                var compileResult = new CompileResult(pathFileToExecute, _logger, itakeSample, token);
+                _logger.LogMessage($"Starting compile");
+                result = CompileTheCode(compileResult);
+                _logger.LogMessage($"compile task done");
+
+                //var task = System.Threading.Tasks.Task.Run(() =>
+                //{
+
+                //});
+                //task.Wait();
                 if (fExecuteToo)
                 {
-                    result = ExecuteTheCode(pathFileToExecute, itakeSample, token, mainMethod, asmCompiled);
+                    result = compileResult.ExecuteTheCode();
                 }
             }
             catch (Exception ex)
             {
                 result = ex.ToString();
             }
-
-
             return result;
+        }
+
+        public class CompileResult
+        {
+            public MethodInfo mainMethod;
+            public Assembly asmCompiled;
+            public string pathFileToExecute;
+            public ITakeSample itakeSample;
+            public CancellationToken token;
+            public readonly ILogger _logger;
+            public bool verbose;
+
+            public CompileResult(string pathFileToExecute, ILogger logger, ITakeSample itakeSample, CancellationToken token)
+            {
+                this.pathFileToExecute = pathFileToExecute;
+                this.itakeSample = itakeSample;
+                this.token = token;
+                this._logger = logger;
+            }
+            public object ExecuteTheCode()
+            {
+                object result = string.Empty;
+                object[] parms = new object[]
+                {
+                            pathFileToExecute,
+                            _logger,
+                            token,
+                            itakeSample,
+                            PerfGraphToolWindowCommand.Instance?.g_dte,
+                            PerfGraphToolWindowCommand.Instance?.package
+                };
+                if (verbose)
+                {
+                    _logger.LogMessage($"Calling Static Main");
+                }
+                var res = mainMethod.Invoke(null, new object[] { parms });
+                if (verbose)
+                {
+                    _logger.LogMessage($"Static Main return= {res}");
+                }
+                if (res is string strres)
+                {
+                    result = strres;
+                }
+                if (res is System.Threading.Tasks.Task task)
+                {
+                    result = res;
+                }
+
+                return result;
+            }
         }
     }
 }
