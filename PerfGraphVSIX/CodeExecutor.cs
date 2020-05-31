@@ -30,7 +30,7 @@ namespace PerfGraphVSIX
             this._logger = logger;
         }
         public object CompileAndMaybeExecute(
-            ITakeSample itakeSample,
+            ITakeSample itakeSample, // pass this to executing code, which may not reference WPF asms
             string pathFileToExecute,
             CancellationToken token,
             bool fExecuteToo = true) // for tests, we want to compile and not execute
@@ -38,12 +38,12 @@ namespace PerfGraphVSIX
             object result = string.Empty;
             try
             {
-                var compileResult = new CompileHelper(pathFileToExecute, _logger, itakeSample, token);
-                compileResult.CompileTheCode();
-                result = compileResult;
+                var compilerHelper = new CompileHelper(pathFileToExecute, _logger, itakeSample, token);
+                compilerHelper.CompileTheCode();
+                result = compilerHelper;
                 if (fExecuteToo)
                 {
-                    result = compileResult.ExecuteTheCode();
+                    result = compilerHelper.ExecuteTheCode();
                 }
             }
             catch (Exception ex)

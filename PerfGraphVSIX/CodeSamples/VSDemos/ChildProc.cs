@@ -40,10 +40,13 @@ using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using Microsoft.VisualStudio.Shell.Interop;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
+using System.Xml;
+using System.Windows.Markup;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Runtime.Remoting.Messaging;
+using System.IO;
 
 namespace MyCodeToExecute
 {
@@ -53,7 +56,15 @@ namespace MyCodeToExecute
         public static async Task DoMain(object[] args)
         {
             var oMyClass = new MyClass();
-            await oMyClass.InitializeAsync(args);
+            try
+            {
+                await oMyClass.InitializeAsync(args);
+            }
+            catch (Exception ex)
+            {
+                var _logger = args[1] as ILogger;
+                _logger.LogMessage(ex.ToString());
+            }
         }
         public string FileToExecute;
         public ILogger _logger;
@@ -61,6 +72,9 @@ namespace MyCodeToExecute
         public IServiceProvider serviceProvider { get { return package as IServiceProvider; } }
         public Microsoft.VisualStudio.Shell.IAsyncServiceProvider asyncServiceProvider { get { return package as Microsoft.VisualStudio.Shell.IAsyncServiceProvider; } }
         private object package;
+
+        public double RefreshRate { get; set; } = 1;
+        public bool Monitor { get; set; } = true;
 
         async Task InitializeAsync(object[] args)
         {
@@ -76,7 +90,7 @@ namespace MyCodeToExecute
             int iTabItemIndex = 0;
             foreach (TabItem tabitem in perfGraphToolWindowControl.TabControl.Items)
             {
-                if (tabitem.Header.ToString() == "ChildProc")
+                if (tabitem.Header.ToString() == Path.GetFileNameWithoutExtension(FileToExecute))
                 {
                     tabItemTabProc = tabitem;
                     break;
@@ -85,49 +99,100 @@ namespace MyCodeToExecute
             }
             if (tabItemTabProc == null)
             {
-                tabItemTabProc = new TabItem() { Header = "ChildProc" };
+                tabItemTabProc = new TabItem() { Header = Path.GetFileNameWithoutExtension(FileToExecute) };
                 perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
             }
             perfGraphToolWindowControl.TabControl.SelectedIndex = iTabItemIndex; // select User output tab
-            var gridUser = new Grid();
-            tabItemTabProc.Content = gridUser;
+
+            var strxaml =
+$@"<Grid
+xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
+xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
+    System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
+        Margin=""5,5,5,5"">
+        <Grid.RowDefinitions>
+            <RowDefinition Height=""auto""/>
+            <RowDefinition Height=""*""/>
+        </Grid.RowDefinitions>
+        <Canvas Margin=""311,0,0,0.5"">
+            <Ellipse Name=""Ball"" Width=""24"" Height=""24"" Fill=""Blue""
+             Canvas.Left=""396"">
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent=""Ellipse.Loaded"">
+                        <BeginStoryboard>
+                            <Storyboard TargetName=""Ball"" RepeatBehavior=""Forever"">
+                                <DoubleAnimation
+                                Storyboard.TargetProperty=""(Canvas.Left)""
+                                From=""96"" To=""300"" Duration=""0:0:1""
+                                AutoReverse=""True"" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+        </Canvas>
+
+        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
+            <Label Content=""Refresh Rate""/>
+            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" ToolTip=""Seconds. Refresh means check child proces. UI won't update UI if tree is same"" />
+            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" 
+                ToolTip=""Monitor Child Processes""/>
+        </StackPanel>
+        <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
+    </Grid>
+";
+            var strReader = new System.IO.StringReader(strxaml);
+            var xamlreader = XmlReader.Create(strReader);
+            var grid = (Grid)(XamlReader.Load(xamlreader));
+            tabItemTabProc.Content = grid;
+
+            grid.DataContext = this;
+            var gridUser = (Grid)grid.FindName("gridUser");
 
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                gridUser.Children.Clear();
-                var childProcTree = new ChildProcTree();
-                gridUser.Children.Add(childProcTree);
-                await TaskScheduler.Default;
-                int hashLastTree = 0;
-                DateTime dtlastTree;
+                ChildProcTree childProcTree = new ChildProcTree();
                 try
                 {
+                    gridUser.Children.Clear();
+                    gridUser.Children.Add(childProcTree);
+                    int hashLastTree = 0;
+                    DateTime dtlastTree;
                     while (!_CancellationTokenExecuteCode.IsCancellationRequested)
                     {
                         await TaskScheduler.Default;
-                        var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
-                        var curHash = 0;
-                        IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                        if (Monitor)
                         {
-                            curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
-                            return true;
-                        });
-                        if (curHash != hashLastTree)
-                        {
-                            dtlastTree = DateTime.Now;
-                            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                            childProcTree.Items.Clear();
-                            childProcTree.AddNodes(childProcTree, devenvTree);
-                            childProcTree.ToolTip = $"Refreshed {dtlastTree}";
-                            //                            hashLastTree = curHash;
+                            var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                            var curHash = 0;
+                            IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                            {
+                                curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
+                                return true;
+                            });
+                            if (curHash != hashLastTree)
+                            {
+                                dtlastTree = DateTime.Now;
+                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                childProcTree.Items.Clear();
+                                childProcTree.AddNodes(childProcTree, devenvTree);
+                                childProcTree.ToolTip = $"Refreshed {dtlastTree}";
+                                await TaskScheduler.Default;
+                                //                            hashLastTree = curHash;
+                            }
                         }
                         //_logger.LogMessage("in loop");
-                        await Task.Delay(TimeSpan.FromSeconds(1), _CancellationTokenExecuteCode);
+                        await Task.Delay(TimeSpan.FromSeconds(RefreshRate), _CancellationTokenExecuteCode);
                     }
 
                 }
                 catch (OperationCanceledException)
                 {
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogMessage(ex.ToString());
                 }
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 childProcTree.Background = Brushes.Cornsilk;
