@@ -34,7 +34,7 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
-
+//Include: CloseableTabItem.cs
 
 using System;
 using System.Linq;
@@ -51,6 +51,8 @@ using EnvDTE;
 using Microsoft.VisualStudio.Threading;
 using Task = System.Threading.Tasks.Task;
 using System.IO;
+using System.Net.NetworkInformation;
+using System.Windows.Controls;
 
 namespace MyCodeToExecute
 {
@@ -79,6 +81,51 @@ namespace MyCodeToExecute
             //logger.LogMessage("Registering events ");
 
             _perfGraphToolWindowControl = _itakeSample as PerfGraphToolWindowControl;
+        }
+
+        public async Task<IVsOutputWindowPane> GetOutputPaneAsync()
+        {
+            // this shows how to get VS Services
+            // you can add ref to a DLL if needed, and add Using's if needed
+            // if you're outputting to the OutputWindow, be aware that the OutputPanes are editor instances, which will
+            // look like a leak as they accumulate data.
+            Guid guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
+            IVsOutputWindow outputWindow = await _asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
+            var crPane = outputWindow.CreatePane(
+                ref guidPane,
+                "PerfGraphVSIX",
+                fInitVisible: 1,
+                fClearWithSolution: 0);
+            outputWindow.GetPane(ref guidPane, out var OutputPane);
+            OutputPane.Activate();
+            return OutputPane;
+        }
+
+        public CloseableTabItem GetTabItem()
+        {
+            int iTabItemIndex = 0;
+            foreach (TabItem tabitem in _perfGraphToolWindowControl.TabControl.Items)
+            {
+                if (tabitem.Name == Path.GetFileNameWithoutExtension(_FileToExecute))
+                {
+                    // problem: each time asm is recompiled/reloaed, the type "CloseableTabItem" has different identity, so casting can cause error in this case
+                    // so need to call via reflection
+                    if (tabitem.GetType().Name == "CloseableTabItem")
+                    {
+                        // found an existing one. Need to close it
+                        tabitem.GetType().GetMethod("CloseTabItem").Invoke(tabitem, null);
+
+                        //tabItemTabProc = (CloseableTabItem)tabitem; // this throws invalid cast exception
+                        //tabItemTabProc.CloseTabItem();
+                        break;
+                    }
+                }
+                iTabItemIndex++;
+            }
+            var tabItemTabProc = new CloseableTabItem(Path.GetFileNameWithoutExtension(_FileToExecute), string.Empty);
+            _perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
+            _perfGraphToolWindowControl.TabControl.SelectedIndex = _perfGraphToolWindowControl.TabControl.Items.Count-1; // select User output tab
+            return tabItemTabProc;
         }
     }
 }

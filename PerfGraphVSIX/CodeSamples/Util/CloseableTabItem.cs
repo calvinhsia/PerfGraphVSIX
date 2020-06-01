@@ -9,18 +9,22 @@ namespace MyCodeToExecute
 {
     public class CloseableTabItem : TabItem
     {
-        public readonly string tabName;
         private readonly Action<CloseableTabItem, string> OnActivatedFirstTimeCreateContent;
         bool fDidCreateContent = false;
         public event EventHandler TabItemClosed;
 
         public CloseableTabItem(string TabName, string tabTip, Action<CloseableTabItem, string> onActivatedFirstTimeCreateContent = null)
         {
-            this.tabName = TabName;
+            this.Name = TabName;
             this.OnActivatedFirstTimeCreateContent = onActivatedFirstTimeCreateContent;
             var tbHeaderPanel = new StackPanel() { Orientation = Orientation.Horizontal };
             this.Header = tbHeaderPanel;
-            tbHeaderPanel.Children.Add(new TextBlock() { Text = TabName, ToolTip = tabTip }); // use textblock and not label so "_" isn't hot key
+            var tbHeader = new TextBlock() { Text = TabName};
+            if (!string.IsNullOrEmpty(tabTip))
+            {
+                tbHeader.ToolTip = tabTip;
+            }
+            tbHeaderPanel.Children.Add(tbHeader); // use textblock and not label so "_" isn't hot key
             var tbHeaderCloseButton = new MyCloseButton(this);
             //var closeButtonStyle = new Style()
             //{
@@ -46,7 +50,7 @@ namespace MyCodeToExecute
             if (!fDidCreateContent)
             {
                 fDidCreateContent = true;
-                this.OnActivatedFirstTimeCreateContent?.Invoke(this, tabName);
+                this.OnActivatedFirstTimeCreateContent?.Invoke(this, Name);
             }
         }
         protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -71,8 +75,14 @@ namespace MyCodeToExecute
                 obj = VisualTreeHelper.GetParent(obj);
                 if (obj is TabControl tabControl)
                 {
-                    TabItemClosed?.Invoke(obj, new EventArgs());
-                    tabControl.Items.Remove(this);
+                    try
+                    {
+                        TabItemClosed?.Invoke(obj, new EventArgs());
+                        tabControl.Items.Remove(this);
+                    }
+                    catch (Exception)
+                    {
+                    }
                     break;
                 }
             }

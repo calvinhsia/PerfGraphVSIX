@@ -53,33 +53,15 @@ namespace MyCodeToExecute
         async Task InitializeAsync()
         {
             await Task.Yield();
-            CloseableTabItem tabItemTabProc = null;
-            int iTabItemIndex = 0;
-            foreach (var tabitem in _perfGraphToolWindowControl.TabControl.Items)
-            {
-                if ((tabitem as CloseableTabItem)?.tabName == Path.GetFileNameWithoutExtension(_FileToExecute))
-                {
-                    tabItemTabProc = (CloseableTabItem)tabitem; // found an existing one. Need to close it
-                    tabItemTabProc.CloseTabItem();
-                    tabItemTabProc = null;
-                    break;
-                }
-                iTabItemIndex++;
-            }
-            var ctsCancelMonitor = new CancellationTokenSource();
-            if (tabItemTabProc == null)
-            {
-                tabItemTabProc = new CloseableTabItem(Path.GetFileNameWithoutExtension(_FileToExecute), "Monitor Child Processes");
-                tabItemTabProc.TabItemClosed += (o, e) =>
-                 {
-                     //_logger.LogMessage("close event");
-                     ctsCancelMonitor.Cancel();
-                     _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
-                 };
-                _perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
-            }
-            _perfGraphToolWindowControl.TabControl.SelectedIndex = iTabItemIndex; // select User output tab
+            CloseableTabItem tabItemTabProc = GetTabItem();
 
+            var ctsCancelMonitor = new CancellationTokenSource();
+            tabItemTabProc.TabItemClosed += (o, e) =>
+            {
+                //_logger.LogMessage("close event");
+                ctsCancelMonitor.Cancel();
+                _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
+            };
             var strxaml =
 $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""

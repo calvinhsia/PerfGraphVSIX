@@ -34,18 +34,16 @@ namespace PerfGraphVSIX
             string pathFileToExecute,
             CancellationToken token)
         {
-            CompileHelper result = null;
+            var compilerHelper = new CompileHelper(pathFileToExecute, _logger, itakeSample, token);
             try
             {
-                var compilerHelper = new CompileHelper(pathFileToExecute, _logger, itakeSample, token);
                 compilerHelper.CompileTheCode();
-                result = compilerHelper;
             }
             catch (Exception ex)
             {
-                result.CompileResults = ex.ToString();
+                compilerHelper.CompileResults = ex.ToString();
             }
-            return result;
+            return compilerHelper;
         }
 
         public class CompileHelper : IDisposable

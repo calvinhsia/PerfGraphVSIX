@@ -39,8 +39,6 @@ namespace MyCodeToExecute
         public TaskCompletionSource<int> _tcsProject = new TaskCompletionSource<int>();
         public TaskCompletionSource<int> _tcsDebug = new TaskCompletionSource<int>();
 
-        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
-        public IVsOutputWindowPane _OutputPane;
         public IVsUIShell _vsUIShell;
 
 
@@ -79,19 +77,6 @@ namespace MyCodeToExecute
         {
             try
             {
-                // this shows how to get VS Services
-                // you can add ref to a DLL if needed, and add Using's if needed
-                // if you're outputting to the OutputWindow, be aware that the OutputPanes are editor instances, which will
-                // look like a leak as they accumulate data.
-                IVsOutputWindow outputWindow = await _asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
-                var crPane = outputWindow.CreatePane(
-                    ref _guidPane,
-                    "PerfGraphVSIX",
-                    fInitVisible: 1,
-                    fClearWithSolution: 0);
-                outputWindow.GetPane(ref _guidPane, out _OutputPane);
-                _OutputPane.Clear();
-//                _OutputPane.Activate();
                 //logger.LogMessage(string.Format("got output Window CreatePane={0} OutputWindow = {1}  Pane {2}", crPane, outputWindow, _OutputPane));
 
                 _vsUIShell = await _asyncServiceProvider.GetServiceAsync(typeof(SVsUIShell)) as IVsUIShell;

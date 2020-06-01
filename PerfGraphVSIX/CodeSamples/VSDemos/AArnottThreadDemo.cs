@@ -35,10 +35,6 @@ namespace MyCodeToExecute
 {
     public class MyClass: MyCodeBaseClass
     {
-
-        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
-        public IVsOutputWindowPane _OutputPane;
-
         public static async Task DoMain(object[] args)
         {
             var o = new MyClass(args);

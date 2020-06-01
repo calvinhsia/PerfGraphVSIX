@@ -35,7 +35,6 @@ namespace MyCodeToExecute
 {
     public class MySimpleSample : MyCodeBaseClass
     {
-        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
         public IVsOutputWindowPane _OutputPane;
 
         public static async Task DoMain(object[] args)
@@ -46,13 +45,7 @@ namespace MyCodeToExecute
         MySimpleSample(object[] args) : base(args) { }
         async Task DoInitializeAsync()
         {
-            IVsOutputWindow outputWindow = await _asyncServiceProvider.GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
-            var crPane = outputWindow.CreatePane(
-                ref _guidPane,
-                "PerfGraphVSIX",
-                fInitVisible: 1,
-                fClearWithSolution: 0);
-            outputWindow.GetPane(ref _guidPane, out _OutputPane);
+            _OutputPane = await GetOutputPaneAsync();
             _OutputPane.Clear();
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
