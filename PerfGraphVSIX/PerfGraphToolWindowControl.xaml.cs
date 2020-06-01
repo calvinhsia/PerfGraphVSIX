@@ -673,25 +673,54 @@
                             _codeExecutor = new CodeExecutor(this);
                         }
                         var sw = Stopwatch.StartNew();
-                        var res = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token);
-                        if (res is CodeExecutor.CompileHelper cHelper)
+                        using (var compileHelper = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token))
                         {
-                            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                            res = cHelper.ExecuteTheCode();
-                        }
-                        if (res is Task task)
-                        {
-                            //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
-                            await task;
-                            await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
-                        }
-                        else
-                        {
-                            if (!string.IsNullOrEmpty(res.ToString()))
+                            if (!string.IsNullOrEmpty(compileHelper.CompileResults))
                             {
-                                await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                                await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", compileHelper.CompileResults.ToString());
+                            }
+                            else
+                            {
+                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                var res = compileHelper.ExecuteTheCode();
+                                if (res is Task task)
+                                {
+                                    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                                    await task;
+                                    await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                                }
+                                else
+                                {
+                                    if (!string.IsNullOrEmpty(res.ToString()))
+                                    {
+                                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                                    }
+                                }
                             }
                         }
+
+                        //var res = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token);
+                        //CodeExecutor.CompileHelper cHelper = null;
+                        //if (res is CodeExecutor.CompileHelper)
+                        //{
+                        //    cHelper = res as CodeExecutor.CompileHelper;
+                        //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                        //    res = cHelper.ExecuteTheCode();
+                        //}
+                        //if (res is Task task)
+                        //{
+                        //    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                        //    await task;
+                        //    await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                        //}
+                        //else
+                        //{
+                        //    if (!string.IsNullOrEmpty(res.ToString()))
+                        //    {
+                        //        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                        //    }
+                        //}
+                        //cHelper?.Dispose();
                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                         _ctsExecuteCode = null;
                         this.btnExecCode.Content = "ExecCode";

@@ -28,7 +28,7 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-            await OpenASolutionAsync();
+            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
         }
 
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)

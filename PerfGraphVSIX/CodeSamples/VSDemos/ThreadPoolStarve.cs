@@ -1,55 +1,17 @@
 ﻿//Desc: sample to show how ThreadPool Starvation can occur, with and without the JoinableTakeFactory
 
-// This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
-// This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
-
-//  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
-//                      %VSRoot% will be changed to the fullpath to VS: e.g. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
-
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.12.1.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.0.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.8.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll"
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.ComponentModelHost.dll
-
-//Ref:"%VSRoot%\Common7\IDE\PublicAssemblies\envdte.dll"
-
-//Pragma: showwarnings=true
-//Ref: %PerfGraphVSIX%
-//Pragma: verbose = False
-
-
-////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
-
-
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.ComponentModel.Composition.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
 //Include: ..\Util\MyCodeBaseClass.cs
+//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.ComponentModelHost.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.ComponentModel.Composition.dll
+
 
 using System;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
-using PerfGraphVSIX;
-using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.ComponentModelHost;
 using System.Diagnostics;
 using System.Windows;
@@ -69,9 +31,6 @@ namespace MyCodeToExecute
 {
     public class MyClass : MyCodeBaseClass
     {
-        Guid _guidPane = new Guid("{CEEAB38D-8BC4-4675-9DFD-993BBE9996A5}");
-        public IVsOutputWindowPane _OutputPane;
-
         public static async Task DoMain(object[] args)
         {
             var o = new MyClass(args);
@@ -117,26 +76,6 @@ namespace MyCodeToExecute
                      tcsMyWindow.SetResult(0);
                  }
              };
-            //var taskClose = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            //{
-            //    await TaskScheduler.Default;
-            //    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
-            //    {
-            //        await Task.Delay(TimeSpan.FromSeconds(1), _CancellationTokenExecuteCode);
-            //        _logger.LogMessage("ChkC " + tcsMyWindow.Task.IsCompleted.ToString());
-            //    }
-            //    _logger.LogMessage("ChkC dn");
-            //    _logger.LogMessage("mtxx" + tcsMyWindow.Task.ToString());
-            //    if (!tcsMyWindow.Task.IsCompleted)
-            //    {
-            //        _logger.LogMessage("mt");
-            //        tcsMyWindow.SetResult(0);
-            //    }
-            //    //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            //    //_logger.LogMessage("mt");
-            //    //_MyWindow.Close();
-            //    //_logger.LogMessage("mtcl");
-            //});
             _MyWindow.Show();
             await tcsMyWindow.Task;
             _MyWindow.Close();
@@ -160,6 +99,7 @@ The CLR may retire extra idle active threads
         public bool CauseStarvation { get; set; }
         public bool UIThreadDoAwait { get; set; } = true;
         public bool UseJTF { get; set; }
+        public CancellationTokenSource ctsExecute = new CancellationTokenSource();
         public MainWindow(CancellationToken cancellationToken)
         {
             this._CancellationTokenExecuteCode = cancellationToken;
@@ -264,6 +204,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             {
                 Debugger.Break();
             };
+            this.Closed += (o, e) =>
+             {
+                 ctsExecute.Cancel();
+             };
 
             _txtStatus.MouseDoubleClick += (od, ed) =>
             {
@@ -301,14 +245,20 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                     _txtStatus.Clear();
                     AddStatusMsg($"{nameof(UseJTF)}={UseJTF}  {nameof(CauseStarvation)}={CauseStarvation}  {nameof(UIThreadDoAwait)}={UIThreadDoAwait}");
                     ShowThreadPoolStats();
+                    ctsExecute = new CancellationTokenSource();
                     await Task.Delay(TimeSpan.FromSeconds(.5));
+                    oWatcher.DetectedStarvation += (o, e) =>
+                    {
+                        AddStatusMsg("Cancelling because starvation detected");
+                        ctsExecute.Cancel();
+                    };
                     if (!UseJTF)
                     {
-                        await DoThreadPoolAsync();
+                        await DoThreadPoolAsync(ctsExecute.Token);
                     }
                     else
                     {
-                        await DoJTFAsync();
+                        await DoJTFAsync(ctsExecute.Token);
                     }
                     AddStatusMsg($"Done");
                     ShowThreadPoolStats();
@@ -321,7 +271,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             _btnGo.IsEnabled = true;
         }
 
-        private async Task DoThreadPoolAsync()
+        private async Task DoThreadPoolAsync(CancellationToken token)
         {
             var tcs = new TaskCompletionSource<int>();
             var lstTasks = new List<Task>();
@@ -329,36 +279,52 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             for (int ii = 0; ii < NTasks; ii++)
             {
                 var i = ii;// local copy of iteration var
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
                 lstTasks.Add(Task.Run(async () =>
                 {
-                    var tid = Thread.CurrentThread.ManagedThreadId;
-                    AddStatusMsg($"Task {i} Start");
-                    // in this method we do the work that might take a long time in bkgd thread (several seconds)
-                    // keep in mind how the thread that does the work is used: 
-                    // if it's calling Thread.Sleep, the CPU load will be low, but the threadpool thread will be occupied
-                    if (CauseStarvation)
+                    try
                     {
-                        while (!tcs.Task.IsCompleted)
+                        var tid = Thread.CurrentThread.ManagedThreadId;
+                        AddStatusMsg($"Task {i} Start");
+                        // in this method we do the work that might take a long time in bkgd thread (several seconds)
+                        // keep in mind how the thread that does the work is used: 
+                        // if it's calling Thread.Sleep, the CPU load will be low, but the threadpool thread will be occupied
+                        if (CauseStarvation)
                         {
-                            // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                            Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                            while (!tcs.Task.IsCompleted && !token.IsCancellationRequested)
+                            {
+                                // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
+                                Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                            }
                         }
+                        else
+                        {
+                            // if the tcs isn't complete, then the curthread will be relinquished back to the theadpool with a continuation queued when the task is done
+                            await tcs.Task;
+                        }
+                        AddStatusMsg($"Task {i} Done on " + (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread");
                     }
-                    else
+                    catch (OperationCanceledException)
                     {
-                        // if the tcs isn't complete, then the curthread will be relinquished back to the theadpool with a continuation queued when the task is done
-                        await tcs.Task;
                     }
-                    AddStatusMsg($"Task {i} Done on " + (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread");
                 }));
             }
             var taskSetDone = Task.Run(async () =>
             { // a task to set the done signal
-                AddStatusMsg("Starting TaskCompletionSource Task");
-                await Task.Delay(TimeSpan.FromSeconds(10), _CancellationTokenExecuteCode);
-                AddStatusMsg("Setting Task Completion Source");
-                tcs.TrySetResult(1);
-                AddStatusMsg("Set  Task Completion Source");
+                try
+                {
+                    AddStatusMsg("Starting TaskCompletionSource Task");
+                    await Task.Delay(TimeSpan.FromSeconds(10), token);
+                    AddStatusMsg("Setting Task Completion Source");
+                    tcs.TrySetResult(1);
+                    AddStatusMsg("Set  Task Completion Source");
+                }
+                catch (OperationCanceledException)
+                {
+                }
             });
             if (UIThreadDoAwait)
             {   // await all the tasks
@@ -374,7 +340,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             }
         }
 
-        private async Task DoJTFAsync()
+        private async Task DoJTFAsync(CancellationToken token)
         {
             var tcs = new TaskCompletionSource<int>();
             JoinableTaskFactory jtf;
@@ -392,51 +358,68 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             for (int ii = 0; ii < NTasks; ii++)
             {
                 var i = ii;// local copy of iteration var
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
                 lstTasks.Add(jtf.RunAsync(async () =>
                 {
-                    Debug.Assert(jtf.Context.IsOnMainThread, "We are on UI thread");
-                    await TaskScheduler.Default; // switch to bgd thread
-                    Debug.Assert(!jtf.Context.IsOnMainThread, "We are on TP thread");
-                    AddStatusMsg($"In Task jtf.runasync {i}");
-                    var tid = Thread.CurrentThread.ManagedThreadId;
-                    if (CauseStarvation)
+                    try
                     {
-                        // synchronous call: the curthread is not relinquished to the threadpool
-                        jtf.Run(async () =>
+                        token.ThrowIfCancellationRequested();
+                        Debug.Assert(jtf.Context.IsOnMainThread, "We are on UI thread");
+                        await TaskScheduler.Default; // switch to bgd thread
+                        Debug.Assert(!jtf.Context.IsOnMainThread, "We are on TP thread");
+                        AddStatusMsg($"In Task jtf.runasync {i}");
+                        var tid = Thread.CurrentThread.ManagedThreadId;
+                        if (CauseStarvation)
                         {
-                            await jtf.SwitchToMainThreadAsync();
+                            // synchronous call: the curthread is not relinquished to the threadpool
+                            jtf.Run(async () =>
+                            {
+                                await jtf.SwitchToMainThreadAsync();
+                                UpdateUiTxt();
+                                await TaskScheduler.Default; // switch to tp thread
+                                while (!tcs.Task.IsCompleted && !token.IsCancellationRequested)
+                                {
+                                    // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
+                                    Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                                }
+                            });
+                        }
+                        else
+                        {
+                            await jtf.SwitchToMainThreadAsync(); // curthread is immediately relinquished
                             UpdateUiTxt();
                             await TaskScheduler.Default; // switch to tp thread
-                            while (!tcs.Task.IsCompleted)
-                            {
-                                // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                                Thread.Sleep(TimeSpan.FromSeconds(0.2));
-                            }
-                        });
-                    }
-                    else
-                    {
-                        await jtf.SwitchToMainThreadAsync(); // curthread is immediately relinquished
-                        UpdateUiTxt();
-                        await TaskScheduler.Default; // switch to tp thread
-                        await tcs.Task;
-                    }
-                    await Task.Delay(TimeSpan.FromSeconds(2.5), _CancellationTokenExecuteCode);
+                            await tcs.Task;
+                        }
+                        await Task.Delay(TimeSpan.FromSeconds(2.5), token);
 
-                    //                    Thread.Sleep(TimeSpan.FromSeconds(2.5));// simulate long time on main thread
-                    await TaskScheduler.Default; // switch to tp thread
-                                                 //await Task.Yield().ConfigureAwait(false); // this will allow the continuation to go on any thread, not the thread of the captured context.
-                                                 //AddStatusMsg($"In Task jtf.runasync {i} bgd");
-                                                 //await jtf.SwitchToMainThreadAsync();
-                                                 //UpdateUiTxt();
-                    AddStatusMsg($"Task jtf.runasync {i} Done on " + (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread");
+                        //                    Thread.Sleep(TimeSpan.FromSeconds(2.5));// simulate long time on main thread
+                        await TaskScheduler.Default; // switch to tp thread
+                                                     //await Task.Yield().ConfigureAwait(false); // this will allow the continuation to go on any thread, not the thread of the captured context.
+                                                     //AddStatusMsg($"In Task jtf.runasync {i} bgd");
+                                                     //await jtf.SwitchToMainThreadAsync();
+                                                     //UpdateUiTxt();
+                        AddStatusMsg($"Task jtf.runasync {i} Done on " + (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
                 }));
             }
             lstTasks.Add(jtf.RunAsync(async () =>
             {
-                await Task.Delay(TimeSpan.FromSeconds(10), _CancellationTokenExecuteCode);
-                AddStatusMsg("Setting Task Completion Source");
-                tcs.TrySetResult(1);
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), token);
+                    AddStatusMsg("Setting Task Completion Source");
+                    tcs.TrySetResult(1);
+                }
+                catch (OperationCanceledException)
+                {
+                }
             }));
             if (UIThreadDoAwait)
             {
@@ -477,7 +460,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
         private readonly TaskCompletionSource<int> _tcsWatcherThread;
         private readonly CancellationTokenSource _ctsWatcherThread;
         private readonly Thread _threadWatcher;
-
+        public event EventHandler DetectedStarvation;
         public MyThreadPoolWatcher(MainWindow mainWindow)
         {
             this._mainWindow = mainWindow;
@@ -495,15 +478,18 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                     var tcs = new TaskCompletionSource<int>(0);
                     ThreadPool.QueueUserWorkItem((o) =>
                     {
-                        tcs.SetResult(0); // the very imple workitem that should execute very quickly
+                        tcs.SetResult(0); // the very simple workitem that should execute very quickly
                     });
-                    tcs.Task.Wait(); // wait for the workitem to be completed. Can't use async here
+                    var timeout = Task.Delay(TimeSpan.FromMilliseconds(250));
+                    Task.WaitAny(new[] { tcs.Task, timeout });// wait for the workitem to be completed. Can't use async here
                     sw.Stop();
-                    if (sw.Elapsed > TimeSpan.FromSeconds(0.25)) //detect if it took > thresh to execute task
+                    if (!tcs.Task.IsCompleted) //detect if it took > thresh to execute task
                     {
                         // when starvation has been detected, the CLR has waited 1 second for an available thread and created another thread
                         mainWindow.AddStatusMsg($"Detected ThreadPool Starvation !!!!!!!! {sw.Elapsed.TotalSeconds:n2} secs");
+                        DetectedStarvation?.Invoke(this, new EventArgs());
                         Thread.Sleep(TimeSpan.FromSeconds(1)); // don't try to detect starvation for another second
+                        tcs.Task.Wait(); // wait for it to complete if still not done
                     }
                 }
                 _tcsWatcherThread.TrySetResult(0);

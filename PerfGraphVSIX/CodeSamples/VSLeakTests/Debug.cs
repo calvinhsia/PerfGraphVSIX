@@ -27,7 +27,7 @@ namespace MyCodeToExecute
 
         public override async Task DoInitializeAsync()
         {
-            await OpenASolutionAsync();
+            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
             await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier), _CancellationTokenExecuteCode);
         }
 

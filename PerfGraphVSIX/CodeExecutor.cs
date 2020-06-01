@@ -29,12 +29,12 @@ namespace PerfGraphVSIX
         {
             this._logger = logger;
         }
-        public object CompileTheCode(
+        public CompileHelper CompileTheCode(
             ITakeSample itakeSample, // pass this to executing code, which may not reference WPF asms
             string pathFileToExecute,
             CancellationToken token)
         {
-            object result = string.Empty;
+            CompileHelper result = null;
             try
             {
                 var compilerHelper = new CompileHelper(pathFileToExecute, _logger, itakeSample, token);
@@ -43,15 +43,16 @@ namespace PerfGraphVSIX
             }
             catch (Exception ex)
             {
-                result = ex.ToString();
+                result.CompileResults = ex.ToString();
             }
             return result;
         }
 
-        public class CompileHelper
+        public class CompileHelper : IDisposable
         {
             public const string DoMain = "DoMain"; // not domain
             public const string VSRootSubstitution = "%VSRoot%";
+            public const string progfiles86 = @"C:\Program Files (x86)";
             public string refPathPrefix => $"{CommentPrefix}Ref:";
             public string includePathPrefix => $"{CommentPrefix}Include:";
             public string pragmaPrefix => $"{CommentPrefix}Pragma:";
@@ -69,6 +70,7 @@ namespace PerfGraphVSIX
             public CancellationToken token;
             public readonly ILogger _logger;
             public bool verbose;
+            public string CompileResults; // like err msg
 
             public CompileHelper(string pathFileToExecute, ILogger logger, ITakeSample itakeSample, CancellationToken token)
             {
@@ -174,9 +176,10 @@ namespace PerfGraphVSIX
                                     {
                                         refAsm = refAsm.Replace("\"", string.Empty);
                                     }
-                                    if (string.IsNullOrEmpty(Path.GetDirectoryName(pathFileToExecute))) // a locally referenced DLL
+                                    if (refAsm.Contains(progfiles86))// C:\Program Files (x86)\
                                     {
-
+                                        var pfiles = Environment.GetEnvironmentVariable("ProgramFiles(x86)");
+                                        refAsm = refAsm.Replace(progfiles86, pfiles);
                                     }
                                     if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                                     {
@@ -354,13 +357,6 @@ namespace PerfGraphVSIX
                     _priorCompiledAssembly = null;
                     throw;
                 }
-                finally
-                {
-                    if (_fDidAddAssemblyResolver)
-                    {
-                        AppDomain.CurrentDomain.AssemblyResolve -= AssemblyResolver;
-                    }
-                }
             }
             Assembly AssemblyResolver(object sender, ResolveEventArgs e)
             {
@@ -438,6 +434,15 @@ namespace PerfGraphVSIX
                     result = res;
                 }
                 return result;
+            }
+
+            public void Dispose()
+            {
+                if (_fDidAddAssemblyResolver)
+                {
+                    AppDomain.CurrentDomain.AssemblyResolve -= AssemblyResolver; // Need resolver around til execution done
+                    _fDidAddAssemblyResolver = false;
+                }
             }
         }
     }

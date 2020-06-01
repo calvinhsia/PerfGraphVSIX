@@ -123,7 +123,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
             <CheckBox Margin=""15,0,0,10"" Content=""Update if change in processes only""  IsChecked=""{{Binding OnlyChanges}}"" 
-                ToolTip=""If the child processes are the same each refresh, then don't update the UI.""/>
+                ToolTip=""Update the tree only on tree node changes (procId and proc name)""/>
         </StackPanel>
         <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
     </Grid>

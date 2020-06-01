@@ -42,8 +42,11 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None);
-            Assert.AreEqual("did main 100 ", res);
+            using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None))
+            {
+                var res = compileHelper.ExecuteTheCode();
+                Assert.AreEqual("did main 100 ", res.ToString());
+            }
         }
 
         [TestMethod]
@@ -100,9 +103,12 @@ namespace DoesntMatter
                 "TBase.cs");
             File.WriteAllText(tempFile2, strCodeToExecuteBaseClass);
 
-            var res = codeExecutor.CompileTheCode(null, tempFile1, CancellationToken.None);
-            LogMessage($"Got output {res}");
-            Assert.AreEqual("did main In Base Method NumIter= 97", res);
+            using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile1, CancellationToken.None))
+            {
+                var res = compileHelper.ExecuteTheCode();
+                LogMessage($"Got output {res.ToString()}");
+                Assert.AreEqual("did main In Base Method NumIter= 97", res.ToString());
+            }
         }
 
 
@@ -143,15 +149,18 @@ public class foo {}
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None);
-            if (res is Task<string> task)
+            using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None))
             {
-                task.Wait();
-                Assert.AreEqual("did main 100 ", task.Result);
-            }
-            else
-            {
-                Assert.Fail();
+                var res = compileHelper.ExecuteTheCode();
+                if (res is Task<string> task)
+                {
+                    task.Wait();
+                    Assert.AreEqual("did main 100 ", task.Result);
+                }
+                else
+                {
+                    Assert.Fail();
+                }
             }
         }
 
@@ -213,11 +222,13 @@ namespace DoesntMatter
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None);
-            LogMessage(res as string);
-            Assert.AreEqual("did main 100 did delay", res);
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
-
+            using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None))
+            {
+                var res = compileHelper.ExecuteTheCode();
+                LogMessage(res as string);
+                Assert.AreEqual("did main 100 did delay", res);
+                Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in doit")).FirstOrDefault());
+            }
             //            Assert.Fail(res);
         }
 
@@ -326,11 +337,14 @@ namespace MyCustomCode
 
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, strCodeToExecute);
-            var res = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None);
-            LogMessage(res as string);
-            Assert.AreEqual("did main", res);
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Iter 6   Start 1 left to do")).FirstOrDefault());
-            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Done all 7 iterations")).FirstOrDefault());
+            using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None))
+            {
+                var res = compileHelper.ExecuteTheCode();
+                LogMessage(res as string);
+                Assert.AreEqual("did main", res);
+                Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Iter 6   Start 1 left to do")).FirstOrDefault());
+                Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("Done all 7 iterations")).FirstOrDefault());
+            }
         }
 
         public const string sampleVSCodeToExecute = @"
@@ -559,16 +573,19 @@ namespace MyCustomCode
             var codeExecutor = new CodeExecutor(this);
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, sampleVSCodeToExecute);
-            var res = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None);
-            if (res is string resString)
+            using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None))
             {
-                Assert.Fail(resString);
-            }
-            var task = res as Task;
-            if (task.IsFaulted)
-            {
-                LogMessage($"Faulted task {task.Exception}");
-                Assert.IsTrue(task.Exception.ToString().Contains(" The SVsSolution service is unavailable."));
+                var res = compileHelper.ExecuteTheCode();
+                if (res is string resString)
+                {
+                    Assert.Fail(resString);
+                }
+                var task = res as Task;
+                if (task.IsFaulted)
+                {
+                    LogMessage($"Faulted task {task.Exception}");
+                    Assert.IsTrue(task.Exception.ToString().Contains(" The SVsSolution service is unavailable."));
+                }
             }
             //            Assert.IsNotNull(_lstLoggedStrings.Where(s => s.Contains("in DoSomeWorkAsync")).FirstOrDefault());
 
@@ -704,18 +721,20 @@ public class foo {}
                 {
                     if (!codesample.Contains(@"Util\"))
                     {
-//                        if (codesample.Contains("AAr"))
+                        //                        if (codesample.Contains("AAr"))
                         {
-//                            LogMessage($"Compiling {codesample}");
+                            //                            LogMessage($"Compiling {codesample}");
                             nCompiled++;
                             var codeExecutor = new CodeExecutor(logger: this);
-                            var res = codeExecutor.CompileTheCode(null, codesample, CancellationToken.None);
-                            if (res is string && !string.IsNullOrEmpty(res as string))
+                            using (var compileHelper = codeExecutor.CompileTheCode(null, codesample, CancellationToken.None))
                             {
-//                                if (!(codesample.Contains("LeakBaseClass") && res.ToString().Contains("Couldn't find static Main")))
+                                if (!string.IsNullOrEmpty(compileHelper.CompileResults))
                                 {
-                                    nErrors++;
-                                    LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + res.ToString());
+                                    //                                if (!(codesample.Contains("LeakBaseClass") && res.ToString().Contains("Couldn't find static Main")))
+                                    {
+                                        nErrors++;
+                                        LogMessage($"{Path.GetFileNameWithoutExtension(codesample)} " + compileHelper.CompileResults);
+                                    }
                                 }
                             }
                         }

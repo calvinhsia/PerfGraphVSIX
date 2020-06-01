@@ -231,6 +231,10 @@ N(Insert) (N Line chart) Enter (choose default 2D line chart)""
                     {
                         this.Close();
                     };
+                    this.Closing += (o, e) =>
+                    {
+                        FishBowl._Instance = null;
+                    };
                     var btnGraph = (Button)grid.FindName("btnGraph");
                     btnGraph.Click += (ob, eb) =>
                     {
@@ -375,18 +379,24 @@ Per A.K. Dewdney article on Wator, December 1984 Scientific American
                         _StopRequested = false;
                         ThreadPool.QueueUserWorkItem((o) =>
                         {
-                            _IsRunning = true;
-                            _hdc = NativeMethods.GetDC(_hwnd);
-                            InitCachedImagesOfAnimals();
-                            while (!_StopRequested)
+                            try
                             {
-                                DoGenerations();
+                                _IsRunning = true;
+                                _hdc = NativeMethods.GetDC(_hwnd);
+                                InitCachedImagesOfAnimals();
+                                while (!_StopRequested)
+                                {
+                                    DoGenerations();
+                                }
+                                _StopRequested = false; // indicate no pending stop
+                                NativeMethods.ReleaseDC(_hwnd, _hdc);
+                                var rect = new NativeMethods.WinRect();
+                                NativeMethods.GetClientRect(_hwnd, ref rect);
+                                NativeMethods.ValidateRect(_hwnd, ref rect);
                             }
-                            _StopRequested = false; // indicate no pending stop
-                            NativeMethods.ReleaseDC(_hwnd, _hdc);
-                            var rect = new NativeMethods.WinRect();
-                            NativeMethods.GetClientRect(_hwnd, ref rect);
-                            NativeMethods.ValidateRect(_hwnd, ref rect);
+                            catch (Exception)
+                            {
+                            }
                         }
                         );
                     }
@@ -454,6 +464,7 @@ Per A.K. Dewdney article on Wator, December 1984 Scientific American
             _wndParent.Closing += (o, e) =>
             {
                 _StopRequested = true;
+                FishBowl._Instance = null;
             };
         }
         public void InitWorld(object sender, RoutedEventArgs e)

@@ -1,38 +1,5 @@
 ﻿//Desc: The base class used for many of the leak samples. Handles iteration and measurement for leaks
 
-// This code will be compiled and run when you hit the ExecCode button. Any error msgs will be shown in the status log control.
-// This allows you to create a stress test by repeating some code, while taking measurements between each iteration.
-
-//  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
-//                      %VSRoot% will be changed to the fullpath to VS: e.g. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
-
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.12.1.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.0.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Shell.Interop.15.8.DesignTime.dll"
-//Ref: "%VSRoot%\VSSDK\VisualStudioIntegration\Common\Assemblies\v4.0\Microsoft.VisualStudio.Threading.dll"
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.15.0.dll
-//Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
-
-//Ref:"%VSRoot%\Common7\IDE\PublicAssemblies\envdte.dll"
-
-
-//Ref: %PerfGraphVSIX%
-
-
-////Ref: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll
-
-
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationFramework.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\PresentationCore.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\WindowsBase.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xaml.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll
 //Include: MyCodeBaseClass.cs
 
 using System;
@@ -220,14 +187,15 @@ namespace MyCodeToExecute
             UnregisterEvents();
         }
 
-        public async Task OpenASolutionAsync(string slnFile = "", int delayAfterOpen = 5)
+        /// <param name="slnFile">Can be a folder too</param>
+        public async Task OpenASolutionAsync(string slnFile, int delayAfterOpen = 5)
         {
-            if (string.IsNullOrEmpty(slnFile))
-            {
-                slnFile = @"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln"; //could be folder to open too
-            }
             if (_dte.Solution != null && _dte.Solution.FullName.ToLower() != slnFile.ToLower())
             {
+                if (!File.Exists(slnFile))
+                {
+                    throw new FileNotFoundException(slnFile);
+                }
                 _tcsSolution = new TaskCompletionSource<int>();
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 _dte.Solution.Open(slnFile);
