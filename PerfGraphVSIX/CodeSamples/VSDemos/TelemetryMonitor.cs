@@ -77,7 +77,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
         </Grid.RowDefinitions>
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""25"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <CheckBox Margin=""15,0,0,10"" Content=""OutputPane""  IsChecked=""{{Binding UseOutputPane}}"" Name=""ChkBoxMonitor"" 
-                ToolTip=""Output to OutputPane?""/>
+                ToolTip=""Output to Debug OutputPane 'PerfGraphVSIX'""/>
             <Label Content=""Filter""/>
             <TextBox Text=""{{Binding EventFilter}}"" Width =""200""
                 ToolTip=""Filter the events""/>

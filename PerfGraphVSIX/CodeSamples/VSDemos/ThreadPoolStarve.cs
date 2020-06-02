@@ -95,7 +95,7 @@ The CLR may retire extra idle active threads
 ";
         CancellationToken _CancellationTokenExecuteCode;
 
-        public int NTasks { get; set; } = 150; // if we're using the vs threadpool, it may already have grown substantially as VS is used.
+        public int NTasks { get; set; } = 15; // if we're using the vs threadpool, it may already have grown substantially as VS is used.
         public bool CauseStarvation { get; set; }
         public bool UIThreadDoAwait { get; set; } = true;
         public bool UseJTF { get; set; }
@@ -135,16 +135,18 @@ The CLR may retire extra idle active threads
         }
         private void MainWindow_Loaded(object sender, RoutedEventArgs eLoaded)
         {
-            Title = "ThreadPool Starvation Demo";
+            try
+            {
+                Title = "ThreadPool Starvation Demo";
 
-            // xmlns:l="clr-namespace:WpfApp1;assembly=WpfApp1"
-            // the C# string requires quotes to be doubled
-            var strxaml =
-$@"<Grid
+                // xmlns:l="clr-namespace:WpfApp1;assembly=WpfApp1"
+                // the C# string requires quotes to be doubled
+                var strxaml =
+    $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
-                System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
+                    System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         Margin=""5,5,5,5"">
         <Grid.RowDefinitions>
             <RowDefinition Height=""auto""/>
@@ -170,7 +172,14 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""30"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <Label Content=""#Tasks""/>
-            <TextBox Text=""{{Binding NTasks}}"" Width=""40"" />
+            <TextBox Text=""{{Binding NTasks}}"" Width=""40"">
+                <TextBox.ToolTip>
+                    <ToolTip xml:space=""preserve"">
+If we're using the vs threadpool, it may already have grown substantially as VS is used.
+Each starvation can cause the CLR to grow the threadpool
+                    </ToolTip>
+                </TextBox.ToolTip>
+            </TextBox>
             <CheckBox Margin=""15,0,0,10"" Content=""_CauseStarvation""  IsChecked=""{{Binding CauseStarvation}}"" 
                 ToolTip=""In the task, for Non-JTF: use Thread.Sleep to cause starvation, else use Await. For JTF, use JTF.Run to cause starvation""/>
             <CheckBox Margin=""15,0,0,10"" Content=""_UIThreadDoAwait""  IsChecked=""{{Binding UIThreadDoAwait}}"" ToolTip=""In the main (UI) thread, use Await, else use Thread.Sleep (and the UI is not responsive!!)""/>
@@ -190,31 +199,36 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
         IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
     </Grid>
 ";
-            var strReader = new System.IO.StringReader(strxaml);
-            var xamlreader = XmlReader.Create(strReader);
-            var grid = (Grid)(XamlReader.Load(xamlreader));
-            grid.DataContext = this;
-            this.Content = grid;
-            this._txtStatus = (TextBox)grid.FindName("_txtStatus");
-            this._btnGo = (Button)grid.FindName("_btnGo");
-            this._btnGo.Click += BtnGo_Click;
-            this._btnDbgBreak = (Button)grid.FindName("_btnDbgBreak");
-            this._txtUI = (TextBox)grid.FindName("_txtUI");
-            this._btnDbgBreak.Click += (o, e) =>
-            {
-                Debugger.Break();
-            };
-            this.Closed += (o, e) =>
-             {
-                 ctsExecute.Cancel();
-             };
+                var strReader = new System.IO.StringReader(strxaml);
+                var xamlreader = XmlReader.Create(strReader);
+                var grid = (Grid)(XamlReader.Load(xamlreader));
+                grid.DataContext = this;
+                this.Content = grid;
+                this._txtStatus = (TextBox)grid.FindName("_txtStatus");
+                this._btnGo = (Button)grid.FindName("_btnGo");
+                this._btnGo.Click += BtnGo_Click;
+                this._btnDbgBreak = (Button)grid.FindName("_btnDbgBreak");
+                this._txtUI = (TextBox)grid.FindName("_txtUI");
+                this._btnDbgBreak.Click += (o, e) =>
+                {
+                    Debugger.Break();
+                };
+                this.Closed += (o, e) =>
+                {
+                    ctsExecute.Cancel();
+                };
 
-            _txtStatus.MouseDoubleClick += (od, ed) =>
+                _txtStatus.MouseDoubleClick += (od, ed) =>
+                {
+                    var fname = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".txt");
+                    System.IO.File.WriteAllText(fname, _txtStatus.Text);
+                    Process.Start(fname);
+                };
+            }
+            catch (Exception ex)
             {
-                var fname = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".txt");
-                System.IO.File.WriteAllText(fname, _txtStatus.Text);
-                Process.Start(fname);
-            };
+                this.Content = ex.ToString();
+            }
         }
 #if false
 if you see tasks starting 1 second apart: 
@@ -271,7 +285,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             _btnGo.IsEnabled = true;
         }
 
-        private async Task DoThreadPoolAsync(CancellationToken token)
+        private async Task DoThreadPoolAsync(CancellationToken tokenStarveDetected)
         {
             var tcs = new TaskCompletionSource<int>();
             var lstTasks = new List<Task>();
@@ -279,7 +293,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             for (int ii = 0; ii < NTasks; ii++)
             {
                 var i = ii;// local copy of iteration var
-                if (token.IsCancellationRequested)
+                if (tokenStarveDetected.IsCancellationRequested)
                 {
                     break;
                 }
@@ -294,10 +308,10 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                         // if it's calling Thread.Sleep, the CPU load will be low, but the threadpool thread will be occupied
                         if (CauseStarvation)
                         {
-                            while (!tcs.Task.IsCompleted && !token.IsCancellationRequested)
+                            while (!tcs.Task.IsCompleted && !tokenStarveDetected.IsCancellationRequested)
                             {
                                 // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                                Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                                Thread.Sleep(TimeSpan.FromSeconds(0.3));
                             }
                         }
                         else
@@ -317,7 +331,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                 try
                 {
                     AddStatusMsg("Starting TaskCompletionSource Task");
-                    await Task.Delay(TimeSpan.FromSeconds(10), token);
+                    await Task.Delay(TimeSpan.FromSeconds(10), tokenStarveDetected);
                     AddStatusMsg("Setting Task Completion Source");
                     tcs.TrySetResult(1);
                     AddStatusMsg("Set  Task Completion Source");
@@ -340,7 +354,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             }
         }
 
-        private async Task DoJTFAsync(CancellationToken token)
+        private async Task DoJTFAsync(CancellationToken tokenStarveDetected)
         {
             var tcs = new TaskCompletionSource<int>();
             JoinableTaskFactory jtf;
@@ -358,7 +372,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             for (int ii = 0; ii < NTasks; ii++)
             {
                 var i = ii;// local copy of iteration var
-                if (token.IsCancellationRequested)
+                if (tokenStarveDetected.IsCancellationRequested)
                 {
                     break;
                 }
@@ -366,7 +380,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                 {
                     try
                     {
-                        token.ThrowIfCancellationRequested();
+                        tokenStarveDetected.ThrowIfCancellationRequested();
                         Debug.Assert(jtf.Context.IsOnMainThread, "We are on UI thread");
                         await TaskScheduler.Default; // switch to bgd thread
                         Debug.Assert(!jtf.Context.IsOnMainThread, "We are on TP thread");
@@ -380,7 +394,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                                 await jtf.SwitchToMainThreadAsync();
                                 UpdateUiTxt();
                                 await TaskScheduler.Default; // switch to tp thread
-                                while (!tcs.Task.IsCompleted && !token.IsCancellationRequested)
+                                while (!tcs.Task.IsCompleted && !tokenStarveDetected.IsCancellationRequested)
                                 {
                                     // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
                                     Thread.Sleep(TimeSpan.FromSeconds(0.2));
@@ -394,7 +408,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                             await TaskScheduler.Default; // switch to tp thread
                             await tcs.Task;
                         }
-                        await Task.Delay(TimeSpan.FromSeconds(2.5), token);
+                        await Task.Delay(TimeSpan.FromSeconds(2.5), tokenStarveDetected);
 
                         //                    Thread.Sleep(TimeSpan.FromSeconds(2.5));// simulate long time on main thread
                         await TaskScheduler.Default; // switch to tp thread
@@ -413,7 +427,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
             {
                 try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(10), token);
+                    await Task.Delay(TimeSpan.FromSeconds(10), tokenStarveDetected);
                     AddStatusMsg("Setting Task Completion Source");
                     tcs.TrySetResult(1);
                 }
@@ -481,7 +495,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                         tcs.SetResult(0); // the very simple workitem that should execute very quickly
                     });
                     var timeout = Task.Delay(TimeSpan.FromMilliseconds(250));
-                    Task.WaitAny(new[] { tcs.Task, timeout });// wait for the workitem to be completed. Can't use async here
+                    var ndx = Task.WaitAny(new[] { tcs.Task, timeout });// wait for the workitem to be completed. Can't use async here
                     sw.Stop();
                     if (!tcs.Task.IsCompleted) //detect if it took > thresh to execute task
                     {
@@ -493,7 +507,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                     }
                 }
                 _tcsWatcherThread.TrySetResult(0);
-            })
+            }, maxStackSize:262144)
             {
                 Name = nameof(MyThreadPoolWatcher),
                 IsBackground = true

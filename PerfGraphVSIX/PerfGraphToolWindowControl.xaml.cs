@@ -185,10 +185,13 @@
 
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
+                    await Task.Yield();
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     _objTracker = new ObjTracker(this);
-                    _editorTracker = await PerfGraphToolWindowCommand.Instance.package.GetServiceAsync(typeof(EditorTracker)) as EditorTracker;
+                    _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+
                     _editorTracker.Initialize(this, _objTracker);
-                    _openFolderTracker = await PerfGraphToolWindowCommand.Instance.package.GetServiceAsync(typeof(OpenFolderTracker)) as OpenFolderTracker;
+                    _openFolderTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<OpenFolderTracker>();
                     _openFolderTracker.Initialize(this, _objTracker);
                     if (this.IsLeakTrackerServiceSupported())
                     {
