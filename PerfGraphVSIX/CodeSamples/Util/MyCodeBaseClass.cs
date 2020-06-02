@@ -104,6 +104,8 @@ namespace MyCodeToExecute
         public CloseableTabItem GetTabItem()
         {
             int iTabItemIndex = 0;
+            //first we need to see if there is already an existing one, then close it
+            // need to give it a chance to clean up, so invoke the CloseTabItem Method
             foreach (TabItem tabitem in _perfGraphToolWindowControl.TabControl.Items)
             {
                 if (tabitem.Name == Path.GetFileNameWithoutExtension(_FileToExecute))
@@ -115,7 +117,7 @@ namespace MyCodeToExecute
                         // found an existing one. Need to close it
                         tabitem.GetType().GetMethod("CloseTabItem").Invoke(tabitem, null);
 
-                        //tabItemTabProc = (CloseableTabItem)tabitem; // this throws invalid cast exception
+                        //tabItemTabProc = (CloseableTabItem)tabitem; // this throws invalid cast exception if recompiled
                         //tabItemTabProc.CloseTabItem();
                         break;
                     }
@@ -124,7 +126,7 @@ namespace MyCodeToExecute
             }
             var tabItemTabProc = new CloseableTabItem(Path.GetFileNameWithoutExtension(_FileToExecute), string.Empty);
             _perfGraphToolWindowControl.TabControl.Items.Add(tabItemTabProc);
-            _perfGraphToolWindowControl.TabControl.SelectedIndex = _perfGraphToolWindowControl.TabControl.Items.Count-1; // select User output tab
+            _perfGraphToolWindowControl.TabControl.SelectedIndex = _perfGraphToolWindowControl.TabControl.Items.Count - 1; // select User output tab
             return tabItemTabProc;
         }
     }

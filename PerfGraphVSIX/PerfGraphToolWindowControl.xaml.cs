@@ -122,11 +122,6 @@
             g_PerfGraphToolWindowControl = this;
             try
             {
-                if (this.IsLeakTrackerServiceSupported())
-                {
-                    this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
-                    this.inProcLeakTracker.Content = new InProcLeakTracker();
-                }
 
                 LogMessage($"Starting {TipString}");
                 var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
@@ -188,11 +183,19 @@
                 _fileSystemWatcher.Deleted += h;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
-                _objTracker = new ObjTracker(this);
-                _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
-                _editorTracker.Initialize(this, _objTracker);
-                _openFolderTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<OpenFolderTracker>();
-                _openFolderTracker.Initialize(this, _objTracker);
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    _objTracker = new ObjTracker(this);
+                    _editorTracker = await PerfGraphToolWindowCommand.Instance.package.GetServiceAsync(typeof(EditorTracker)) as EditorTracker;
+                    _editorTracker.Initialize(this, _objTracker);
+                    _openFolderTracker = await PerfGraphToolWindowCommand.Instance.package.GetServiceAsync(typeof(OpenFolderTracker)) as OpenFolderTracker;
+                    _openFolderTracker.Initialize(this, _objTracker);
+                    if (this.IsLeakTrackerServiceSupported())
+                    {
+                        this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
+                        this.inProcLeakTracker.Content = new InProcLeakTracker();
+                    }
+                });
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                 {

@@ -27,10 +27,10 @@ using System.Windows.Media;
 using System.IO;
 using Microsoft.VisualStudio.Telemetry;
 using Microsoft.VisualStudio.Telemetry.Notification;
+using System.Text;
 
 namespace MyCodeToExecute
 {
-
     public class MyClass : MyCodeBaseClass
     {
         public static async Task DoMain(object[] args)
@@ -55,7 +55,6 @@ namespace MyCodeToExecute
         {
             await Task.Yield();
             CloseableTabItem tabItemTabProc = GetTabItem();
-            ITelemetryNotificationService telemetryNotificationService = TelemetryNotificationService.Default;
 
             var ctsCancelMonitor = new CancellationTokenSource();
             tabItemTabProc.TabItemClosed += (o, e) =>
@@ -84,10 +83,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 ToolTip=""Filter the events""/>
             <Button Name=""btnUpdateFilter"" Content=""UpdateFilter"" Background=""LightGray""/>
         </StackPanel>
-        <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
+        <Grid Name=""gridUser"" Grid.Row = ""1"">
+        </Grid>
     </Grid>
 ";
-            var outputPane = await GetOutputPaneAsync();
             var strReader = new System.IO.StringReader(strxaml);
             var xamlreader = XmlReader.Create(strReader);
             var grid = (Grid)(XamlReader.Load(xamlreader));
@@ -95,31 +94,47 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
             var btnUpdateFilter = (Button)grid.FindName("btnUpdateFilter");
+            var outputPane = await GetOutputPaneAsync();
+
             JoinableTask taskSubscribe = null;
             btnUpdateFilter.Click += async (o, e) =>
              {
-                 await TaskScheduler.Default;
-                 ctsCancelMonitor.Cancel();
-                 if (taskSubscribe != null)
+                 try
                  {
-                     await taskSubscribe;
+                     await TaskScheduler.Default;
+                     ctsCancelMonitor.Cancel();
+                     if (taskSubscribe != null)
+                     {
+                         await taskSubscribe;
+                     }
+                     ctsCancelMonitor = new CancellationTokenSource();
+                     DoSubScribe();
                  }
-                 ctsCancelMonitor = new CancellationTokenSource();
-                 DoSubScribe();
+                 catch (Exception ex)
+                 {
+                     _logger.LogMessage(ex.ToString());
+                 }
              };
-            DoSubScribe();
+            btnUpdateFilter.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             void DoSubScribe()
             {
                 var startcond = new EventMatch(this);
-                var subscriptionId = telemetryNotificationService.Subscribe(startcond, (telEvent) =>
+                var subscriptionId = TelemetryNotificationService.Default.Subscribe(startcond, (telEvent) =>
                 {
+                    var output = new StringBuilder(telEvent.ToString());
+                    switch (telEvent.Name)
+                    {
+                        case "vs/core/command":
+                            output.Append(":" + telEvent.Properties["vs.core.command.name"]);
+                            break;
+                    }
                     if (UseOutputPane)
                     {
-                        outputPane.OutputString(telEvent.ToString() + Environment.NewLine);
+                        outputPane.OutputString(output.ToString() + Environment.NewLine);
                     }
                     else
                     {
-                        _logger.LogMessage(telEvent.ToString());
+                        _logger.LogMessage(output.ToString());
                     }
                 }, singleNotification: false);
                 _logger.LogMessage($"Subscribed subscriptionId={subscriptionId} EventFilter '{EventFilter}'");
@@ -130,8 +145,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                           await TaskScheduler.Default;
                           await Task.Delay(TimeSpan.FromSeconds(1));
                       }
-                      _logger.LogMessage($"Unsubscribe subscriptionId={subscriptionId}");
-                      telemetryNotificationService.Unsubscribe(subscriptionId);
+                      _logger.LogMessage($"Unsubscribe subscriptionId={subscriptionId} Filter='{EventFilter}'");
+                      TelemetryNotificationService.Default.Unsubscribe(subscriptionId);
                   });
             }
         }

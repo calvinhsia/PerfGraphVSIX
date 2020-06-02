@@ -31,12 +31,19 @@ namespace MyCodeToExecute
         {
             while (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                var ev = "PerfGraphVSIX/Telemetry/EventFromCodeSample";
+                var ev = new TelemetryEvent("PerfGraphVSIX/Telemetry/EventFromCodeSample");
+                ev.Properties["localtime"] = DateTime.Now.ToString(); // to test what time zones
                 _logger.LogMessage($"Sending TelemetryEvent '{ev}'");
+                //
                 TelemetryService.DefaultSession.PostEvent(ev);
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 // verified
                 /*
+                 * 
+                 * Query:
+ cluster("https://DDTelVSRaw.kusto.windows.net").database("VS").RawEventsVSUnclassified
+| where  EventName startswith "Perfgraph"
+
             // this really works, as verified by a PerfView trace with CodeMarker provider enabled:
             // additional providers = 641d7f6c-481c-42e8-ab7e-d18dc5e5cb9e:@StacksEnabled=true
 Name

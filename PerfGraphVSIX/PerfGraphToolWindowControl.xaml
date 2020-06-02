@@ -69,6 +69,31 @@
                     <StackPanel x:Name="spCodeSamples" Grid.Column="0">
                     </StackPanel>
                     <GridSplitter Grid.Column="1" Width="5" VerticalAlignment="Stretch"/>
+                    <Grid Grid.Column = "2">
+                        <TextBox Height="20" VerticalAlignment="Top" ToolTipService.ShowDuration="40000">
+                            https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3829/Show-VS-memory-use-in-a-graph-PerfGraphVSIX
+                            <TextBox.ToolTip>
+                                <ToolTip xml:space="preserve">
+These are some code samples that you can modify/run. (extensions to this extension!)
+Navigate the tree to edit/view a sample (dbl-click) or run (the ExecCode button below or Ctrl-Enter)
+The most recently modified one is automatically selected.
+Each item's tooltip content is the result of parsing the '//Desc:' lines in the file
+The LeakDemos and VSLeakTests include samples of leaking code. The code is iterated automatically and dumps are taken near the end and at the end. 
+  The 2 dumps are compared to identify the types leaked. Run one, and it shows a graph of leaking memory while running.
+  At the end of the iterations a Txt file is opened showing the leaking types, 
+  The LeakDemos show detecting certain kinds of leaks, such as WPF Event Handlers or Cancellation Token Source.
+  The VSLeakTests automate another instance of VS e.g. repeatedly opening/closing a solution, debug, etc
+  and ClrObjectExplorer is opened with the final dump, so you can filter to the desired type and see it's references/GCRoots
+The VSDemos include samples of how to do various tasks in the VS process: 
+    a Telemetry Monitor, Child Process Monitor, ThreadPool Starvation demo, CodeMarker
+The ClrObjExplorer button will: take a dump of the current instance of VS and open it in ClrObjectExplorer.
+This allows you to examine the current VS instance to see how many instances of your type are in memory and how they are referenced.
+To learn how to add your own, see VSDemos/Simple.cs
+
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                        </TextBox>
+                    </Grid>
                 </Grid>
             </TabItem>
             <TabItem Header="Graph">
