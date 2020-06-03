@@ -397,7 +397,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                                 while (!tcs.Task.IsCompleted && !tokenStarveDetected.IsCancellationRequested)
                                 {
                                     // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                                    Thread.Sleep(TimeSpan.FromSeconds(0.2));
+                                    Thread.Sleep(TimeSpan.FromSeconds(0.3));
                                 }
                             });
                         }

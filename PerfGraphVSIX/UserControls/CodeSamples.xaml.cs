@@ -29,11 +29,11 @@ namespace PerfGraphVSIX.UserControls
             InitializeComponent();
             this._codeSampleDirectory = codeSampleDirectory;
             this._targetToSelect = targetToSelect;
-            ToolTip = @"Dbl-click a code sample to open in editor. 
-The selected one will be run with the 'ExecCode' button. Create new files in the same folder as desired. 
-The selection changes to be the most recent edited when the directory changes content.
-Ctrl-Enter on highlighted item will execute it too.
-";
+//            ToolTip = @"Dbl-click a code sample to open in editor. 
+//The selected one will be run with the 'ExecCode' button. Create new files in the same folder as desired. 
+//The selection changes to be the most recent edited when the directory changes content.
+//Ctrl-Enter on highlighted item will execute it too.
+//";
             MaxHeight = 200;
             MaxWidth = 200;
             HorizontalAlignment = HorizontalAlignment.Left;
