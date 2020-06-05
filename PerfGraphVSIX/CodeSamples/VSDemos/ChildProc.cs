@@ -74,6 +74,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
         <Canvas Margin=""311,0,0,0.5"">
+<!--An animated circle indicates UI delays easily -->
             <Ellipse Name=""Ball"" Width=""24"" Height=""24"" Fill=""Blue""
              Canvas.Left=""396"">
                 <Ellipse.Triggers>
@@ -132,9 +133,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                         await TaskScheduler.Default;
                         if (Monitor)
                         {
-                            var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                            var processEx = new ProcessEx();
+                            var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
                             var curHash = 0;
-                            IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                            processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
                             {
                                 curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
                                 return true;
@@ -226,33 +228,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             }
         }
 
-        bool StopIter = false;
-        void IterateTreeNodes(List<ProcessEx.ProcNode> nodes, int level, Func<ProcessEx.ProcNode, int, bool> func)
-        {
-            if (level == 0) // initialize recursion
-            {
-                StopIter = false;
-            }
-            foreach (var node in nodes)
-            {
-                if (func(node, level))
-                {
-                    if (node.Children != null)
-                    {
-                        IterateTreeNodes(node.Children, level + 1, func);
-                    }
-                }
-                else
-                {
-                    StopIter = true;
-                }
-                if (StopIter) // if any recursive call has set it, break
-                {
-                    break;
-                }
-            }
-        }
-
         public async Task DoIterationBodyAsync(int iteration, CancellationToken token)
         {
             await TaskScheduler.Default;
@@ -265,8 +240,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 {
                     await TaskScheduler.Default;
                     var curlstProcToMonitor = new List<ProcessEx.ProcNode>();
-                    var devenvTree = ProcessEx.GetProcessTree(Process.GetCurrentProcess().Id);
-                    IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                    var processEx = new ProcessEx();
+                    var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                    processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
                      {
                          if (node.ProcEntry.szExeFile.IndexOf(procToMonitor, StringComparison.OrdinalIgnoreCase) >= 0)
                          {
@@ -373,7 +349,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
         /// </summary>
         /// <param name="RootPid">If 0, entire tree. Else tree rooted from specified pid, and list length will == 1 or 0</param>
         /// <returns></returns>
-        public static List<ProcNode> GetProcessTree(int RootPid = 0)
+        public List<ProcNode> GetProcessTree(int RootPid = 0)
         {
             var dictprocNodesById = new Dictionary<int, ProcNode>(); // index ProcId
             GetProcesses(p => { dictprocNodesById[p.th32ProcessID] = new ProcNode(p); return true; });
@@ -447,6 +423,33 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 CloseHandle(handleToSnapshot);
             }
         }
+        bool StopIter = false;
+        public void IterateTreeNodes(List<ProcessEx.ProcNode> nodes, int level, Func<ProcessEx.ProcNode, int, bool> func)
+        {
+            if (level == 0) // initialize recursion
+            {
+                StopIter = false;
+            }
+            foreach (var node in nodes)
+            {
+                if (func(node, level))
+                {
+                    if (node.Children != null)
+                    {
+                        IterateTreeNodes(node.Children, level + 1, func);
+                    }
+                }
+                else
+                {
+                    StopIter = true;
+                }
+                if (StopIter) // if any recursive call has set it, break
+                {
+                    break;
+                }
+            }
+        }
+
     }
 
 }

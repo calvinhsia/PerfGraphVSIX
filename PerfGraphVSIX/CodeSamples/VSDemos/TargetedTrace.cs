@@ -1,4 +1,7 @@
 ﻿//Desc: Sample code to show how to initiate a targeted trace
+
+//Include: ..\Util\MyCodeBaseClass.cs
+
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Newtonsoft.Json.dll
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Telemetry.dll
 
@@ -22,52 +25,59 @@ using Newtonsoft.Json;
 using Microsoft.VisualStudio.Telemetry;
 using Microsoft.VisualStudio.RemoteSettings;
 
-namespace MyNameSpace
+namespace MyCodeToExecute
 {
     // Most of the codemarker stuff in this file is from https://devdiv.visualstudio.com/DevDiv/_git/VS?path=%2Fsrc%2Fvscommon%2FCodeMarkers%2FManagedCodeMarkers.cs
 
-    public class MyClass
+    public class MyClass : MyCodeBaseClass
     {
-        public ILogger _logger; // log to PerfGraph ToolWindow
-        public CancellationToken _CancellationTokenExecuteCode;
         public static async Task DoMain(object[] args)
         {
-            var ox = new MyClass();
-            await ox.DoItAsync(args);
+            var ox = new MyClass(args);
+            await ox.DoItAsync();
         }
-        async Task DoItAsync(object[] args)
+        MyClass(object[] args) : base(args) { }
+        async Task DoItAsync()
         {
-            _logger = args[1] as ILogger;
-            _CancellationTokenExecuteCode = (CancellationToken)args[2];
             while (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
-                _logger.LogMessage($"Sending CodeMarker");
                 // Signal Perfwatson to start the tracing
                 // Tracing may not start because e.g. not enough disk space, sampling (rule might say collect trace 10% of time), tracing already happening for another rule, etc
                 // we blindly send these markers hoping for a trace to start.
                 // Because we don't know we can't unsubscribe the stop, abandon events when the start condition fires
 
-                var tracingAction = new DynamicTracingAction();
+                var tracingAction = new DynamicTracingAction()
+                {
+                    FriendlyName = "TargetedTracingTest",
+                    Description = "Testing Targeted tracing",
+                    Test = "1",
+                    TraceDurationSecs = 10,
+                    MinTraceDurationSecs = 10,
+                    TracingActions = "EtlTrace;DevenvProcessDumpFull;SatProcDump",
+                    SatProcsToDump = "perfwaTson2.exe"
 
+                    //                    SatProcsToDump = "perfwaTson2.exe;Microsoft.ServiceHub.controller.exe;Microsoft.ServiceHub.SettingsHost.exe;Microsoft.ServiceHub.Identityhost.exe;msbuild.exe;ServiceHub.DataWarehouseHost.exe; ServiceHub.TestWindowStoreHost.exe;Microsoft.Alm.Shared.Remoting.RemoteContainer.dll"
+                    // each has a Conhost.exe child proc https://www.howtogeek.com/howto/4996/what-is-conhost.exe-and-why-is-it-running/
+                    // Microsoft.ServiceHub.controller.exe,ServiceHub.DataWarehouseHost.exe, ServiceHub.TestWindowStoreHost.exe are 64 bit, but not started by default
+                    // Microsoft.Alm.Shared.Remoting.RemoteContainer.dll;ServiceHub.VSDetouredHost.exe;ServiceHub.Host.CLR.x86.exe;ServiceHub.ThreadedWaitDialog.exe
+                };
 
                 var actionWrapper = new ActionWrapper<DynamicTracingAction>
                 {
-                    RuleId = "asdf",
+                    RuleId = "TestingRule",
                     Action = tracingAction
                 };
                 var dynamicTracingActionContainer = new DynamicTracingActionContainer(tracingAction)
                 {
                     RuleId = actionWrapper.RuleId,
-                    CodeMarkerAction = (int)CodeMarkerAction.None,
+                    CodeMarkerAction = (int)CodeMarkerAction.StopAndUpload,
                 };
 
+                _logger.LogMessage($"Sending targetedTraceBegin CodeMarker {(int)CodeMarkerProviderEventIds.perfTargetedTraceBegin}");
 
                 CodeMarkers.Instance.CodeMarkerEx((int)CodeMarkerProviderEventIds.perfTargetedTraceBegin,
                     CreateDynamicTracingCodeMarkerData(actionWrapper, CodeMarkerAction.None));
 
-                TelemetryEvent traceStartEvent = new TelemetryEvent("VS/Feedback/DynamicTracing/DelayedStart");
-                traceStartEvent.Properties["VS.Feedback.TargetedNotification.RuleId"] = dynamicTracingActionContainer.RuleId;
-                TelemetryService.DefaultSession.PostEvent(traceStartEvent);
 
 
                 await Task.Delay(TimeSpan.FromSeconds(1));
@@ -236,6 +246,12 @@ namespace MyNameSpace
         /// Gets a full heap dump including memory
         /// </summary>
         DevenvProcessDumpFull = 0x100,
+
+        /// <summary>
+        /// Gets a full heap dump including memory of a VS Satellite process, such as ServiceHub
+        /// </summary>
+        SatProcDump = 0x200,
+
     }
 
     /// <summary>
@@ -342,6 +358,16 @@ namespace MyNameSpace
         /// and can cause a lot of crashes due to long path names: see Bug 590210: [Watson Failure] caused by FAIL_FAST_INVALID_ARG_c0000409_diasymreader.dll!PDB1::OpenNgenPdb.
         /// </summary>
         public int ClrRunDown { get; set; } = 1;
+
+
+        /// <summary>
+        /// Specify the satellite process name(s) separated by "," or ";".
+        /// Must also set the 'SatProcDump' in the tracing actions above.
+        /// If there are 0 or > 1 instances of the specified process, then will dump all of them. (e.g. multiple MSBUild)
+        /// The child process dumped will be a descendant of VS as an ancestor to be dumped (could be > 1 instances of VS running)
+        /// Case insensitive: e.g. "perfwaTson2.exe;ServiceHub.controller.exe;msbuild.exe"
+        /// </summary>
+        public string SatProcsToDump { get; set; }
 
         /// <summary>
         /// Specifies the number of snapshots to keep
@@ -462,11 +488,11 @@ namespace MyNameSpace
                 TraceProfileAction action = TraceProfileAction.None;
                 if (!string.IsNullOrEmpty(DynamicTracingAction.TracingActions))
                 {
-                    var actions = DynamicTracingAction.TracingActions.Split(new[] { ',' });
+                    var actions = DynamicTracingAction.TracingActions.Split(new[] { ',', ';' });
                     foreach (var wrd in actions)
                     {
-                            // convert string of multiple flags to enum
-                            if (Enum.TryParse<TraceProfileAction>(wrd.Trim(), ignoreCase: true, result: out var result))
+                        // convert string of multiple flags to enum
+                        if (Enum.TryParse<TraceProfileAction>(wrd.Trim(), ignoreCase: true, result: out var result))
                         {
                             action |= result;
                         }

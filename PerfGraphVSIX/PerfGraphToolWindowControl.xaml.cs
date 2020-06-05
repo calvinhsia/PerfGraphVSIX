@@ -669,7 +669,7 @@
                         CodeFileToRun = Path.Combine(CodeSampleDirectory, CodeFileToRun);
 
                         this.btnExecCode.Content = "Cancel Code Execution";
-                        await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+                        await AddStatusMsgAsync($"Starting Code Execution {Path.GetFileName(CodeFileToRun)}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
 
                         await TaskScheduler.Default; // tpool
 
