@@ -47,7 +47,7 @@ namespace MyCodeToExecute
 
         public double RefreshRate { get; set; } = 1;
         public bool Monitor { get; set; } = true;
-        public bool OnlyChanges { get; set; } = false;
+        public bool ShowMemChangestoo { get; set; } = true;
 
         MyClass(object[] args) : base(args) { }
         async Task InitializeAsync()
@@ -105,8 +105,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""Seconds. Refresh means check child proces. UI won't update UI if tree is same"" />
             <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
-            <CheckBox Margin=""15,0,0,10"" Content=""Update if change in processes only""  IsChecked=""{{Binding OnlyChanges}}"" 
-                ToolTip=""Update the tree only on tree node changes (procId and proc name)""/>
+            <CheckBox Margin=""15,0,0,10"" Content=""Show Memory Changes too""  IsChecked=""{{Binding ShowMemChangestoo}}"" 
+                ToolTip=""Update the tree for memory changes. The bouncing ball will be jerky on UI updates""/>
         </StackPanel>
         <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
     </Grid>
@@ -149,7 +149,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                                 childProcTree.AddNodes(childProcTree, devenvTree);
                                 childProcTree.ToolTip = $"Refreshed {dtlastTree}";
                                 await TaskScheduler.Default;
-                                if (OnlyChanges)
+                                if (!ShowMemChangestoo)
                                 {
                                     hashLastTree = curHash;
                                 }

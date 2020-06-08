@@ -5,9 +5,6 @@
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Newtonsoft.Json.dll
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Telemetry.dll
 
-//Ref: %PerfGraphVSIX%
-
-//Pragma: verbose=false
 
 using System;
 using System.IO;
@@ -15,8 +12,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
-using PerfGraphVSIX;
-using Microsoft.Test.Stress;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +34,34 @@ namespace MyCodeToExecute
         MyClass(object[] args) : base(args) { }
         async Task DoItAsync()
         {
+#if false
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcRuleId /d myruleid
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcFriendlyName /d MyFriendlyName
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcSatProcToMonitor /d perfwatson2.exe
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcMemoryThresholdMBytes /d 10000
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcMonitorPeriodSecs /d 10
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcSatProcsToDump /d perfwatson2.exe
+reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcTest /d 1
+#endif
+            // reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser /v SatProcRuleId /d myruleid
+            // writing from within the VS process writes to mounted hive
+            //using (var hKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser", writable: true))
+            //{
+            //    hKey.SetValue("SatProcRuleId", "Myruleid");
+            //    hKey.SetValue("SatProcFriendlyName", "MyFriendlyName");
+            //    hKey.SetValue("SatProcSatProcToMonitor", "perfwatson2.exe");
+            //    hKey.SetValue("SatProcMemoryThresholdMBytes", "10000");
+            //    hKey.SetValue("SatProcMonitorPeriodSecs", "10");
+            //    hKey.SetValue("SatProcSatProcsToDump", "perfwatson2.exe");
+            //    hKey.SetValue("SatProcTest", "1");
+
+            //    //                var x = hKey.GetValue("SatProcRuleId");
+            //}
+            //using (var hKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\VisualStudio", writable: true))
+            //{
+            //    hKey.DeleteSubKeyTree(@"16.0_Remote");
+            //}
+            //return;
             while (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
                 // Signal Perfwatson to start the tracing
@@ -53,7 +76,8 @@ namespace MyCodeToExecute
                     Test = "1",
                     TraceDurationSecs = 10,
                     MinTraceDurationSecs = 10,
-                    TracingActions = "EtlTrace;DevenvProcessDumpFull;SatProcDump",
+                    //                    TracingActions = "DevenvProcessDumpFull;SatProcDump",
+                    TracingActions = "EtlTrace,DevenvProcessDumpFull,SatProcDump",
                     SatProcsToDump = "perfwaTson2.exe"
 
                     //                    SatProcsToDump = "perfwaTson2.exe;Microsoft.ServiceHub.controller.exe;Microsoft.ServiceHub.SettingsHost.exe;Microsoft.ServiceHub.Identityhost.exe;msbuild.exe;ServiceHub.DataWarehouseHost.exe; ServiceHub.TestWindowStoreHost.exe;Microsoft.Alm.Shared.Remoting.RemoteContainer.dll"
@@ -67,16 +91,11 @@ namespace MyCodeToExecute
                     RuleId = "TestingRule",
                     Action = tracingAction
                 };
-                var dynamicTracingActionContainer = new DynamicTracingActionContainer(tracingAction)
-                {
-                    RuleId = actionWrapper.RuleId,
-                    CodeMarkerAction = (int)CodeMarkerAction.StopAndUpload,
-                };
 
                 _logger.LogMessage($"Sending targetedTraceBegin CodeMarker {(int)CodeMarkerProviderEventIds.perfTargetedTraceBegin}");
 
                 CodeMarkers.Instance.CodeMarkerEx((int)CodeMarkerProviderEventIds.perfTargetedTraceBegin,
-                    CreateDynamicTracingCodeMarkerData(actionWrapper, CodeMarkerAction.None));
+                    CreateDynamicTracingCodeMarkerData(actionWrapper, CodeMarkerAction.StopAndUpload));
 
 
 

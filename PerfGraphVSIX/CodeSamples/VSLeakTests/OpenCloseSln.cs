@@ -32,7 +32,7 @@ namespace MyCodeToExecute
 
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
         {
-            await OpenASolutionAsync(@"C:\Users\calvinh\Source\repos\hWndHost\hWndHost.sln");
+            await OpenASolutionAsync(@"C:\Users\calvinh\source\repos\ReflectCPP\ReflectCpp\ReflectCpp.sln");
 
             await CloseTheSolutionAsync();
         }

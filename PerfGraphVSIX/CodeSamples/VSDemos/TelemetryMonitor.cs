@@ -1,4 +1,5 @@
-﻿//Desc: Monitor Telemetry Events
+﻿//Desc: Monitor Telemetry Events. Like telemetry monitor, but highly customizable and 
+//Desc: doesn't require a separate process like TelemetryMonitor
 
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Telemetry.dll
 //Include: ..\Util\MyCodeBaseClass.cs
@@ -6,8 +7,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using PerfGraphVSIX;
-using Microsoft.Test.Stress;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,34 +35,17 @@ namespace MyCodeToExecute
         public static async Task DoMain(object[] args)
         {
             var oMyClass = new MyClass(args);
-            try
-            {
-                await oMyClass.InitializeAsync();
-            }
-            catch (Exception ex)
-            {
-                var _logger = args[1] as ILogger;
-                _logger.LogMessage(ex.ToString());
-            }
+            await oMyClass.InitializeAsync();
         }
 
         public bool UseOutputPane { get; set; } = false;
+        public bool ShowAllProperties { get; set; } = false;
         public string EventFilter { get; set; }
 
         MyClass(object[] args) : base(args) { }
         async Task InitializeAsync()
         {
             await Task.Yield();
-            CloseableTabItem tabItemTabProc = GetTabItem();
-
-            var ctsCancelMonitor = new CancellationTokenSource();
-            tabItemTabProc.TabItemClosed += (o, e) =>
-            {
-                _logger.LogMessage("tabitemclosed event");
-                ctsCancelMonitor.Cancel();
-                _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
-            };
-
             var strxaml =
 $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
@@ -76,8 +58,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""25"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
-            <CheckBox Margin=""15,0,0,10"" Content=""OutputPane""  IsChecked=""{{Binding UseOutputPane}}"" Name=""ChkBoxMonitor"" 
+            <CheckBox Margin=""15,0,0,10"" Content=""OutputPane""  IsChecked=""{{Binding UseOutputPane}}""  
                 ToolTip=""Output to Debug OutputPane 'PerfGraphVSIX'""/>
+            <CheckBox Margin=""15,0,0,10"" Content=""ShowAllProperties""  IsChecked=""{{Binding ShowAllProperties}}"" 
+                ToolTip=""Show the properties of the Telemetry event""/>
             <Label Content=""Filter""/>
             <TextBox Text=""{{Binding EventFilter}}"" Width =""200""
                 ToolTip=""Filter the events""/>
@@ -90,42 +74,45 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             var strReader = new System.IO.StringReader(strxaml);
             var xamlreader = XmlReader.Create(strReader);
             var grid = (Grid)(XamlReader.Load(xamlreader));
+            CloseableTabItem tabItemTabProc = GetTabItem();
             tabItemTabProc.Content = grid;
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
             var btnUpdateFilter = (Button)grid.FindName("btnUpdateFilter");
             var outputPane = await GetOutputPaneAsync();
-
-            JoinableTask taskSubscribe = null;
+            int subscriptionId = 0;
+            tabItemTabProc.TabItemClosed += async (o, e) =>
+            {
+                _logger.LogMessage("tabitemclosed event");
+                await TaskScheduler.Default;
+                DoUnsubscribe();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                _perfGraphToolWindowControl.TabControl.SelectedIndex = 0; // select main tab
+            };
             btnUpdateFilter.Click += async (o, e) =>
              {
-                 try
-                 {
-                     await TaskScheduler.Default;
-                     ctsCancelMonitor.Cancel();
-                     if (taskSubscribe != null)
-                     {
-                         await taskSubscribe;
-                     }
-                     ctsCancelMonitor = new CancellationTokenSource();
-                     DoSubScribe();
-                 }
-                 catch (Exception ex)
-                 {
-                     _logger.LogMessage(ex.ToString());
-                 }
+                 await TaskScheduler.Default;
+                 DoUnsubscribe();
+                 DoSubScribe();
              };
             btnUpdateFilter.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             void DoSubScribe()
             {
-                var startcond = new EventMatch(this);
-                var subscriptionId = TelemetryNotificationService.Default.Subscribe(startcond, (telEvent) =>
+                var startcond = new EventMatch(this.EventFilter);
+                subscriptionId = TelemetryNotificationService.Default.Subscribe(startcond, (telEvent) =>
                 {
                     var output = new StringBuilder(telEvent.ToString());
                     switch (telEvent.Name)
                     {
                         case "vs/core/command":
                             output.Append(":" + telEvent.Properties["vs.core.command.name"]);
+                            if (ShowAllProperties)
+                            {
+                                foreach (var item in telEvent.Properties)
+                                {
+                                    output.AppendLine($"  {item.Key}  {item.Value}");
+                                }
+                            }
                             break;
                     }
                     if (UseOutputPane)
@@ -137,40 +124,32 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                         _logger.LogMessage(output.ToString());
                     }
                 }, singleNotification: false);
-                _logger.LogMessage($"Subscribed subscriptionId={subscriptionId} EventFilter '{EventFilter}'");
-                taskSubscribe = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                  {
-                      while (!ctsCancelMonitor.IsCancellationRequested)
-                      {
-                          await TaskScheduler.Default;
-                          await Task.Delay(TimeSpan.FromSeconds(1));
-                      }
-                      _logger.LogMessage($"Unsubscribe subscriptionId={subscriptionId} Filter='{EventFilter}'");
-                      TelemetryNotificationService.Default.Unsubscribe(subscriptionId);
-                  });
+                _logger.LogMessage($"Subscribed to telemetry events. SubscriptionId={subscriptionId} EventFilter '{EventFilter}'");
+            }
+            void DoUnsubscribe()
+            {
+                if (subscriptionId != 0)
+                {
+                    TelemetryNotificationService.Default.Unsubscribe(subscriptionId);
+                    _logger.LogMessage($"Unsubscribe subscriptionId={subscriptionId} Filter='{EventFilter}'");
+                }
             }
         }
     }
 
     public class EventMatch : ITelemetryEventMatch
     {
-        readonly MyClass myClass;
-        public EventMatch(MyClass myClass)
+        readonly string _eventFilter;
+        public EventMatch(string eventFilter)
         {
-            this.myClass = myClass;
+            this._eventFilter = eventFilter;
         }
-        /// <summary>
-        /// Indicates whether the specified <see cref="TelemetryEvent"/> satisfies this filter.
-        /// </summary>
-        /// <param name="telemetryEvent">The <see cref="TelemetryEvent"/> to check against this filter.</param>
-        /// <returns>true if this filter is satisfied; otherwise, false.</returns>
         public bool IsEventMatch(TelemetryEvent telemetryEvent)
         {
-            if (!string.IsNullOrEmpty(myClass.EventFilter))
+            if (!string.IsNullOrEmpty(_eventFilter))
             {
-                return telemetryEvent.ToString().IndexOf(myClass.EventFilter, StringComparison.OrdinalIgnoreCase) >= 0;
+                return telemetryEvent.ToString().IndexOf(_eventFilter, StringComparison.OrdinalIgnoreCase) >= 0;
             }
-
             return true;
         }
     }
