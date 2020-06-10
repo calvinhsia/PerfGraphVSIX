@@ -584,9 +584,9 @@
         {
             // we want to read the threadid 
             //and time immediately on current thread
-            var dt = string.Format("[{0}],",
+            var dt = string.Format("[{0}],{1},",
                 DateTime.Now.ToString("hh:mm:ss:fff")
-                //,Thread.CurrentThread.ManagedThreadId
+                , System.Threading.Thread.CurrentThread.ManagedThreadId
                 );
             string str;
             if (args.Length > 0)

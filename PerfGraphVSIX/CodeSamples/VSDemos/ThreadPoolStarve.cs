@@ -91,6 +91,7 @@ namespace MyCodeToExecute
 The UI (including the status window) may not be responsive, depending on the options chosen\r\n
 After completion, the status window timestamps are accurate (the actual time the msg was logged).\r\n
 The CLR will expand the threadpool if a task can't be scheduled to run because no thread is available for 1 second.
+When running in the VS process, the CLR may already have increased the # of threadpool threads substantially.
 The CLR may retire extra idle active threads
 ";
         CancellationToken _CancellationTokenExecuteCode;
@@ -397,7 +398,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                                 while (!tcs.Task.IsCompleted && !tokenStarveDetected.IsCancellationRequested)
                                 {
                                     // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                                    Thread.Sleep(TimeSpan.FromSeconds(0.3));
+                                    Thread.Sleep(TimeSpan.FromSeconds(0.6));
                                 }
                             });
                         }
