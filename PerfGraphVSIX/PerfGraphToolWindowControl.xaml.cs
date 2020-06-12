@@ -29,9 +29,11 @@
     using System.Windows.Media;
     using Task = System.Threading.Tasks.Task;
     using Microsoft.VisualStudio.Utilities;
+    using PerfGraphVSIX.UserControls;
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
+        public static PerfGraphToolWindowControl g_PerfGraphToolWindowControl;
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
 
@@ -66,6 +68,7 @@
         public int NumDataPoints { get; set; } = 100;
 
         public bool SetMaxGraphTo100 { get; set; } = false;
+        public TabControl TabControl => tabControl; // so executing code can reference it
 
 
         public string CodeSampleDirectory
@@ -80,8 +83,6 @@
                 return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
             }
         }
-        private ObservableCollection<string> _LstCodeSamples = new ObservableCollection<string>();
-        public ObservableCollection<string> LstCodeSamples { get { return _LstCodeSamples; } set { _LstCodeSamples = value; RaisePropChanged(); } }
 
         public int NumberOfIterations { get; set; } = 7;
         public int DelayMultiplier { get; set; } = 1;
@@ -118,13 +119,9 @@
         public PerfGraphToolWindowControl()
         {
             this.InitializeComponent();
+            g_PerfGraphToolWindowControl = this;
             try
             {
-                if (this.IsLeakTrackerServiceSupported())
-                {
-                    this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
-                    this.inProcLeakTracker.Content = new InProcLeakTracker();
-                }
 
                 LogMessage($"Starting {TipString}");
                 var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
@@ -149,24 +146,28 @@
                 async Task RefreshCodeToRunAsync()
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    LstCodeSamples.Clear();
-                    foreach (var file in Directory.GetFiles(CodeSampleDirectory)
+                    FileInfo mostRecentFileInfo = null;
+                    foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.*", SearchOption.AllDirectories)
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime))
                     {
-                        LstCodeSamples.Add(Path.GetFileName(file));
+                        if (!file.Contains(@"\Util\"))// utility folder doesn't contain code with Main program
+                        {
+                            var finfo = new FileInfo(file);
+                            if (mostRecentFileInfo == null || finfo.LastWriteTime > mostRecentFileInfo.LastWriteTime)
+                            {
+                                mostRecentFileInfo = finfo;
+                            }
+                        }
                     }
-                    //_ctsExecuteCode?.Cancel();
-                    if (LstCodeSamples[0].Contains("ExecCodeBase.cs")) // The base class doesn't have a Static Main
-                    {
-                        lvCodeSamples.SelectedItem = LstCodeSamples[1];
-                    }
-                    else
-                    {
-                        lvCodeSamples.SelectedItem = LstCodeSamples[0];
-                    }
+                    _codeSampleControl = new CodeSamples(CodeSampleDirectory, mostRecentFileInfo?.Name);
+                    this.spCodeSamples.Children.Clear();
+                    this.spCodeSamples.Children.Add(_codeSampleControl);
                 }
-                _ = RefreshCodeToRunAsync();
+                _ = Task.Run(() =>
+                {
+                    _ = RefreshCodeToRunAsync();
+                });
 
                 _fileSystemWatcher = new FileSystemWatcher(CodeSampleDirectory);
                 FileSystemEventHandler h = new FileSystemEventHandler(
@@ -182,11 +183,22 @@
                 _fileSystemWatcher.Deleted += h;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
-                _objTracker = new ObjTracker(this);
-                _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
-                _editorTracker.Initialize(this, _objTracker);
-                _openFolderTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<OpenFolderTracker>();
-                _openFolderTracker.Initialize(this, _objTracker);
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    await Task.Yield();
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    _objTracker = new ObjTracker(this);
+                    _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
+
+                    _editorTracker.Initialize(this, _objTracker);
+                    _openFolderTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<OpenFolderTracker>();
+                    _openFolderTracker.Initialize(this, _objTracker);
+                    if (this.IsLeakTrackerServiceSupported())
+                    {
+                        this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
+                        this.inProcLeakTracker.Content = new InProcLeakTracker();
+                    }
+                });
 
                 txtUpdateInterval.LostFocus += (o, e) =>
                 {
@@ -266,7 +278,6 @@
                     await ResetPerfCounterMonitorAsync();
                 });
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
-                chkShowStatusHistory.RaiseEvent(new RoutedEventArgs(CheckBox.CheckedEvent, this));
 
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {
@@ -558,22 +569,26 @@
 
         public void LogMessage(string msg, params object[] args)
         {
-            _ = AddStatusMsgAsync(msg, args);
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                await AddStatusMsgAsync(msg, args);
+            });
         }
 
         const int statusTextLenThresh = 100000;
         int nTruncated = 0;
+        private CodeSamples _codeSampleControl;
 
         // we can't use the output window because it will just accumulate and look like a leak
         async public Task AddStatusMsgAsync(string msg, params object[] args)
         {
             // we want to read the threadid 
             //and time immediately on current thread
-            var dt = string.Format("[{0}],",
+            var dt = string.Format("[{0}],{1},",
                 DateTime.Now.ToString("hh:mm:ss:fff")
-                //,Thread.CurrentThread.ManagedThreadId
+                , System.Threading.Thread.CurrentThread.ManagedThreadId
                 );
-            var str = string.Empty;
+            string str;
             if (args.Length > 0)
             {
                 str = string.Format(dt + msg, args);
@@ -603,21 +618,22 @@
             }
         }
 
-#pragma warning disable VSTHRD100 // Avoid async void methods
-        async void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
-#pragma warning restore VSTHRD100 // Avoid async void methods
+        void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
         {
-            btnClrObjExplorer.IsEnabled = false;
-            await WaitForInitializationCompleteAsync();
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            DoGC(); //must be on main thread
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            await measurementHolderInteractiveUser.CreateDumpAsync(
-                System.Diagnostics.Process.GetCurrentProcess().Id,
-                MemoryAnalysisType.StartClrObjExplorer,
-                desc: "InteractiveDump");
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            {
+                btnClrObjExplorer.IsEnabled = false;
+                await WaitForInitializationCompleteAsync();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                DoGC(); //must be on main thread
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                await measurementHolderInteractiveUser.CreateDumpAsync(
+                    System.Diagnostics.Process.GetCurrentProcess().Id,
+                    MemoryAnalysisType.StartClrObjExplorer,
+                    desc: "InteractiveDump");
 
-            btnClrObjExplorer.IsEnabled = true;
+                btnClrObjExplorer.IsEnabled = true;
+            });
         }
 
         private async Task WaitForInitializationCompleteAsync()
@@ -629,82 +645,109 @@
             }
         }
 
-#pragma warning disable VSTHRD100 // Avoid async void methods
-        private async void BtnExecCode_Click(object sender, RoutedEventArgs e)
-#pragma warning restore VSTHRD100 // Avoid async void methods
+        public void BtnExecCode_Click(object sender, RoutedEventArgs e)
         {
-            try
+            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                await WaitForInitializationCompleteAsync();
-                if (this.UpdateInterval != 0)
+                try
                 {
-                    this.UpdateInterval = 0;
-                    await ResetPerfCounterMonitorAsync();
-                }
-                if (_ctsExecuteCode == null)
-                {
-                    this.tabControl.SelectedIndex = 0; // select graph tab
-                    var CodeFileToRun = string.Empty;
-                    if (lvCodeSamples.SelectedItem == null || lvCodeSamples.SelectedItems.Count != 1)
+                    await WaitForInitializationCompleteAsync();
+                    if (this.UpdateInterval != 0)
                     {
-                        LogMessage($"No single Code file selected");
-                        return;
+                        this.UpdateInterval = 0;
+                        await ResetPerfCounterMonitorAsync();
                     }
-                    CodeFileToRun = Path.Combine(CodeSampleDirectory, lvCodeSamples.SelectedItem.ToString());
+                    if (_ctsExecuteCode == null)
+                    {
+                        var CodeFileToRun = _codeSampleControl.GetSelectedFile();
 
-                    this.btnExecCode.Content = "Cancel Code Execution";
-                    await AddStatusMsgAsync($"Starting Code Execution {CodeFileToRun}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
-                    _ctsExecuteCode = new CancellationTokenSource();
-                    if (_codeExecutor == null)
-                    {
-                        _codeExecutor = new CodeExecutor(this);
-                    }
-                    var sw = Stopwatch.StartNew();
-                    var res = _codeExecutor.CompileAndExecute(this, CodeFileToRun, _ctsExecuteCode.Token);
-                    if (res is Task task)
-                    {
-                        //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
-                        await task;
-                        await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                        if (string.IsNullOrEmpty(CodeFileToRun))
+                        {
+                            LogMessage($"No single Code file selected");
+                            return;
+                        }
+                        CodeFileToRun = Path.Combine(CodeSampleDirectory, CodeFileToRun);
+
+                        this.btnExecCode.Content = "Cancel Code Execution";
+                        await AddStatusMsgAsync($"Starting Code Execution {Path.GetFileName(CodeFileToRun)}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+
+                        await TaskScheduler.Default; // tpool
+
+                        _ctsExecuteCode = new CancellationTokenSource();
+                        if (_codeExecutor == null)
+                        {
+                            _codeExecutor = new CodeExecutor(this);
+                        }
+                        var sw = Stopwatch.StartNew();
+                        using (var compileHelper = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token))
+                        {
+                            if (!string.IsNullOrEmpty(compileHelper.CompileResults))
+                            {
+                                await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", compileHelper.CompileResults.ToString());
+                            }
+                            else
+                            {
+                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                var res = compileHelper.ExecuteTheCode();
+                                if (res is Task task)
+                                {
+                                    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                                    await task;
+                                    await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                                }
+                                else
+                                {
+                                    if (!string.IsNullOrEmpty(res.ToString()))
+                                    {
+                                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                                    }
+                                }
+                            }
+                        }
+
+                        //var res = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token);
+                        //CodeExecutor.CompileHelper cHelper = null;
+                        //if (res is CodeExecutor.CompileHelper)
+                        //{
+                        //    cHelper = res as CodeExecutor.CompileHelper;
+                        //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                        //    res = cHelper.ExecuteTheCode();
+                        //}
+                        //if (res is Task task)
+                        //{
+                        //    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                        //    await task;
+                        //    await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                        //}
+                        //else
+                        //{
+                        //    if (!string.IsNullOrEmpty(res.ToString()))
+                        //    {
+                        //        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                        //    }
+                        //}
+                        //cHelper?.Dispose();
+                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                        _ctsExecuteCode = null;
+                        this.btnExecCode.Content = "ExecCode";
+                        this.btnExecCode.IsEnabled = true;
                     }
                     else
                     {
-                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                        await AddStatusMsgAsync("cancelling Code Execution");
+                        _ctsExecuteCode.Cancel();
+                        this.btnExecCode.IsEnabled = false;
                     }
-                    _ctsExecuteCode = null;
+                }
+                catch (Exception ex)
+                {
+                    LogMessage(ex.ToString());
                     this.btnExecCode.Content = "ExecCode";
                     this.btnExecCode.IsEnabled = true;
+                    _ctsExecuteCode = null;
                 }
-                else
-                {
-                    await AddStatusMsgAsync("cancelling Code Execution");
-                    _ctsExecuteCode.Cancel();
-                    this.btnExecCode.IsEnabled = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage(ex.ToString());
-                this.btnExecCode.Content = "ExecCode";
-                this.btnExecCode.IsEnabled = true;
-                _ctsExecuteCode = null;
-            }
-        }
 
-        private void LvCodeSamples_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            //            ThreadHelper.ThrowIfNotOnUIThread();
-            Dispatcher.VerifyAccess();
-
-            if (lvCodeSamples.SelectedItems.Count == 1)
-            {
-                var itm = lvCodeSamples.SelectedItems[0] as string;
-                var pathFile = Path.Combine(
-                    CodeSampleDirectory,
-                    itm.ToString());
-                pathFile = "\"" + pathFile + "\"";
-                PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", pathFile);
-            }
+            });
         }
     }
 
