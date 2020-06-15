@@ -44,6 +44,11 @@ namespace Microsoft.Test.Stress
         /// </summary>
         public string ProcNamesToMonitor = "devenv";
 
+        /// <summary>
+        /// Objects on the managed heap whose type matches the regex specified in this field will have their memory statistics calculated
+        /// and reported as part of the stress run. The default value of null disables the functionality. Example: "Microsoft\.Build\..*"
+        /// </summary>
+        public string TypesToReportStatisticsOn = null;
         
         /// <summary>
         /// At the end of each iteration, monitor perf counters til quiet for measurement

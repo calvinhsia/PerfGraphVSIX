@@ -298,7 +298,7 @@ namespace Microsoft.Test.Stress
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}rsquared"] = itm.RSquared(); // can't use perfcounter name: invalid property name. so use enum name
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}slope"] = itm.slope;
                         dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}IsLeak"] = itm.IsLeak;
-                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}Threshold"] = itm.perfCounterData.thresholdRegression; ;
+                        dictTelemetryProperties[$"Ctr{itm.perfCounterData.perfCounterType}Threshold"] = itm.perfCounterData.thresholdRegression;
                     }
                     var lstLeakResults = _lstAllLeakResults.Where(r => r.IsLeak).ToList();
 
@@ -327,7 +327,22 @@ namespace Microsoft.Test.Stress
                                             baseDumpFileName,
                                             currentDumpFile,
                                             stressUtilOptions.NumIterations,
-                                            stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                                            stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot,
+                                            stressUtilOptions.TypesToReportStatisticsOn,
+                                            out DumpAnalyzer.TypeStatistics baselineTypeStatistics,
+                                            out DumpAnalyzer.TypeStatistics currentTypeStatistics);
+
+                            if (baselineTypeStatistics != null)
+                            {
+                                dictTelemetryProperties["TypeStatsExclusiveRetainedBytes_Base"] = baselineTypeStatistics.ExclusiveRetainedBytes;
+                                dictTelemetryProperties["TypeStatsInclusiveRetainedBytes_Base"] = baselineTypeStatistics.InclusiveRetainedBytes;
+                            }
+                            if (currentTypeStatistics != null)
+                            {
+                                dictTelemetryProperties["TypeStatsExclusiveRetainedBytes_Final"] = currentTypeStatistics.ExclusiveRetainedBytes;
+                                dictTelemetryProperties["TypeStatsInclusiveRetainedBytes_Final"] = currentTypeStatistics.InclusiveRetainedBytes;
+                            }
+
                             var fname = Path.Combine(ResultsFolder, $"{DiffFileName}_{nSamplesTaken}.txt");
                             File.WriteAllText(fname, sb.ToString());
                             if (stressUtilOptions.ShowUI)
@@ -750,6 +765,10 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
             }
             dictTelemetryProperties["TargetProcessVersion"] = fileVersion;
             dictTelemetryProperties["BranchName"] = branchName;
+            if (stressUtilOptions.TypesToReportStatisticsOn != null)
+            {
+                dictTelemetryProperties["TypesToReportStatisticsOn"] = stressUtilOptions.TypesToReportStatisticsOn;
+            }
 
 //            WriteResultsToXML(Path.Combine(ResultsFolder, _xmlResultFileName));
             if (this.testContext != null)
