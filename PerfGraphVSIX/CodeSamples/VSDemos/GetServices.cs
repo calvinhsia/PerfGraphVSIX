@@ -29,7 +29,7 @@ using Task = System.Threading.Tasks.Task;
  * */
 namespace MyCodeToExecute
 {
-    public class MySimpleSample : MyCodeBaseClass, IVsSelectionEvents
+    public class MySimpleSample : MyCodeBaseClass, IVsSelectionEvents, IVsRunningDocTableEvents
     {
         public bool UseOutputPane { get; set; } = false;
 
@@ -76,6 +76,7 @@ Output to Debug OutputPane or LogStatus
             _OutputPane = await GetOutputPaneAsync();
             _OutputPane.Clear();
             uint cookieSelectionEvents = 0;
+            uint cookieRdt = 0;
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 LogMessage("Here in MySimpleSample " + DateTime.Now.ToString("MM/dd/yy hh:mm:ss"));
@@ -91,9 +92,17 @@ Output to Debug OutputPane or LogStatus
                 var VsShellMonitorSelection = await _asyncServiceProvider.GetServiceAsync(typeof(SVsShellMonitorSelection)) as IVsMonitorSelection;
                 LogMessage($"{nameof(VsShellMonitorSelection)} = {VsShellMonitorSelection}");
                 VsShellMonitorSelection.AdviseSelectionEvents(this, out cookieSelectionEvents);
-                tabItemTabProc.TabItemClosed += async (o, e) =>
+
+                IVsRunningDocumentTable vsRunningDocumentTable = await _asyncServiceProvider.GetServiceAsync(typeof(IVsRunningDocumentTable)) as IVsRunningDocumentTable;
+                //vsRunningDocumentTable.AdviseRunningDocTableEvents(this, out cookieRdt);
+                void UnSubscribe()
                 {
                     VsShellMonitorSelection.UnadviseSelectionEvents(cookieSelectionEvents);
+                    vsRunningDocumentTable.UnadviseRunningDocTableEvents(cookieRdt);
+                }
+                tabItemTabProc.TabItemClosed += async (o, e) =>
+                {
+                    UnSubscribe();
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
                 };
@@ -111,6 +120,43 @@ Output to Debug OutputPane or LogStatus
                 _logger.LogMessage(msg, args);
             }
         }
+        int IVsRunningDocTableEvents.OnAfterFirstDocumentLock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining)
+        {
+            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterFirstDocumentLock)}");
+            return VSConstants.S_OK;
+        }
+
+        int IVsRunningDocTableEvents.OnBeforeLastDocumentUnlock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining)
+        {
+            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnBeforeLastDocumentUnlock)}");
+            return VSConstants.S_OK;
+        }
+
+        int IVsRunningDocTableEvents.OnAfterSave(uint docCookie)
+        {
+            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterSave)}");
+            return VSConstants.S_OK;
+        }
+
+        int IVsRunningDocTableEvents.OnAfterAttributeChange(uint docCookie, uint grfAttribs)
+        {
+            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterAttributeChange)}");
+            return VSConstants.S_OK;
+        }
+
+        int IVsRunningDocTableEvents.OnBeforeDocumentWindowShow(uint docCookie, int fFirstShow, IVsWindowFrame pFrame)
+        {
+            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnBeforeDocumentWindowShow)}");
+            return VSConstants.S_OK;
+        }
+
+        int IVsRunningDocTableEvents.OnAfterDocumentWindowHide(uint docCookie, IVsWindowFrame pFrame)
+        {
+            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterDocumentWindowHide)}");
+            return VSConstants.S_OK;
+        }
+
+
         public int OnCmdUIContextChanged(uint dwCmdUICookie, int fActive)
         {
             LogMessage($"{nameof(OnCmdUIContextChanged)} UICtxCookie={dwCmdUICookie} fActive= {fActive}");

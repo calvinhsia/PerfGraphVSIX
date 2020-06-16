@@ -73,7 +73,7 @@ namespace MyCodeToExecute
             DebuggerEvents = null;
         }
 
-        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f, int delayBetweenIterationsMsec = 1000)
+        public virtual async Task DoTheTest(int numIterations, double Sensitivity = 1.0f, int delayBetweenIterationsMsec = 0)
         {
             try
             {

@@ -392,13 +392,13 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                             // synchronous call: the curthread is not relinquished to the threadpool
                             jtf.Run(async () =>
                             {
-                                await jtf.SwitchToMainThreadAsync();
-                                UpdateUiTxt();
+                                //await jtf.SwitchToMainThreadAsync();
+                                //UpdateUiTxt();
                                 await TaskScheduler.Default; // switch to tp thread
                                 while (!tcs.Task.IsCompleted && !tokenStarveDetected.IsCancellationRequested)
                                 {
                                     // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                                    Thread.Sleep(TimeSpan.FromSeconds(0.6));
+                                    Thread.Sleep(TimeSpan.FromSeconds(1.5));
                                 }
                             });
                         }
