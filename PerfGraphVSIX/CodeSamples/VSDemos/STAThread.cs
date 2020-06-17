@@ -1,5 +1,6 @@
 ﻿//Desc: create another STA UI thread within VS
 //Desc: can also be used in Test frameworks that have no UI
+//Desc: Demonstrate UI delays detected in VS
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.ComponentModelHost.dll
@@ -42,62 +43,65 @@ namespace MyCodeToExecute
         {
             var tcsStaThread = new TaskCompletionSource<int>();
             _logger.LogMessage($"Starting");
+
+            await RunInSTAExecutionContextAsync(async () =>
+            {
+                await Task.Yield();
+                _logger.LogMessage($"In InvokeAsync on myUIThread");
+                _MyWindow = new MainWindow(this);
+                var isClosed = false;
+                _MyWindow.Closed += (o, e) =>
+                 {
+                     isClosed = true;
+                 };
+                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(1), _CancellationTokenExecuteCode);
+                            if (isClosed)
+                            {
+                                break;
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                    }
+                    _MyWindow.Dispatcher.Invoke(() =>
+                    {
+                        _MyWindow.Close();
+                    });
+                });
+                _MyWindow.ShowDialog();
+            });
+        }
+        public async Task RunInSTAExecutionContextAsync(Func<Task> actionAsync)
+        {
+            var tcsStaThread = new TaskCompletionSource<int>();
+            _logger.LogMessage($"Creating ExecutionContext");
             var execContext = CreateExecutionContext(tcsStaThread);
+            _logger.LogMessage($"Created ExecutionContext");
             var tcs = new TaskCompletionSource<int>();
             Exception except = null;
             await execContext.Dispatcher.InvokeAsync(async () =>
             {
+                await Task.Yield();
                 try
                 {
-                    _logger.LogMessage($"In InvokeAsync on myUIThread");
-                    _MyWindow = new MainWindow(this);
-                    var timer = new DispatcherTimer()
-                    {
-                        Interval = TimeSpan.FromSeconds(1)
-                    };
-                    var tcsMyWindow = new TaskCompletionSource<int>();
-                    timer.Tick += (o, e) =>
-                    {
-                        if (_CancellationTokenExecuteCode.IsCancellationRequested)
-                        {
-                            try
-                            {
-                                timer.Stop();
-                                _MyWindow.Close();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogMessage(ex.ToString());
-                            }
-                        }
-                    };
-                    timer.Start();
-                    bool fDidShutdown = false;
-                    void DoShutDown()
-                    {
-                        if (!fDidShutdown)
-                        {
-                            timer.Stop();
-                            fDidShutdown = true;
-                            _logger.LogMessage($"Before invokeshutdown");
-                            execContext.Dispatcher.InvokeShutdown();
-                            _logger.LogMessage($" after invokeshutdown");
-                            tcs.SetResult(0);
-                            _logger.LogMessage($" after set tcs");
-                        }
-                    }
-                    _MyWindow.Closed += (o, e) =>
-                     {
-                         DoShutDown();
-                     };
-                    _MyWindow.ShowDialog();
-                    DoShutDown();
+                    await actionAsync();
                 }
                 catch (Exception ex)
                 {
                     except = ex;
-                    tcs.SetResult(0);
                 }
+                _logger.LogMessage($"Before invokeshutdown");
+                execContext.Dispatcher.InvokeShutdown();
+                _logger.LogMessage($" after invokeshutdown");
+                tcs.SetResult(0);
+                _logger.LogMessage($" after set tcs");
             });
             await tcs.Task;
             if (except != null)
@@ -107,18 +111,21 @@ namespace MyCodeToExecute
             }
             _logger.LogMessage($"done task. Now waiting for STAThread to end");
             await tcsStaThread.Task; // wait for sta thread to finish
-            _logger.LogMessage($"Test end");
         }
-        private MyExecutionContext CreateExecutionContext(TaskCompletionSource<int> tcsStaThread)
+
+        MyExecutionContext CreateExecutionContext(TaskCompletionSource<int> tcsStaThread)
         {
             const string Threadname = "MyStaThread";
             var tcsGetExecutionContext = new TaskCompletionSource<MyExecutionContext>();
 
+            _logger.LogMessage($"Creating {Threadname}");
             var myStaThread = new Thread(() =>
             {
-                _logger.LogMessage($"MyStaThread start");
+                // Create the context, and install it:
+                _logger.LogMessage($"{Threadname} start");
                 var dispatcher = Dispatcher.CurrentDispatcher;
                 var syncContext = new DispatcherSynchronizationContext(dispatcher);
+
                 SynchronizationContext.SetSynchronizationContext(syncContext);
 
                 tcsGetExecutionContext.SetResult(new MyExecutionContext
@@ -127,7 +134,8 @@ namespace MyCodeToExecute
                     Dispatcher = dispatcher
                 });
 
-                _logger.LogMessage($"MyStaThread start Dispatcher.Run");
+                // Start the Dispatcher Processing
+                _logger.LogMessage($"MyStaThread before Dispatcher.run");
                 Dispatcher.Run();
                 _logger.LogMessage($"MyStaThread After Dispatcher.run");
                 tcsStaThread.SetResult(0);
@@ -136,10 +144,11 @@ namespace MyCodeToExecute
             myStaThread.SetApartmentState(ApartmentState.STA);
             myStaThread.Name = Threadname;
             myStaThread.Start();
+            _logger.LogMessage($"Starting {Threadname}");
             return tcsGetExecutionContext.Task.Result;
         }
 
-        internal class MyExecutionContext
+        public class MyExecutionContext
         {
             public DispatcherSynchronizationContext DispatcherSynchronizationContext { get; set; }
             public Dispatcher Dispatcher { get; set; }
@@ -150,9 +159,12 @@ namespace MyCodeToExecute
     {
         CancellationToken _CancellationTokenExecuteCode => myClass._CancellationTokenExecuteCode;
         MyClass myClass;
+        public int UIDelayMSecs { get; set; } = 3000;
         public MainWindow(MyClass myclass)
         {
             this.myClass = myclass;
+                Width = 800;
+                Height = 400;
             this.Loaded += MainWindow_Loaded;
         }
         void LogMessage(string msg, params object[] args)
@@ -163,8 +175,7 @@ namespace MyCodeToExecute
         {
             try
             {
-                Title = "Private STA UI Thread Demo";
-
+                Title = "Private STA UI Thread and UIDelay Demo";
                 // xmlns:l="clr-namespace:WpfApp1;assembly=WpfApp1"
                 // the C# string requires quotes to be doubled
                 var strxaml =
@@ -178,8 +189,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <RowDefinition Height=""auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
-        <Canvas Margin=""511,0,0,0.5"">
-            <Ellipse Name=""Ball"" Width=""24"" Height=""24"" Fill=""Blue""
+        <Canvas Margin=""11,0,0,0.5"">
+            <Ellipse Name=""Ball"" Width=""24"" Height=""24"" Fill=""Green""
              Canvas.Left=""396"">
                 <Ellipse.Triggers>
                     <EventTrigger RoutedEvent=""Ellipse.Loaded"">
@@ -195,17 +206,51 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 </Ellipse.Triggers>
             </Ellipse>
         </Canvas>
-        <TextBox xml:space=""preserve"" Margin=""10,50,20,20"">
+        <StackPanel Grid.Row=""1"" Margin=""10,50,20,20"">
+            <TextBox xml:space=""preserve"" >
 This Window is running on it's own private UI thread, as can be seen in the Log Messages, which show the ThreadId
-The bouncing ball will be jerky if the thread is busy (UIDelay)
+The bouncing ball will be jerky if the thread is too busy to update the User Interface (UIDelay)
 If you cause a UI delay in the VS main thread, this thread will be less affected.
-        </TextBox>
+The ChildProc sample has a bouncing ball that will not be animated during UI delays.
+The Telemetry monitor sample will show a vs/delays/ui/start event
+            </TextBox>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""UIDelay on VS main thread in msecs""/>
+                <TextBox Text = ""{{Binding UIDelayMSecs}}""/>
+            </StackPanel>
+            <Button Content=""Cause UI Delay on Main Thread of this form"" Name=""btnUIDelayMySTA"" Width=""250"" HorizontalAlignment=""Left""
+ToolTip=""Cause UI delay on main thread of this form""
+/>
+            <Button Content=""Cause UI Delay on VS Main Thread"" Name=""btnUIDelay"" Width=""250"" HorizontalAlignment=""Left""
+ToolTip=""Cause UI delay on main thread of VS: if you have telemetry monitor or ChildProc sample running you can see the effective UI delay""
+/>
+            <Button Content=""Close"" Name=""btnClose"" Width=""100"" HorizontalAlignment=""Left""/>
+        </StackPanel>
     </Grid>
 ";
                 var strReader = new System.IO.StringReader(strxaml);
                 var xamlreader = XmlReader.Create(strReader);
                 var grid = (Grid)(XamlReader.Load(xamlreader));
                 grid.DataContext = this;
+                var btnClose = (Button)grid.FindName("btnClose");
+                btnClose.Click += (o, e) =>
+                  {
+                      this.Close();
+                  };
+                var btnUIDelay = (Button)grid.FindName("btnUIDelay");
+                btnUIDelay.Click += async (o, e) =>
+                 {
+                     // switch to main thread of VS
+                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                     LogMessage($"Causing UI delay on main thread of VS {UIDelayMSecs}");
+                     Thread.Sleep(TimeSpan.FromMilliseconds(UIDelayMSecs));
+                 };
+                var btnUIDelayMySTA = (Button)grid.FindName("btnUIDelayMySTA");
+                btnUIDelayMySTA.Click += async (o, e) =>
+                {
+                    LogMessage($"Causing UI delay on main thread of STA form {UIDelayMSecs}");
+                    Thread.Sleep(TimeSpan.FromMilliseconds(UIDelayMSecs));
+                };
                 this.Content = grid;
             }
             catch (Exception ex)

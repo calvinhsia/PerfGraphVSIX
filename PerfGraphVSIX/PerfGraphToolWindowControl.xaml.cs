@@ -30,12 +30,14 @@
     using Task = System.Threading.Tasks.Task;
     using Microsoft.VisualStudio.Utilities;
     using PerfGraphVSIX.UserControls;
+    using Microsoft.VisualStudio.Telemetry;
 
     public partial class PerfGraphToolWindowControl : UserControl, INotifyPropertyChanged, ILogger, ITakeSample
     {
         public static PerfGraphToolWindowControl g_PerfGraphToolWindowControl;
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
+        public const string TelemetryEventBaseName = @"DevDivStress/PerfGraphVSIX";
 
         internal ObjTracker _objTracker;
 
@@ -198,6 +200,9 @@
                         this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
                         this.inProcLeakTracker.Content = new InProcLeakTracker();
                     }
+                    await TaskScheduler.Default;
+                    var telEvent = new TelemetryEvent(TelemetryEventBaseName + "Start");
+                    TelemetryService.DefaultSession.PostEvent(telEvent);
                 });
 
                 txtUpdateInterval.LostFocus += (o, e) =>
@@ -584,7 +589,7 @@
         {
             // we want to read the threadid 
             //and time immediately on current thread
-            var dt = string.Format("[{0}],{1},",
+            var dt = string.Format("[{0}],{1,3},",
                 DateTime.Now.ToString("hh:mm:ss:fff")
                 , System.Threading.Thread.CurrentThread.ManagedThreadId
                 );
@@ -672,6 +677,10 @@
                         await AddStatusMsgAsync($"Starting Code Execution {Path.GetFileName(CodeFileToRun)}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
 
                         await TaskScheduler.Default; // tpool
+
+                        var telEvent = new TelemetryEvent(TelemetryEventBaseName + "/ExecCode");
+                        telEvent.Properties[TelemetryEventBaseName.Replace("/", ".")+".code"] = Path.GetFileName(CodeFileToRun);
+                        TelemetryService.DefaultSession.PostEvent(telEvent);
 
                         _ctsExecuteCode = new CancellationTokenSource();
                         if (_codeExecutor == null)

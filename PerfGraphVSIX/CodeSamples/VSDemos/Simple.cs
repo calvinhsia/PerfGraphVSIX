@@ -81,6 +81,7 @@ namespace MyCodeToExecute
                 fClearWithSolution: 0);
             outputWindow.GetPane(ref _guidPane, out _OutputPane);
             _OutputPane.Clear();
+            _OutputPane.Activate();
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await TaskScheduler.Default; // switch to background thread
