@@ -37,7 +37,7 @@
         public static PerfGraphToolWindowControl g_PerfGraphToolWindowControl;
         internal EditorTracker _editorTracker;
         internal OpenFolderTracker _openFolderTracker;
-        public const string TelemetryEventBaseName = @"PerfGraphVSIX";
+        public const string TelemetryEventBaseName = @"DevDivStress/PerfGraphVSIX";
 
         internal ObjTracker _objTracker;
 
@@ -201,7 +201,7 @@
                         this.inProcLeakTracker.Content = new InProcLeakTracker();
                     }
                     await TaskScheduler.Default;
-                    var telEvent = new TelemetryEvent(TelemetryEventBaseName + "/Start");
+                    var telEvent = new TelemetryEvent(TelemetryEventBaseName + "Start");
                     TelemetryService.DefaultSession.PostEvent(telEvent);
                 });
 
@@ -679,7 +679,7 @@
                         await TaskScheduler.Default; // tpool
 
                         var telEvent = new TelemetryEvent(TelemetryEventBaseName + "/ExecCode");
-                        telEvent.Properties[TelemetryEventBaseName.Replace("/", ".")] = Path.GetFileName(CodeFileToRun);
+                        telEvent.Properties[TelemetryEventBaseName.Replace("/", ".")+".code"] = Path.GetFileName(CodeFileToRun);
                         TelemetryService.DefaultSession.PostEvent(telEvent);
 
                         _ctsExecuteCode = new CancellationTokenSource();
