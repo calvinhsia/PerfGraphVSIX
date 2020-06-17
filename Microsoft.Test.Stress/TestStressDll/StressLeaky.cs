@@ -151,7 +151,10 @@ $"String and Type Count differences_{numIter}.txt",
                                                         measurementHolder.baseDumpFileName,
                                                         currentDumpFile,
                                                         measurementHolder.stressUtilOptions.NumIterations,
-                                                        measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot);
+                                                        measurementHolder.stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot,
+                                                        measurementHolder.stressUtilOptions.TypesToReportStatisticsOn,
+                                                        out DumpAnalyzer.TypeStatistics _,
+                                                        out DumpAnalyzer.TypeStatistics _);
                                         var fname = Path.Combine(measurementHolder.ResultsFolder, $"{MeasurementHolder.DiffFileName}_{measurementHolder.nSamplesTaken}.txt");
                                         File.WriteAllText(fname, sb.ToString());
                                         if (measurementHolder.stressUtilOptions.ShowUI)
@@ -268,7 +271,27 @@ $"String and Type Count differences_{numIter}.txt",
                                 {
                                     var oDumpAnalyzer = new DumpAnalyzer(measurementHolder.Logger);
                                     var sb = new System.Text.StringBuilder();
-                                    oDumpAnalyzer.GetDiff(sb, pathDumpBase: dumpPrior, pathDumpCurrent: dump, TotNumIterations: nIter, NumIterationsBeforeTotalToTakeBaselineSnapshot: 1);
+                                    oDumpAnalyzer.GetDiff(sb,
+                                        pathDumpBase: dumpPrior,
+                                        pathDumpCurrent: dump,
+                                        TotNumIterations: nIter,
+                                        NumIterationsBeforeTotalToTakeBaselineSnapshot: 1,
+                                        typesToReportStatisticsOn: @"System\.Collections\..*",
+                                        out DumpAnalyzer.TypeStatistics baselineTypeStatistics,
+                                        out DumpAnalyzer.TypeStatistics currentTypeStatistics);
+
+                                    Assert.IsTrue(baselineTypeStatistics.InclusiveRetainedBytes > 0);
+                                    Assert.IsTrue(baselineTypeStatistics.ExclusiveRetainedBytes > 0);
+                                    Assert.IsTrue(baselineTypeStatistics.InclusiveRetainedBytes >= baselineTypeStatistics.ExclusiveRetainedBytes);
+                                    Assert.IsTrue(baselineTypeStatistics.MemoryProfilingStopwatch.ElapsedMilliseconds > 0);
+                                    Assert.IsFalse(baselineTypeStatistics.MemoryProfilingStopwatch.IsRunning);
+
+                                    Assert.IsTrue(currentTypeStatistics.InclusiveRetainedBytes > 0);
+                                    Assert.IsTrue(currentTypeStatistics.ExclusiveRetainedBytes > 0);
+                                    Assert.IsTrue(currentTypeStatistics.InclusiveRetainedBytes >= currentTypeStatistics.ExclusiveRetainedBytes);
+                                    Assert.IsTrue(currentTypeStatistics.MemoryProfilingStopwatch.ElapsedMilliseconds > 0);
+                                    Assert.IsFalse(currentTypeStatistics.MemoryProfilingStopwatch.IsRunning);
+
                                     var fname = Path.Combine(measurementHolder.ResultsFolder, $"{TestContext.TestName} {MeasurementHolder.DiffFileName}_{nIter}.txt");
                                     File.WriteAllText(fname, sb.ToString());
                                     measurementHolder.lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {nIter}" });

@@ -9,12 +9,35 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Versioning;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Microsoft.Test.Stress
 {
     public class DumpAnalyzer
     {
+        /// <summary>
+        /// Encapsulates memory profiling data for a specific type or set of types.
+        /// </summary>
+        public sealed class TypeStatistics
+        {
+            /// <summary>
+            /// The overall size of all exclusively retained objects in bytes.
+            /// </summary>
+            public ulong ExclusiveRetainedBytes;
+
+            /// <summary>
+            /// The overall size of all retained objects in bytes, including objects also rooted by something
+            /// else than only our types of interest.
+            /// </summary>
+            public ulong InclusiveRetainedBytes;
+
+            /// <summary>
+            /// Measures the time taken to calculate the profiling data.
+            /// </summary>
+            public Stopwatch MemoryProfilingStopwatch = new Stopwatch();
+        }
+
         private readonly ILogger logger;
         public DumpAnalyzer(ILogger logger)
         {
@@ -25,17 +48,32 @@ namespace Microsoft.Test.Stress
         /// Given a dump file, output 2 dictionaries: CLR Type name=>Count   and String=>Count
         /// e.g. if the dump has 44 copies of the string "foobar", then dictStrings["foobar"]=44
         ///    if the dump has 12 instances of Microsoft.VisualStudio.Type.Foobar, then  dictTypes["Microsoft.VisualStudio.Type.Foobar"] =12
+        /// Also outputs memory statistics on types matching typesToReportStatisticsOn if typesToReportStatisticsOn is not null.
         /// </summary>
         /// <param name="dumpFile"></param>
+        /// <param name="typesToReportStatisticsOn"></param>
         /// <param name="dictTypes"></param>
         /// <param name="dictStrings"></param>
-        public void AnalyzeDump(string dumpFile, out Dictionary<string, int> dictTypes, out Dictionary<string, int> dictStrings)
+        /// <param name="typeStatistics"></param>
+        public void AnalyzeDump(string dumpFile, string typesToReportStatisticsOn, out Dictionary<string, int> dictTypes,
+            out Dictionary<string, int> dictStrings, out TypeStatistics typeStatistics)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
             //  /s \\calvinhw8\c$\Users\calvinh\Documents;srv*C:\Users\calvinh\AppData\Local\Temp\Symbols*;\\ddelementary\public\CalvinH\VsDbgTestDumps\VSHeapAllocDetourDump;\\ddrps\symbols;http://symweb/ m "\\calvinhw8\c$\Users\calvinh\Documents\devenvNav2files700.dmp"
             //            var symPath = @"http://symweb";
             dictTypes = new Dictionary<string, int>();
             dictStrings = new Dictionary<string, int>();
+
+            Regex typesToReportStatisticsOnRegex = null;
+            if (typesToReportStatisticsOn != null)
+            {
+                typesToReportStatisticsOnRegex = new Regex(typesToReportStatisticsOn, RegexOptions.Compiled);
+                typeStatistics = new TypeStatistics();
+            }
+            else
+            {
+                typeStatistics = null;
+            }
 
             try
             {
@@ -52,6 +90,7 @@ namespace Microsoft.Test.Stress
                     //                  logger.LogMessage($"Got runtime {runtime}");
                     var nObjCount = 0;
                     var lstStrings = new List<ClrObject>();
+                    var markedObjects = new HashSet<ulong>();
                     foreach (var obj in runtime.Heap.EnumerateObjects())
                     {
                         var typ = obj.Type.Name;
@@ -68,7 +107,19 @@ namespace Microsoft.Test.Stress
                             dictTypes[typ]++;
                         }
                         nObjCount++;
+
+                        if (typesToReportStatisticsOnRegex?.IsMatch(typ) == true)
+                        {
+                            CalculateTypeStatisticsPhase1(obj, typesToReportStatisticsOnRegex, markedObjects, typeStatistics);
+                        }
                     }
+                    if (typesToReportStatisticsOnRegex != null)
+                    {
+                        // Phase 1 calculated the total retained bytes. Now figure out which of the marked objects are rooted by
+                        // objects of other types as well to calculate the exclusive retained bytes.
+                        CalculateTypeStatisticsPhase2(runtime.Heap, typesToReportStatisticsOnRegex, markedObjects, typeStatistics);
+                    }
+
                     logger.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dictTypes.Count} {dumpFile}");
                     var maxLength = 1024;
                     var strValue = string.Empty;
@@ -138,19 +189,32 @@ namespace Microsoft.Test.Stress
         /// <param name="pathDumpCurrent"></param>
         /// <param name="TotNumIterations"></param>
         /// <param name="NumIterationsBeforeTotalToTakeBaselineSnapshot"></param>
+        /// <param name="typesToReportStatisticsOn"></param>
+        /// <param name="baselineTypeStatistics"></param>
+        /// <param name="currentTypeStatistics"></param>
         public void GetDiff(
             StringBuilder sb,
             string pathDumpBase,
             string pathDumpCurrent,
             int TotNumIterations,
-            int NumIterationsBeforeTotalToTakeBaselineSnapshot)
+            int NumIterationsBeforeTotalToTakeBaselineSnapshot,
+            string typesToReportStatisticsOn,
+            out TypeStatistics baselineTypeStatistics,
+            out TypeStatistics currentTypeStatistics)
         {
             _dictTypeDiffs = new Dictionary<string, Tuple<int, int>>();
             _dictStringDiffs = new Dictionary<string, Tuple<int, int>>();
 
-            AnalyzeDump(pathDumpBase, out var dictTypesBaseline, out var dictStringsBaseline);
-            AnalyzeDump(pathDumpCurrent, out var dictTypesCurrent, out var dictStringsCurrent);
+            AnalyzeDump(pathDumpBase, typesToReportStatisticsOn, out var dictTypesBaseline, out var dictStringsBaseline, out baselineTypeStatistics);
+            AnalyzeDump(pathDumpCurrent, typesToReportStatisticsOn, out var dictTypesCurrent, out var dictStringsCurrent, out currentTypeStatistics);
             sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
+            if (baselineTypeStatistics != null && currentTypeStatistics != null)
+            {
+                sb.AppendLine($"Statistics on types matching '{ typesToReportStatisticsOn }'");
+                sb.AppendLine($"Inclusive retained bytes 1st/2nd dump: { baselineTypeStatistics.InclusiveRetainedBytes }/{ currentTypeStatistics.InclusiveRetainedBytes }");
+                sb.AppendLine($"Exclusive retained bytes 1st/2nd dump: { baselineTypeStatistics.ExclusiveRetainedBytes }/{ currentTypeStatistics.ExclusiveRetainedBytes }");
+                sb.AppendLine($"Retained bytes took { baselineTypeStatistics.MemoryProfilingStopwatch.Elapsed.Seconds } seconds to calculate in 1st dump, { currentTypeStatistics.MemoryProfilingStopwatch.Elapsed.Seconds } seconds in 2nd dump");
+            }
             sb.AppendLine($"Below are 2 lists: the counts of Types and Strings in each dump. The 1st column is the number in the 1st dump, the 2nd is the number found in the 2nd dump and the 3rd column is the Type or String");
             sb.AppendLine($"For example if # iterations  = 11, 2 dumps are taken after iterations 7 and 11., '17  56  System.Guid' means there were 17 instances of System.Guid in the 1st dump and 56 in the 2nd");
             sb.AppendLine($"TypesAndStrings { Path.GetFileName(pathDumpBase)} {Path.GetFileName(pathDumpCurrent)}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
@@ -258,6 +322,99 @@ namespace Microsoft.Test.Stress
         {
             var args = $"/m \"{_DumpFileName}\"";
             System.Diagnostics.Process.Start(GetClrObjExplorerPath(), args);
+        }
+
+        private void CalculateTypeStatisticsPhase1(ClrObject rootObj, Regex typesToReportStatisticsOnRegex, HashSet<ulong> markedObjects, TypeStatistics typeStatistics)
+        {
+            if (!markedObjects.Contains(rootObj.Address))
+            {
+                // Start the stopwatch only if we're looking at an unmarked object. Measuring the single HashSet.Contains() would have more
+                // overhead than the actual duration of the operation.
+                typeStatistics.MemoryProfilingStopwatch.Start();
+
+                Queue<ClrObject> objectQueue = new Queue<ClrObject>();
+                objectQueue.Enqueue(rootObj);
+                markedObjects.Add(rootObj.Address);
+
+                while (objectQueue.Count > 0)
+                {
+                    ClrObject obj = objectQueue.Dequeue();
+                    typeStatistics.InclusiveRetainedBytes += obj.Size;
+
+                    foreach (var reference in obj.EnumerateObjectReferences())
+                    {
+                        if (!reference.IsNull && !markedObjects.Contains(reference.Address))
+                        {
+                            // We follow references only as long as they point to BCL types or to types to report statistics on.
+                            // Otherwise we would transitively walk pretty much the entire managed heap and the number we report
+                            // would be meaningless.
+                            string referenceType = reference.Type.Name;
+                            if (referenceType.StartsWith("System.") || typesToReportStatisticsOnRegex.IsMatch(referenceType))
+                            {
+                                markedObjects.Add(reference.Address);
+                                objectQueue.Enqueue(reference);
+                            }
+                        }
+                    }
+                }
+
+                typeStatistics.MemoryProfilingStopwatch.Stop();
+            }
+        }
+
+        private void CalculateTypeStatisticsPhase2(ClrHeap heap, Regex typesToReportStatisticsOnRegex, HashSet<ulong> markedObjects, TypeStatistics typeStatistics)
+        {
+            typeStatistics.MemoryProfilingStopwatch.Start();
+
+            HashSet<ulong> visitedObjects = new HashSet<ulong>();
+            Queue<ClrObject> objectQueue = new Queue<ClrObject>();
+
+            // Start with exclusive = inclusive and walk the heap from roots looking for objects to subtract from this number.
+            typeStatistics.ExclusiveRetainedBytes = typeStatistics.InclusiveRetainedBytes;
+
+            foreach (ClrRoot root in heap.EnumerateRoots())
+            {
+                // Interested only in roots outside of our marked inclusive graph.
+                if (!markedObjects.Contains(root.Object))
+                {
+                    ClrObject rootObj = heap.GetObject(root.Object);
+                    objectQueue.Enqueue(rootObj);
+                    visitedObjects.Add(root.Object);
+
+                    while (objectQueue.Count > 0)
+                    {
+                        ClrObject obj = objectQueue.Dequeue();
+                        if (obj.IsNull || obj.Type == null)
+                        {
+                            continue;
+                        }
+
+                        // We stop the walk when we see an object of a type we are reporting statistics on.
+                        if (!typesToReportStatisticsOnRegex.IsMatch(obj.Type.Name))
+                        {
+                            if (markedObjects.Contains(obj.Address))
+                            {
+                                // Not an object of a type we are reporting statistics on but it is part of the inclusive object graph.
+                                // This means that it must not be reported in the exclusive bytes.
+                                typeStatistics.ExclusiveRetainedBytes -= obj.Size;
+                                markedObjects.Remove(obj.Address);
+                            }
+
+                            // Follow all references.
+                            foreach (var reference in obj.EnumerateObjectReferences())
+                            {
+                                if (!reference.IsNull && !visitedObjects.Contains(reference.Address))
+                                {
+                                    visitedObjects.Add(reference.Address);
+                                    objectQueue.Enqueue(reference);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            typeStatistics.MemoryProfilingStopwatch.Stop();
         }
     }
 }
