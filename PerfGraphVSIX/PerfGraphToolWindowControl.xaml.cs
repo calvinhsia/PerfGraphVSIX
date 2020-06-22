@@ -185,7 +185,7 @@
                 _fileSystemWatcher.Deleted += h;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
-                ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
                     await Task.Yield();
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -203,6 +203,7 @@
                     await TaskScheduler.Default;
                     var telEvent = new TelemetryEvent(TelemetryEventBaseName + "Start");
                     TelemetryService.DefaultSession.PostEvent(telEvent);
+                    await DoProcessAutoexecAsync();
                 });
 
                 txtUpdateInterval.LostFocus += (o, e) =>
@@ -315,6 +316,31 @@
             catch (Exception ex)
             {
                 this.Content = ex.ToString();
+            }
+        }
+
+        private async Task DoProcessAutoexecAsync()
+        {
+            await WaitForInitializationCompleteAsync();
+            await TaskScheduler.Default;
+            var autoexecFile = Path.Combine(CodeSampleDirectory, "AutoExec.Txt");
+            if (File.Exists(autoexecFile))
+            {
+                var fileContents = File.ReadAllLines(autoexecFile);
+                foreach (var line in fileContents.Where(p => !string.IsNullOrEmpty(p.Trim()) && !p.StartsWith("//")))
+                {
+                    var splt = line.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (splt.Length == 2)
+                    {
+                        if (Environment.GetEnvironmentVariable("USERNAME").ToLowerInvariant() == splt[0].ToLowerInvariant())
+                        {
+                            await AddStatusMsgAsync($"AutoExec {splt[1]}");
+                            var codeFileToRun = Path.Combine(CodeSampleDirectory, splt[1].Trim());
+                            await RunCodeAsync(codeFileToRun);
+                        }
+                    }
+                }
+
             }
         }
 
@@ -664,82 +690,16 @@
                     }
                     if (_ctsExecuteCode == null)
                     {
-                        var CodeFileToRun = _codeSampleControl.GetSelectedFile();
+                        var codeFileToRun = _codeSampleControl.GetSelectedFile();
 
-                        if (string.IsNullOrEmpty(CodeFileToRun))
+                        if (string.IsNullOrEmpty(codeFileToRun))
                         {
                             LogMessage($"No single Code file selected");
                             return;
                         }
-                        CodeFileToRun = Path.Combine(CodeSampleDirectory, CodeFileToRun);
-
+                        codeFileToRun = Path.Combine(CodeSampleDirectory, codeFileToRun);
                         this.btnExecCode.Content = "Cancel Code Execution";
-                        await AddStatusMsgAsync($"Starting Code Execution {Path.GetFileName(CodeFileToRun)}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
-
-                        await TaskScheduler.Default; // tpool
-
-                        var telEvent = new TelemetryEvent(TelemetryEventBaseName + "/ExecCode");
-                        telEvent.Properties[TelemetryEventBaseName.Replace("/", ".")+".code"] = Path.GetFileName(CodeFileToRun);
-                        TelemetryService.DefaultSession.PostEvent(telEvent);
-
-                        _ctsExecuteCode = new CancellationTokenSource();
-                        if (_codeExecutor == null)
-                        {
-                            _codeExecutor = new CodeExecutor(this);
-                        }
-                        var sw = Stopwatch.StartNew();
-                        using (var compileHelper = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token))
-                        {
-                            if (!string.IsNullOrEmpty(compileHelper.CompileResults))
-                            {
-                                await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", compileHelper.CompileResults.ToString());
-                            }
-                            else
-                            {
-                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                                var res = compileHelper.ExecuteTheCode();
-                                if (res is Task task)
-                                {
-                                    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
-                                    await task;
-                                    await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
-                                }
-                                else
-                                {
-                                    if (!string.IsNullOrEmpty(res.ToString()))
-                                    {
-                                        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
-                                    }
-                                }
-                            }
-                        }
-
-                        //var res = _codeExecutor.CompileTheCode(this, CodeFileToRun, _ctsExecuteCode.Token);
-                        //CodeExecutor.CompileHelper cHelper = null;
-                        //if (res is CodeExecutor.CompileHelper)
-                        //{
-                        //    cHelper = res as CodeExecutor.CompileHelper;
-                        //    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        //    res = cHelper.ExecuteTheCode();
-                        //}
-                        //if (res is Task task)
-                        //{
-                        //    //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
-                        //    await task;
-                        //    await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(CodeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
-                        //}
-                        //else
-                        //{
-                        //    if (!string.IsNullOrEmpty(res.ToString()))
-                        //    {
-                        //        await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
-                        //    }
-                        //}
-                        //cHelper?.Dispose();
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        _ctsExecuteCode = null;
-                        this.btnExecCode.Content = "ExecCode";
-                        this.btnExecCode.IsEnabled = true;
+                        await RunCodeAsync(codeFileToRun);
                     }
                     else
                     {
@@ -757,6 +717,53 @@
                 }
 
             });
+        }
+
+        private async Task RunCodeAsync(string codeFileToRun)
+        {
+            await AddStatusMsgAsync($"Starting Code Execution {Path.GetFileName(codeFileToRun)}"); // https://social.msdn.microsoft.com/forums/vstudio/en-US/5066b6ac-fdf8-4877-a023-1a7550f2cdd9/custom-tool-hosting-an-editor-iwpftextviewhost-in-a-tool-window
+
+            await TaskScheduler.Default; // tpool
+
+            var telEvent = new TelemetryEvent(TelemetryEventBaseName + "/ExecCode");
+            telEvent.Properties[TelemetryEventBaseName.Replace("/", ".") + ".code"] = Path.GetFileName(codeFileToRun);
+            TelemetryService.DefaultSession.PostEvent(telEvent);
+
+            _ctsExecuteCode = new CancellationTokenSource();
+            if (_codeExecutor == null)
+            {
+                _codeExecutor = new CodeExecutor(this);
+            }
+            var sw = Stopwatch.StartNew();
+            using (var compileHelper = _codeExecutor.CompileTheCode(this, codeFileToRun, _ctsExecuteCode.Token))
+            {
+                if (!string.IsNullOrEmpty(compileHelper.CompileResults))
+                {
+                    await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", compileHelper.CompileResults.ToString());
+                }
+                else
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    var res = compileHelper.ExecuteTheCode();
+                    if (res is Task task)
+                    {
+                        //                   await AddStatusMsgAsync($"CompileAndExecute done: {res}");
+                        await task;
+                        await AddStatusMsgAsync($"Done Code Execution {Path.GetFileNameWithoutExtension(codeFileToRun)}  {sw.Elapsed.TotalMinutes:n2} Mins");
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(res.ToString()))
+                        {
+                            await AddStatusMsgAsync("Result of CompileAndExecute\r\n{0}", res.ToString());
+                        }
+                    }
+                }
+            }
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            _ctsExecuteCode = null;
+            this.btnExecCode.Content = "ExecCode";
+            this.btnExecCode.IsEnabled = true;
         }
     }
 

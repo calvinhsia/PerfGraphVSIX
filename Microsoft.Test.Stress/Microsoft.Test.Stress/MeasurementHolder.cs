@@ -770,7 +770,7 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
                 dictTelemetryProperties["TypesToReportStatisticsOn"] = stressUtilOptions.TypesToReportStatisticsOn;
             }
 
-//            WriteResultsToXML(Path.Combine(ResultsFolder, _xmlResultFileName));
+            //            WriteResultsToXML(Path.Combine(ResultsFolder, _xmlResultFileName));
             if (this.testContext != null)
             {
                 if (Logger is Logger myLogger)
@@ -792,10 +792,13 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
             if (stressUtilOptions.SendTelemetry)
             {
                 PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
-                if (telemetrySession != null)
+                if (Process.GetCurrentProcess().ProcessName != "devenv") // if we're running as a VSIX
                 {
-                    telemetrySession.Dispose();
-                    telemetrySession = null;
+                    if (telemetrySession != null)
+                    {
+                        telemetrySession.Dispose();
+                        telemetrySession = null;
+                    }
                 }
             }
         }
@@ -871,17 +874,24 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
         {
             if (telemetrySession == null)
             {
-                if (string.IsNullOrEmpty(SerializedTelemetrySession))
+                if (Process.GetCurrentProcess().ProcessName == "devenv")
                 {
                     telemetrySession = TelemetryService.DefaultSession;
-                    telemetrySession.IsOptedIn = true;
-                    telemetrySession.Start();
-                    SerializedTelemetrySession = telemetrySession.SerializeSettings();
                 }
                 else
                 {
-                    telemetrySession = new TelemetrySession(SerializedTelemetrySession);
-                    telemetrySession.Start();
+                    if (string.IsNullOrEmpty(SerializedTelemetrySession))
+                    {
+                        telemetrySession = TelemetryService.DefaultSession;
+                        telemetrySession.IsOptedIn = true;
+                        telemetrySession.Start();
+                        SerializedTelemetrySession = telemetrySession.SerializeSettings();
+                    }
+                    else
+                    {
+                        telemetrySession = new TelemetrySession(SerializedTelemetrySession);
+                        telemetrySession.Start();
+                    }
                 }
             }
             var prefix = telemetryEventName.Replace("/", ".") + ".";

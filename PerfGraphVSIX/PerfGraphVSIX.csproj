@@ -58,6 +58,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CodeExecutor.cs" />
+    <Content Include="CodeSamples\AutoExec.txt">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="CodeSamples\Fun\Cartoon.vb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
