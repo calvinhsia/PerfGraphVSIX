@@ -91,7 +91,7 @@ namespace PerfGraphVSIX.UserControls
                 this.MouseDoubleClick += (o, e) =>
                 {
                     Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-                    PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", FullFileName);
+                    PerfGraphToolWindowCommand.Instance.g_dte.ExecuteCommand("File.OpenFile", $@"""{FullFileName}""");
                 };
             }
             protected override void OnPreviewKeyDown(KeyEventArgs e)
