@@ -289,10 +289,11 @@ namespace PerfGraphVSIX
                                 var srcFiles = string.Empty;
                                 foreach (var srcfile in lstFilesToCompile)
                                 {
-                                    srcFiles += " " + srcfile;
+                                    // to support spaces in file paths, enclose them in quotes
+                                    srcFiles += $@"""{srcfile}"" ";
                                 }
                                 // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/reference-compiler-option
-                                var args = $@"{srcFiles} /target:library /nologo /out:""{outfile}"" {refs}";
+                                var args = $@"{srcFiles}/target:library /nologo /out:""{outfile}"" {refs}";
                                 if (verbose)
                                 {
                                     _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args);
