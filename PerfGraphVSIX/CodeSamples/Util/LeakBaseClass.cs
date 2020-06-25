@@ -136,7 +136,7 @@ namespace MyCodeToExecute
                         await Task.Delay(TimeSpan.FromMilliseconds(delayBetweenIterationsMsec * DelayMultiplier));
                         var desc = string.Format("Iter {0}/{1}", iteration + 1, numIterations);
                         // we need to go thru the extension to get the measurement, so the vsix graph updates and adds to log
-                        await _itakeSample.DoSampleAsync(measurementHolder, desc);
+                        await _itakeSample.DoSampleAsync(measurementHolder, DoForceGC: true, descriptionOverride: desc);
 
                         if (_CancellationTokenExecuteCode.IsCancellationRequested)
                         {

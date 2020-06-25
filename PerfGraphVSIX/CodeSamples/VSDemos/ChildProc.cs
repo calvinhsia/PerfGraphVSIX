@@ -184,7 +184,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 foreach (var node in lstNodes)
                 {
                     // each has a Conhost.exe child proc https://www.howtogeek.com/howto/4996/what-is-conhost.exe-and-why-is-it-running/
-                    if (node.ProcEntry.szExeFile != "conhost.exe")
+                    if (node.ProcEntry.szExeFile != "conhost.exe") // https://devdiv.visualstudio.com/DevDiv/_workitems/edit/1141094
                     {
                         long memsize = 0;
                         try
@@ -193,6 +193,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                             memsize = proc.PrivateMemorySize64;
                         }
                         catch (ArgumentException) // process is not running
+                        {
+
+                        }
+                        catch(InvalidOperationException) // System.InvalidOperationException: Process has exited, so the requested information is not available.
                         {
 
                         }

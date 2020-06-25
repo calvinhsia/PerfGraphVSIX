@@ -16,7 +16,6 @@ using System.Linq;
 
 namespace MyCodeToExecute
 {
-
     public class MyClass : LeakBaseClass
     {
         public event EventHandler Myevent;
@@ -25,11 +24,12 @@ namespace MyCodeToExecute
             byte[] arr = new byte[1024 * 1024 * 20];
             public BigStuffWithLongNameSoICanSeeItBetter(MyClass obj)
             {
-                //obj.Myevent += Obj_Myevent; // this form always leaks, even if Obj_Myevent is empty
-                var x = 2;
+                //                obj.Myevent += Obj_Myevent;
+                //var x = 2;
                 obj.Myevent += (o, e) =>
                   {
-                      var y = arr; // this line causes leak because ref to local member lifted in closure
+//                      var y = arr;
+//                      obj._logger.LogMessage($"in event {arr.Length}");
                   };
             }
 
@@ -42,7 +42,7 @@ namespace MyCodeToExecute
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 7, Sensitivity: 2.5, delayBetweenIterationsMsec: 800);
+                await oMyClass.DoTheTest(numIterations: 77, delayBetweenIterationsMsec: 0);
             }
         }
         public MyClass(object[] args) : base(args)
@@ -50,11 +50,6 @@ namespace MyCodeToExecute
             //ShowUI = false;
             //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
             SecsBetweenIterations = 0;
-        }
-
-        public override async Task DoInitializeAsync()
-        {
-            await Task.Yield();
         }
 
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
@@ -70,10 +65,10 @@ namespace MyCodeToExecute
         {
             await Task.Yield();
             var eventHandlerList = GetEventHandlerList<MyClass, EventArgs>(this, "Myevent");
-           _logger.LogMessage(string.Format("Leaked: # Event Handlers =  {0} ", eventHandlerList.Length));
+            _logger.LogMessage(string.Format("Leaked: # Event Handlers =  {0} ", eventHandlerList.Length));
             foreach (var evHandler in eventHandlerList)
             {
-               _logger.LogMessage(string.Format("   {0} {1}", evHandler.Target, evHandler.Method));
+                _logger.LogMessage(string.Format("   {0} {1}", evHandler.Target, evHandler.Method));
             }
         }
 
@@ -91,15 +86,21 @@ namespace MyCodeToExecute
         /// <returns>Array of delegates or null</returns>
         internal static Delegate[] GetRoutedEventHandlerList<TEventPublisher>(TEventPublisher instance, RoutedEvent routedEvent)
         {
-            var evHandlersStore = typeof(TEventPublisher)
-                .GetProperty("EventHandlersStore", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .GetValue(instance, index: null);
-            var miGetEvHandlers = evHandlersStore.GetType().GetMethod("GetRoutedEventHandlers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-            var lstRoutedEvents = miGetEvHandlers.Invoke(evHandlersStore, new object[] { routedEvent }) as RoutedEventHandlerInfo[];
             var lstDelegates = new List<Delegate>();
-            foreach (var handler in lstRoutedEvents)
+            try
             {
-                lstDelegates.Add(handler.Handler);
+                var evHandlersStore = typeof(TEventPublisher)
+                    .GetProperty("EventHandlersStore", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .GetValue(instance, index: null);
+                var miGetEvHandlers = evHandlersStore.GetType().GetMethod("GetRoutedEventHandlers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                var lstRoutedEvents = miGetEvHandlers.Invoke(evHandlersStore, new object[] { routedEvent }) as RoutedEventHandlerInfo[];
+                foreach (var handler in lstRoutedEvents)
+                {
+                    lstDelegates.Add(handler.Handler);
+                }
+            }
+            catch (Exception)
+            {
             }
             return lstDelegates.ToArray(); ;
         }
@@ -118,22 +119,28 @@ namespace MyCodeToExecute
         /// <returns>Array of delegates or null</returns>
         internal static Delegate[] GetEventHandlerList<TEventPublisher, TEventArgs>(TEventPublisher instance, string eventName)
         {
-            var evFld = (typeof(TEventPublisher)
-                .GetField(eventName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic));
-            if (evFld.GetValue(instance) as EventHandler != null)
+            Delegate[] lstDelegates = null;
+            try
             {
-                var evList = (evFld
-                    .GetValue(instance) as EventHandler) // check for null
-                    .GetInvocationList();// check for null
-                return evList;
+                var evFld = (typeof(TEventPublisher)
+                    .GetField(eventName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic));
+                if (evFld.GetValue(instance) as EventHandler != null)
+                {
+                    lstDelegates = (evFld
+                        .GetValue(instance) as EventHandler) // check for null
+                        .GetInvocationList();// check for null
+                }
+                else
+                {
+                    lstDelegates = (evFld
+                        .GetValue(instance) as EventHandler<TEventArgs>) // check for null
+                        .GetInvocationList();// check for null
+                }
             }
-            else
+            catch (Exception)
             {
-                var evList = (evFld
-                    .GetValue(instance) as EventHandler<TEventArgs>) // check for null
-                    .GetInvocationList();// check for null
-                return evList;
             }
+            return lstDelegates;
         }
     }
 }

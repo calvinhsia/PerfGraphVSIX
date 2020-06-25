@@ -147,6 +147,10 @@ To learn how to add your own, see VSDemos/Simple.cs
                             <local:MyTextBox Text="{Binding NumDataPoints}" Width="90" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
+                            <CheckBox Content="DoFullGC Per Sample" IsChecked="{Binding DoFullGCPerSample}" 
+                                      ToolTip="When taking a measurement sample, do a complete GC. This is should be set only for leak tests. Full GC causes UI Delays"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
                             <CheckBox Content="TrackTextViews" IsChecked="{Binding TrackTextViews}" ToolTip="Listen for TextView Creation Events and track them"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">

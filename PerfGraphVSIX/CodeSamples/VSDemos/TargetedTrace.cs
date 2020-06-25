@@ -78,9 +78,8 @@ reg add hkcu\Software\Microsoft\VisualStudio\16.0_Remote\PerfWatson\InternalUser
                     MinTraceDurationSecs = 10,
                     //                    TracingActions = "DevenvProcessDumpFull;SatProcDump",
                     TracingActions = "EtlTrace,DevenvProcessDumpFull,SatProcDump",
-                    SatProcsToDump = "perfwaTson2.exe"
-
-                    //                    SatProcsToDump = "perfwaTson2.exe;Microsoft.ServiceHub.controller.exe;Microsoft.ServiceHub.SettingsHost.exe;Microsoft.ServiceHub.Identityhost.exe;msbuild.exe;ServiceHub.DataWarehouseHost.exe; ServiceHub.TestWindowStoreHost.exe;Microsoft.Alm.Shared.Remoting.RemoteContainer.dll"
+                    //SatProcsToDump = "perfwaTson2.exe"
+                    SatProcsToDump = "perfwaTson2.exe;Microsoft.ServiceHub.controller.exe;Microsoft.ServiceHub.SettingsHost.exe;Microsoft.ServiceHub.Identityhost.exe;msbuild.exe;ServiceHub.DataWarehouseHost.exe;ServiceHub.TestWindowStoreHost.exe;Microsoft.Alm.Shared.Remoting.RemoteContainer.dll"
                     // each has a Conhost.exe child proc https://www.howtogeek.com/howto/4996/what-is-conhost.exe-and-why-is-it-running/
                     // Microsoft.ServiceHub.controller.exe,ServiceHub.DataWarehouseHost.exe, ServiceHub.TestWindowStoreHost.exe are 64 bit, but not started by default
                     // Microsoft.Alm.Shared.Remoting.RemoteContainer.dll;ServiceHub.VSDetouredHost.exe;ServiceHub.Host.CLR.x86.exe;ServiceHub.ThreadedWaitDialog.exe
