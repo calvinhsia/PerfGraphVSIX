@@ -191,15 +191,17 @@ namespace Microsoft.Test.Stress
             IsMeasuringCurrentProcess = LstPerfCounterData[0].ProcToMonitor.Id == Process.GetCurrentProcess().Id;
         }
 
-        public async Task<string> TakeMeasurementAsync(string desc, bool IsForInteractiveGraph = false)
+        public async Task<string> TakeMeasurementAsync(string desc, bool DoForceGC, bool IsForInteractiveGraph = false)
         {
             if (string.IsNullOrEmpty(desc))
             {
                 desc = TestName;
             }
             await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsBetweenIterations));
-
-            await DoForceGCAsync();
+            if (DoForceGC)
+            {
+                await DoForceGCAsync();
+            }
 
             var sBuilderMeasurementResult = new StringBuilder(desc + $" {LstPerfCounterData[0].ProcToMonitor.ProcessName} {LstPerfCounterData[0].ProcToMonitor.Id} ");
 

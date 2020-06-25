@@ -344,7 +344,7 @@ namespace TestStressDll
                         lstBigStuff.Add(new byte[nArraySize]);
                     }
                     //                lstBigStuff.Add(new int[10000000]);
-                    var res = await measurementHolder.TakeMeasurementAsync($"iter {i}/{nIter}");
+                    var res = await measurementHolder.TakeMeasurementAsync($"iter {i}/{nIter}", DoForceGC: true);
                     LogMessage(res);
                 }
                 var filename = measurementHolder.DumpOutMeasurementsToTxtFile();

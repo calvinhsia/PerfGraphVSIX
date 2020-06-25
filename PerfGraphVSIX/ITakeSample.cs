@@ -9,6 +9,6 @@ namespace PerfGraphVSIX
 {
     public interface ITakeSample
     {
-        Task DoSampleAsync(MeasurementHolder measurementHolder, string descriptionOverride = "");
+        Task DoSampleAsync(MeasurementHolder measurementHolder, bool DoForceGC, string descriptionOverride = "");
     }
 }

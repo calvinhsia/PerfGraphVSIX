@@ -107,7 +107,7 @@ Language:         Language Neutral
                         await resultTask;
                     }
 
-                    var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}");
+                    var res = await measurementHolder.TakeMeasurementAsync($"Iter {iteration + 1,3}/{stressUtilOptions.NumIterations}", DoForceGC: true);
                     stressUtilOptions.logger.LogMessage(res);
                     stressUtilOptions.testContext.Properties[PropNameCurrentIteration] = (int)(stressUtilOptions.testContext.Properties[PropNameCurrentIteration]) + 1;
                 }

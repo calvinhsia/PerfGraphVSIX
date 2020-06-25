@@ -111,28 +111,6 @@ namespace PerfGraphVSIX
             ComponentModel = (await this.GetServiceAsync(typeof(SComponentModel))) as IComponentModel;
             await TaskScheduler.Default;
             _ = DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
-            //            await InitializeToolWindowAsync(typeof(PerfGraphToolWindow), id: 0, cancellationToken: cancellationToken);
-
-            // Get the instance number 0 of this tool window. This window is single instance so this instance
-            // is actually the only one.
-            // The last flag is set to true so that if the tool window does not exists it will be created.
-            var task = this.JoinableTaskFactory.RunAsync(async delegate
-             {
-                 //var cts = new CancellationToken();
-                 //await this.JoinableTaskFactory.SwitchToMainThreadAsync();
-                 //ToolWindowPane window = await this.ShowToolWindowAsync(typeof(PerfGraphToolWindow), id: 0, create: true, cancellationToken: cts);
-                 //if ((null == window) || (null == window.Frame))
-                 //{
-                 //    throw new NotSupportedException("Cannot create tool window");
-                 //}
-
-                 //IVsWindowFrame windowFrame = (IVsWindowFrame)window.Frame;
-                 //fDidShowToolWindow = true;
-                 //Microsoft.VisualStudio.ErrorHandler.ThrowOnFailure(windowFrame.Show());
-             });
-
         }
-
-
     }
 }

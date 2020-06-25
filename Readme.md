@@ -1,9 +1,16 @@
 # PerfGraphVSIX
 
-
 A Visual Studio extension that allows rapid prototyping: developing/running code inside the same instance of VS,
 accessing services from that instance of VS
 Code Samples of memory leaks, including Event Handlers (both normal event handlers and WPF RoutedEventHandlers), CancellationTokenSource leaks
+
+To use to show a graph of the current instance memory use:
+	On the Options Pane, choose UpdateInterval to e.g. 1000, to take a measurement every 1000 milliseconds
+	Choose the counters you want to measure. Typically GCBytesInAllHeaps (managed memory) and ProcessorPrivateBytes (native and managed)
+	Then choose the Graph Pane to watch the memory consumption of VS.
+	(if you open/close multiple instances of VS other than the current one, you may get an InvalidOperationException. This is a limitation of
+	Performance Counters. You can just reselect the desired counters if you like)
+
 
 You can:
 Develop and run code in the VS instance from within the same VS process with:
@@ -20,6 +27,7 @@ Develop and run code in the VS instance from within the same VS process with:
 Stress Testing for leak detection is also supported:
 1. Create automatic tests that are run from the Test Window or from within the current instance of VS
 2. These tests automatically iterate code, take memory measurements, take 2 dumps to compare object counts between iterations for leak detection
+
 
 
 Install from https://github.com/calvinhsia/PerfGraphVSIX/releases/latest

@@ -67,6 +67,8 @@
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
         /// </summary>
         public int UpdateInterval { get { return _UpdateInterval; } set { _UpdateInterval = value; RaisePropChanged(); } }
+
+        public bool DoFullGCPerSample { get; set; } = false;
         public int NumDataPoints { get; set; } = 100;
 
         public bool SetMaxGraphTo100 { get; set; } = false;
@@ -216,7 +218,7 @@
                       ThreadHelper.JoinableTaskFactory.Run(async () =>
                           {
                               await WaitForInitializationCompleteAsync();
-                              await DoSampleAsync(measurementHolderInteractiveUser, "Manual");
+                              await DoSampleAsync(measurementHolderInteractiveUser, DoForceGC: true, descriptionOverride: "Manual");
                           }
                       );
                   };
@@ -403,7 +405,7 @@
                 {
                     while (!_ctsPcounter.Token.IsCancellationRequested && UpdateInterval > 0)
                     {
-                        await DoSampleAsync(measurementHolderInteractiveUser);
+                        await DoSampleAsync(measurementHolderInteractiveUser, DoForceGC: DoFullGCPerSample);
                         await Task.Delay(TimeSpan.FromMilliseconds(UpdateInterval), _ctsPcounter.Token);
                     }
                 }
@@ -417,21 +419,19 @@
 
         //used for interactive user, not for iteration tests
         MeasurementHolder measurementHolderInteractiveUser;
-        public async Task DoSampleAsync(MeasurementHolder measurementHolder, string descriptionOverride = "")
+        public async Task DoSampleAsync(MeasurementHolder measurementHolder, bool DoForceGC, string descriptionOverride = "")
         {
+            var res = string.Empty;
             if (measurementHolder == null)
             {
                 measurementHolder = measurementHolderInteractiveUser;
             }
             try
             {
-                var res = string.Empty;
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                DoGC();
                 await TaskScheduler.Default;
                 try
                 {
-                    res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, IsForInteractiveGraph: UpdateInterval != 0);
+                    res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, DoForceGC, IsForInteractiveGraph: UpdateInterval != 0);
                     await AddDataPointsAsync(measurementHolder);
                 }
                 catch (Exception ex)
@@ -483,7 +483,10 @@
                 }
             }
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            DoGC();// do a GC.Collect on main thread for every sample (the graphing uses memory)
+            if (DoFullGCPerSample)
+            {
+                DoGC();// do a GC.Collect on main thread for every sample (the graphing uses memory)
+            }
             // this needs to be done on UI thread
             _chart.Series.Clear();
             _chart.ChartAreas.Clear();
