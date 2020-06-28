@@ -102,7 +102,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""25"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <Label Content=""Refresh Rate""/>
-            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child proces. UI won't update UI if tree is same"" />
+            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child process. UI won't update UI if tree is same. 0 means don't refresh"" />
 <!--            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
             <CheckBox Margin=""15,0,0,10"" Content=""Show Memory Changes too""  IsChecked=""{{Binding ShowMemChangestoo}}"" 
@@ -132,7 +132,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     while (!ctsCancelMonitor.IsCancellationRequested)
                     {
                         await TaskScheduler.Default;
-                        if (Monitor)
+                        if (Monitor && RefreshRate > 0)
                         {
                             var processEx = new ProcessEx();
                             var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
