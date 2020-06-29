@@ -126,7 +126,6 @@
             g_PerfGraphToolWindowControl = this;
             try
             {
-
                 LogMessage($"Starting {TipString}");
                 var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
                 var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime;
@@ -189,8 +188,13 @@
 
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
-                    await Task.Yield();
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    if (PerfGraphToolWindowCommand.Instance.g_dte == null) // if the toolwindow was already opened, this is set in InitializeToolWindowAsync. 1st time opening set it here
+                    {
+                        EnvDTE.DTE dte = (EnvDTE.DTE)await PerfGraphToolWindowCommand.Instance.package.GetServiceAsync(typeof(EnvDTE.DTE));
+                        PerfGraphToolWindowCommand.Instance.g_dte = dte; // ?? throw new InvalidOperationException(nameof(dte));
+                    }
                     _objTracker = new ObjTracker(this);
                     _editorTracker = PerfGraphToolWindowPackage.ComponentModel.GetService<EditorTracker>();
 

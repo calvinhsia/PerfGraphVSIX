@@ -410,6 +410,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             IntPtr handleToSnapshot = IntPtr.Zero;
             try
             {
+                /*Note: pids are re-used, leading to misleading results. e.g. the winlogon.exe process is parented by a PID that is reused for ServiceHub
+                 * This will show ServiceHub having a subtree of WinLogon and all it's descendents
+                 */
                 PROCESSENTRY32 procEntry = new PROCESSENTRY32();
                 procEntry.dwSize = (UInt32)Marshal.SizeOf(typeof(PROCESSENTRY32));
                 handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process, 0);
