@@ -45,7 +45,7 @@ namespace MyCodeToExecute
             }
         }
 
-        public double RefreshRate { get; set; } = 1;
+        public double RefreshRate { get; set; } = 1000;
         public bool Monitor { get; set; } = true;
         public bool ShowMemChangestoo { get; set; } = true;
 
@@ -102,11 +102,12 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""25"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <Label Content=""Refresh Rate""/>
-            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""Seconds. Refresh means check child proces. UI won't update UI if tree is same"" />
-            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
+            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child process. UI won't update UI if tree is same. 0 means don't refresh"" />
+<!--            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
             <CheckBox Margin=""15,0,0,10"" Content=""Show Memory Changes too""  IsChecked=""{{Binding ShowMemChangestoo}}"" 
                 ToolTip=""Update the tree for memory changes. The bouncing ball will be jerky on UI updates""/>
+-->
         </StackPanel>
         <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
     </Grid>
@@ -131,7 +132,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     while (!ctsCancelMonitor.IsCancellationRequested)
                     {
                         await TaskScheduler.Default;
-                        if (Monitor)
+                        if (Monitor && RefreshRate > 0)
                         {
                             var processEx = new ProcessEx();
                             var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
@@ -143,6 +144,12 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                             });
                             if (curHash != hashLastTree)
                             {
+                                // get the mem measurements on background thread
+                                processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                                 {
+                                     _ = node.MemSize.Value; // instantiate lazy
+                                     return true;
+                                 });
                                 dtlastTree = DateTime.Now;
                                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                                 childProcTree.Items.Clear();
@@ -156,7 +163,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                             }
                         }
                         //_logger.LogMessage("in loop");
-                        await Task.Delay(TimeSpan.FromSeconds(RefreshRate), ctsCancelMonitor.Token);
+                        await Task.Delay(TimeSpan.FromMilliseconds(RefreshRate), ctsCancelMonitor.Token);
                     }
                 }
                 catch (OperationCanceledException)
@@ -186,20 +193,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     // each has a Conhost.exe child proc https://www.howtogeek.com/howto/4996/what-is-conhost.exe-and-why-is-it-running/
                     if (node.ProcEntry.szExeFile != "conhost.exe") // https://devdiv.visualstudio.com/DevDiv/_workitems/edit/1141094
                     {
-                        long memsize = 0;
-                        try
-                        {
-                            var proc = Process.GetProcessById(node.procId);
-                            memsize = proc.PrivateMemorySize64;
-                        }
-                        catch (ArgumentException) // process is not running
-                        {
-
-                        }
-                        catch(InvalidOperationException) // System.InvalidOperationException: Process has exited, so the requested information is not available.
-                        {
-
-                        }
                         var spData = new StackPanel() { Orientation = Orientation.Horizontal };
                         var tbThrds = new TextBlock()
                         {
@@ -210,7 +203,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                         spData.Children.Add(tbThrds);
                         var tbMem = new TextBlock()
                         {
-                            Text = $"Mem={memsize,12:n0}",
+                            Text = $"Mem={node.MemSize.Value,12:n0}",
                             Margin = new Thickness(3, 0, 0, 0),
                             Background = Brushes.LightSalmon
                         };
@@ -322,10 +315,27 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             public ProcNode(PROCESSENTRY32 procEntry)
             {
                 this.ProcEntry = procEntry;
+                this.MemSize = new Lazy<long>(() =>
+                {
+                    var memsize = 0L;
+                    try
+                    {
+                        var proc = Process.GetProcessById(procId);
+                        memsize = proc.PrivateMemorySize64;
+                    }
+                    catch (ArgumentException) // process is not running
+                    {
+                    }
+                    catch (InvalidOperationException) // System.InvalidOperationException: Process has exited, so the requested information is not available.
+                    {
+                    }
+                    return memsize;
+                });
             }
 
             public PROCESSENTRY32 ProcEntry;
 
+            public Lazy<long> MemSize;
             public int procId { get { return ProcEntry.th32ProcessID; } }
             public int ParentProcId { get { return ProcEntry.th32ParentProcessID; } }
             public List<ProcNode> Children;
@@ -400,6 +410,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             IntPtr handleToSnapshot = IntPtr.Zero;
             try
             {
+                /*Note: pids are re-used, leading to misleading results. e.g. the winlogon.exe process is parented by a PID that is reused for ServiceHub
+                 * This will show ServiceHub having a subtree of WinLogon and all it's descendents
+                 */
                 PROCESSENTRY32 procEntry = new PROCESSENTRY32();
                 procEntry.dwSize = (UInt32)Marshal.SizeOf(typeof(PROCESSENTRY32));
                 handleToSnapshot = CreateToolhelp32Snapshot((uint)SnapshotFlags.Process, 0);

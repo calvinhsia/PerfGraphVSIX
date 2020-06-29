@@ -82,8 +82,8 @@ namespace PerfGraphVSIX
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             EnvDTE.DTE dte = (EnvDTE.DTE)await GetServiceAsync(typeof(EnvDTE.DTE));
-            
-            PerfGraphToolWindowCommand.Instance.g_dte = dte ?? throw new InvalidOperationException(nameof(dte));
+
+            PerfGraphToolWindowCommand.Instance.g_dte = dte;
 
             return "foo";
         }
