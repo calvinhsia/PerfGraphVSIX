@@ -126,7 +126,9 @@
             g_PerfGraphToolWindowControl = this;
             try
             {
+#if DEBUG
                 LogMessage($"Starting {TipString}");
+#endif
                 var tspanDesiredLeaseLifetime = TimeSpan.FromSeconds(2);
                 var oldval = System.Runtime.Remoting.Lifetime.LifetimeServices.LeaseTime;
                 if (oldval == tspanDesiredLeaseLifetime)
@@ -289,8 +291,9 @@
                     //await Task.Delay(TimeSpan.FromSeconds(15));// delay samples til VS started
                     await ResetPerfCounterMonitorAsync();
                 });
+#if DEBUG
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
-
+#endif
                 Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject += (o, e) =>
                 {
                     Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
