@@ -49,7 +49,7 @@ namespace Microsoft.Test.Stress
         /// and reported as part of the stress run. The default value of null disables the functionality. Example: "Microsoft\.Build\..*"
         /// </summary>
         public string TypesToReportStatisticsOn = null;
-        
+
         /// <summary>
         /// At the end of each iteration, monitor perf counters til quiet for measurement
         /// </summary>
@@ -214,7 +214,8 @@ namespace Microsoft.Test.Stress
             var xmlSerializer = new XmlSerializer(typeof(StressUtilOptions));
             using (var sr = new StreamReader(fileNameOptions))
             {
-                fileOptions = (StressUtilOptions)xmlSerializer.Deserialize(sr);
+                var xmlReader = XmlReader.Create(sr, new XmlReaderSettings() { XmlResolver = null }); // https://devdiv.visualstudio.com/DevDiv/_workitems/edit/1041264
+                fileOptions = (StressUtilOptions)xmlSerializer.Deserialize(xmlReader);
             }
             // the file settings override the passed in values, if any
             PerfCounterOverrideSettings = fileOptions.PerfCounterOverrideSettings;
@@ -225,7 +226,7 @@ namespace Microsoft.Test.Stress
             {
                 if (mem is FieldInfo fldInfo)
                 {
-                    if (!exemptionFromOverrides.Contains(fldInfo.Name+","))
+                    if (!exemptionFromOverrides.Contains(fldInfo.Name + ","))
                     {
                         var newval = fldInfo.GetValue(fileOptions);
                         //                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");
