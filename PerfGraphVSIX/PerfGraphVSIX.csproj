@@ -165,6 +165,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="CodeSamples\VSDemos\RunCodeIn64Bit.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Compile Include="UserControls\CodeSamples.xaml.cs">
       <DependentUpon>CodeSamples.xaml</DependentUpon>
     </Compile>
