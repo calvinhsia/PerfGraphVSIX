@@ -1,7 +1,7 @@
 ﻿//Desc: Run code in 64 bit assembly
 //Desc: Creates a 64 bit assembly that calls the code in a 32 bit asm and runs it as 64 bit
 //Desc: Example: some code doesn't work in 32 bit assemblies (like taking a dump of a 64 bit process from 32 bit)
-//Include: ..\Util\MyCodeBaseClass.cs
+//Include: ..\Util\LeakBaseClass.cs
 
 using System;
 using System.Threading;
@@ -62,7 +62,8 @@ namespace MyCodeToExecute
                     outputLogFile, "Executing from 32 bit via reflection", 32, true });
 
                 // Or we can generate a 64 bit exe and run it
-                var addDir = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), "PublicAssemblies");
+                var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+                var addDir = Path.Combine(vsRoot, "PublicAssemblies") + ";" + Path.Combine(vsRoot, "PrivateAssemblies");
 
                 // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
                 var asm64BitFile = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
@@ -72,8 +73,8 @@ namespace MyCodeToExecute
                         asm64BitFile,
                         PortableExecutableKinds.PE32Plus,
                         ImageFileMachine.AMD64,
-                        AdditionalAssemblyPath: addDir, // Microsoft.VisualStudio.Shell.Interop
-                        logOutput: false
+                        AdditionalAssemblyPaths: addDir, // Microsoft.VisualStudio.Shell.Interop
+                        logOutput: false // for diagnostics
                     );
                 var args = $@"""{Assembly.GetExecutingAssembly().Location
                     }"" {nameof(MyClassThatRunsIn32and64bit)} {
@@ -81,7 +82,7 @@ namespace MyCodeToExecute
                 var p64 = Process.Start(
                     asm64BitFile,
                     args);
-                p64.WaitForExit(10 * 1000);
+                p64.WaitForExit(30 * 1000);
                 File.Delete(asm64BitFile);
                 var result = File.ReadAllText(outputLogFile);
                 _logger.LogMessage(result);
@@ -97,7 +98,7 @@ namespace MyCodeToExecute
     /// </summary>
     internal class MyClassThatRunsIn32and64bit
     {
-        // arg1 is a file to write our results, arg2 and arg3 show we can pass simple types.
+        // arg1 is a file to write our results, arg2 and arg3 show we can pass simple types. e.g. Pass the name of a named pipe.
         internal static void MyMainMethod(string outLogFile, string desc, int intarg, bool boolarg)
         {
             var sb = new StringBuilder();
@@ -105,7 +106,7 @@ namespace MyCodeToExecute
             {
                 sb.AppendLine($"\r\n  {desc} Executing {nameof(MyClassThatRunsIn32and64bit)}.{nameof(MyMainMethod)} Pid={Process.GetCurrentProcess().Id} {Process.GetCurrentProcess().MainModule.FileName}");
                 sb.AppendLine($"  IntPtr.Size = {IntPtr.Size} Intarg={intarg} BoolArg={boolarg}");
-                if (IntPtr.Size==8)
+                if (IntPtr.Size == 8)
                 {
                     sb.AppendLine("  We're in 64 bit land!!!");
                 }
@@ -113,6 +114,22 @@ namespace MyCodeToExecute
                 {
                     sb.AppendLine("  nothing exciting: 32 bit land");
                 }
+                int numAllocated = 0;
+                var lst = new List<BigClass>();
+                try
+                {
+                    while (true)
+                    {
+                        lst.Add(new BigClass());
+                        numAllocated++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lst = null;
+                    sb.AppendLine($"Excption: {ex.Message} after allocating {numAllocated} gigs");
+                }
+//                sb.AppendLine($"Allocated {numAllocated} Gigs");
             }
             catch (Exception ex)
             {
@@ -120,28 +137,39 @@ namespace MyCodeToExecute
             }
             File.AppendAllText(outLogFile, sb.ToString());
         }
+        class BigClass
+        {
+            byte[] arr = new byte[1024 * 1024 * 1024];
+        }
     }
-    /// <summary>
-    /// We want to create an assembly that will be loaded in an exe (perhaps 64 bit) that will load and call a target method (could be static or non-static, public, non-public)
-    /// Taking a process dump of a 64 bit process from a 32 bit process doesn't work. Even from 32 bit task manager.
-    /// This code emits an Asm that can be made into a 64 bit executable
-    /// The goal is to call a static method in 32 bit PerfWatson in a static class MemoryDumpHelper with the signature:
-    ///           public static void CollectDump(int procid, string pathOutput, bool FullHeap)
-    /// The generated asm can be saved as an exe on disk, then started from 32 bit code. 
-    ///  A little wrinkle: in order to enumerate the types in the DLL, the Appdomain AsemblyResolver needs to find the dependencies
-    /// The 64 bit process will then load the 32 bit PW IL (using the assembly resolver, then invoke the method via reflection)
-    /// the parameters are pased to the 64 bit exe on the commandline.
-    /// This code logs output to the output file (which is the dump file when called with logging false)
-    /// The code generates a static Main (string[] args) method.
-    ///  see https://github.com/calvinhsia/CreateDump
-    /// </summary>
     public class AssemblyCreator
     {
+        /// <summary>
+        /// We want to create an assembly that will be loaded in an exe (perhaps 64 bit) that will load and call a target method (could be static or non-static, public, non-public)
+        /// Taking a process dump of a 64 bit process from a 32 bit process doesn't work. Even from 32 bit task manager.
+        /// This code emits an Asm that can be made into a 64 bit executable
+        /// The goal is to call a static method in 32 bit PerfWatson in a static class MemoryDumpHelper with the signature:
+        ///           public static void CollectDump(int procid, string pathOutput, bool FullHeap)
+        /// The generated asm can be saved as an exe on disk, then started from 32 bit code. 
+        ///  A little wrinkle: in order to enumerate the types in the DLL, the Appdomain AsemblyResolver needs to find the dependencies
+        /// The 64 bit process will then load the 32 bit PW IL (using the assembly resolver, then invoke the method via reflection)
+        /// the parameters are pased to the 64 bit exe on the commandline.
+        /// This code logs output to the output file (which is the dump file when called with logging false)
+        /// The code generates a static Main (string[] args) method.
+        ///  see https://github.com/calvinhsia/CreateDump
+        /// </summary>
+        /// <param name="targPEFile"></param>
+        /// <param name="portableExecutableKinds"></param>
+        /// <param name="imageFileMachine"></param>
+        /// <param name="AdditionalAssemblyPaths">a single full path or ';' separted fullpaths for additional dirs to load dependencies</param>
+        /// <param name="logOutput"></param>
+        /// <param name="CauseException"></param>
+        /// <returns></returns>
         public Type CreateAssembly(
                 string targPEFile,
                 PortableExecutableKinds portableExecutableKinds,
                 ImageFileMachine imageFileMachine,
-                string AdditionalAssemblyPath,
+                string AdditionalAssemblyPaths,
                 bool logOutput = false,
                 bool CauseException = false
             )
@@ -156,11 +184,11 @@ namespace MyCodeToExecute
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(aName.Name + ".exe");
             var typeBuilder = moduleBuilder.DefineType(typeName, TypeAttributes.Public);
             var statTarg32bitDll = typeBuilder.DefineField("targ32bitDll", typeof(string), FieldAttributes.Static);
-            var statAddDir = typeBuilder.DefineField("addDir", typeof(string), FieldAttributes.Static);
+            var statAddDirs = typeBuilder.DefineField("addDirs", typeof(string), FieldAttributes.Static);
             var statStringBuilder = typeBuilder.DefineField("_StringBuilder", typeof(StringBuilder), FieldAttributes.Static);
             var statLogOutputFile = typeBuilder.DefineField("_logOutputFile", typeof(string), FieldAttributes.Static);
             MethodBuilder AsmResolveMethodBuilder = null;
-            if (!string.IsNullOrEmpty(AdditionalAssemblyPath))
+            if (!string.IsNullOrEmpty(AdditionalAssemblyPaths))
             {
                 AsmResolveMethodBuilder = typeBuilder.DefineMethod(
                     "CurrentDomain_AssemblyResolve",
@@ -170,30 +198,13 @@ namespace MyCodeToExecute
                     );
                 {
                     var il = AsmResolveMethodBuilder.GetILGenerator();
-                    var locAsmRetValue = il.DeclareLocal(typeof(Assembly));//0 // retvalue
-                    var locStrAsmAddPath = il.DeclareLocal(typeof(string)); //1 var privAsmDir = Path.Combine(Path.GetDirectoryName(targ32bitDll), "PrivateAssemblies");
-                    var locStrRequestAsmName = il.DeclareLocal(typeof(string)); //2 requestName =Microsoft.VisualStudio.Telemetry
+                    var locAsm = il.DeclareLocal(typeof(Assembly));
+                    var locStrRequestAsmName = il.DeclareLocal(typeof(string));
+                    var locStrArrSplit = il.DeclareLocal(typeof(string[]));
+                    var locStrTemp = il.DeclareLocal(typeof(string));
+                    var locLoopIndex = il.DeclareLocal(typeof(int));
 
-                    if (logOutput)
-                    {
-                        il.Emit(OpCodes.Ldsfld, statStringBuilder);
-                        il.Emit(OpCodes.Ldstr, "InResolveMethod");
-                        il.Emit(OpCodes.Callvirt, typeof(StringBuilder).GetMethod("AppendLine", new Type[] { typeof(string) }));
-                        il.Emit(OpCodes.Pop);
-                    }
-
-                    il.Emit(OpCodes.Ldsfld, statAddDir);
-                    il.Emit(OpCodes.Stloc, locStrAsmAddPath);
-
-                    if (logOutput)
-                    {
-                        il.Emit(OpCodes.Ldsfld, statStringBuilder);
-                        il.Emit(OpCodes.Ldloc, locStrAsmAddPath);
-                        il.Emit(OpCodes.Callvirt, typeof(StringBuilder).GetMethod("AppendLine", new Type[] { typeof(string) }));
-                        il.Emit(OpCodes.Pop);
-                    }
-
-                    //var requestName = args.Name.Substring(0, args.Name.IndexOf(",")); // Microsoft.VisualStudio.Telemetry, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+                    //var requestName = args.Name.Substring(0, args.Name.IndexOf(",")) + ".dll"; // Microsoft.VisualStudio.Telemetry, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
                     il.Emit(OpCodes.Ldarg_1);
                     il.Emit(OpCodes.Callvirt, typeof(ResolveEventArgs).GetProperty("Name").GetMethod); // Microsoft.VisualStudio.Telemetry, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
                     il.Emit(OpCodes.Ldc_I4_0);
@@ -202,24 +213,81 @@ namespace MyCodeToExecute
                     il.Emit(OpCodes.Ldstr, ",");
                     il.Emit(OpCodes.Callvirt, typeof(string).GetMethod("IndexOf", new Type[] { typeof(string) }));
                     il.Emit(OpCodes.Callvirt, typeof(string).GetMethod("Substring", new Type[] { typeof(Int32), typeof(Int32) }));
+                    il.Emit(OpCodes.Ldstr, ".dll");
+                    il.Emit(OpCodes.Call, typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }));
                     il.Emit(OpCodes.Stloc, locStrRequestAsmName); // Microsoft.VisualStudio.Telemetry
 
                     if (logOutput)
                     {
                         il.Emit(OpCodes.Ldsfld, statStringBuilder);
+                        il.Emit(OpCodes.Ldstr, "Resolve Request ");
+                        il.Emit(OpCodes.Callvirt, typeof(StringBuilder).GetMethod("Append", new Type[] { typeof(string) }));
                         il.Emit(OpCodes.Ldloc, locStrRequestAsmName);
                         il.Emit(OpCodes.Callvirt, typeof(StringBuilder).GetMethod("AppendLine", new Type[] { typeof(string) }));
                         il.Emit(OpCodes.Pop);
                     }
 
-                    //asm = Assembly.LoadFrom(Path.Combine(privAsmDir, $"{requestName}.dll"));
-                    il.Emit(OpCodes.Ldloc, locStrAsmAddPath);
-                    il.Emit(OpCodes.Ldloc, locStrRequestAsmName);
-                    il.Emit(OpCodes.Ldstr, ".dll");
-                    il.Emit(OpCodes.Call, typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }));
-                    il.Emit(OpCodes.Call, typeof(Path).GetMethod("Combine", new Type[] { typeof(string), typeof(string) }));
-                    il.Emit(OpCodes.Call, typeof(Assembly).GetMethod("LoadFrom", new Type[] { typeof(string) }));
+                    // 
 
+                    // var arr = _additionalDirs.Split(new[] { ';' })
+                    il.Emit(OpCodes.Ldsfld, statAddDirs);
+                    il.Emit(OpCodes.Ldc_I4_1);
+                    il.Emit(OpCodes.Newarr, typeof(Char));
+                    il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Emit(OpCodes.Ldc_I4, 59); // ';'
+                    il.Emit(OpCodes.Stelem_I2);
+                    il.Emit(OpCodes.Callvirt, typeof(string).GetMethod("Split", new Type[] { typeof(char[]) }));
+                    il.Emit(OpCodes.Stloc, locStrArrSplit);
+
+
+                    il.Emit(OpCodes.Ldc_I4_0);
+                    il.Emit(OpCodes.Stloc, locLoopIndex);
+                    var labLoopIndex = il.DefineLabel();
+                    var labStartLoop = il.DefineLabel();
+                    {
+                        il.MarkLabel(labStartLoop);
+                        il.Emit(OpCodes.Ldloc, locStrArrSplit);
+                        il.Emit(OpCodes.Ldloc, locLoopIndex);
+                        il.Emit(OpCodes.Ldelem_Ref);
+                        il.Emit(OpCodes.Ldloc, locStrRequestAsmName);
+                        il.Emit(OpCodes.Call, typeof(Path).GetMethod("Combine", new Type[] { typeof(string), typeof(string) }));
+                        il.Emit(OpCodes.Stloc, locStrTemp);
+
+                        if (logOutput)
+                        {
+                            il.Emit(OpCodes.Ldsfld, statStringBuilder);
+                            il.Emit(OpCodes.Ldloc, locStrTemp);
+                            il.Emit(OpCodes.Callvirt, typeof(StringBuilder).GetMethod("AppendLine", new Type[] { typeof(string) }));
+                            il.Emit(OpCodes.Pop);
+                        }
+
+                        il.Emit(OpCodes.Ldloc, locStrTemp);
+                        il.Emit(OpCodes.Call, typeof(File).GetMethod("Exists", new Type[] { typeof(string) }));
+
+                        var labFileNotExist = il.DefineLabel();
+                        il.Emit(OpCodes.Brfalse, labFileNotExist);
+                        {
+                            il.Emit(OpCodes.Ldloc, locStrTemp);
+                            il.Emit(OpCodes.Call, typeof(Assembly).GetMethod("LoadFrom", new Type[] { typeof(string) }));
+                            il.Emit(OpCodes.Ret);
+                        }
+                        il.MarkLabel(labFileNotExist);
+
+                        il.Emit(OpCodes.Ldloc, locLoopIndex);
+                        il.Emit(OpCodes.Ldc_I4_1);
+                        il.Emit(OpCodes.Add);
+                        il.Emit(OpCodes.Stloc, locLoopIndex);
+                    }
+                    il.MarkLabel(labLoopIndex);
+                    il.Emit(OpCodes.Ldloc, locLoopIndex);
+                    il.Emit(OpCodes.Ldloc, locStrArrSplit);
+                    il.Emit(OpCodes.Ldlen);
+                    il.Emit(OpCodes.Conv_I4);
+                    il.Emit(OpCodes.Blt, labStartLoop);
+
+                    // return asm
+                    il.Emit(OpCodes.Ldloc, locAsm);
                     il.Emit(OpCodes.Ret);
                 }
             }
@@ -239,19 +307,19 @@ namespace MyCodeToExecute
             {
                 var il = mainMethodBuilder.GetILGenerator();
                 var labEnd = il.DefineLabel();
-                var locStrTemp = il.DeclareLocal(typeof(string));//0
-                var locdtNow = il.DeclareLocal(typeof(DateTime));//1
-                var locAsmTarg32 = il.DeclareLocal(typeof(Assembly)); //2 targ32bitasm
-                var locTypeArr = il.DeclareLocal(typeof(Type[])); //3 
-                var locIntLoopIndex = il.DeclareLocal(typeof(Int32)); // 4
-                var locTypeCurrent = il.DeclareLocal(typeof(Type)); // 5 // as we iterate types
-                var locStrTypeName = il.DeclareLocal(typeof(string)); // 6 // string typename in loop
-                var locMIMethod = il.DeclareLocal(typeof(MethodInfo)); // 7 method
-                var locObjInstance = il.DeclareLocal(typeof(object));// 8 Activator.CreateInstance
-                var locObjArrArgsToPass = il.DeclareLocal(typeof(object[])); // 9 argsToPass
-                var locIntParmLoopIndex = il.DeclareLocal(typeof(Int32)); // 11 parm loop index
-                var locParameterInfoArr = il.DeclareLocal(typeof(ParameterInfo[])); // 12 ParameterInfo[]
-                var locStrParameterName = il.DeclareLocal(typeof(string));//13 parametertypename
+                var locStrTemp = il.DeclareLocal(typeof(string));
+                var locdtNow = il.DeclareLocal(typeof(DateTime));
+                var locAsmTarg32 = il.DeclareLocal(typeof(Assembly));
+                var locTypeArr = il.DeclareLocal(typeof(Type[]));
+                var locIntLoopIndex = il.DeclareLocal(typeof(Int32));
+                var locTypeCurrent = il.DeclareLocal(typeof(Type));
+                var locStrTypeName = il.DeclareLocal(typeof(string));
+                var locMIMethod = il.DeclareLocal(typeof(MethodInfo));
+                var locObjInstance = il.DeclareLocal(typeof(object));
+                var locObjArrArgsToPass = il.DeclareLocal(typeof(object[]));
+                var locIntParmLoopIndex = il.DeclareLocal(typeof(Int32));
+                var locParameterInfoArr = il.DeclareLocal(typeof(ParameterInfo[]));
+                var locStrParameterName = il.DeclareLocal(typeof(string));
 
                 il.BeginExceptionBlock();
                 {
@@ -271,8 +339,8 @@ namespace MyCodeToExecute
                     il.Emit(OpCodes.Callvirt, typeof(StringBuilder).GetMethod("AppendLine", new Type[] { typeof(string) }));
                     il.Emit(OpCodes.Pop);
 
-                    il.Emit(OpCodes.Ldstr, AdditionalAssemblyPath);
-                    il.Emit(OpCodes.Stsfld, statAddDir);
+                    il.Emit(OpCodes.Ldstr, AdditionalAssemblyPaths);
+                    il.Emit(OpCodes.Stsfld, statAddDirs);
 
                     if (CauseException)
                     {
