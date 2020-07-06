@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Desc: A tab item that can be added to the PerfGraph ToolWindow TabControl.
+using System;
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;

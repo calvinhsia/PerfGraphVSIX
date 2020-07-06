@@ -25,14 +25,18 @@ namespace MyCodeToExecute
         class BigStuffWithLongNameSoICanSeeItBetter : IDisposable
         {
             IntPtr alloc;
+            IntPtr alloc2;
+
             public BigStuffWithLongNameSoICanSeeItBetter(int i)
             {
                 var hp = Heap.GetProcessHeap();
-                alloc = Heap.HeapAlloc(hp, 0, 1024 * 200);
+                alloc = Heap.HeapAlloc(hp, 0, 1024 * 1024);
+                alloc2 = Marshal.AllocHGlobal(1024 * 1024);
             }
             public void Dispose()
             {
                 Heap.HeapFree(Heap.GetProcessHeap(), 0, alloc);
+                Marshal.FreeHGlobal(alloc2);
             }
         }
 

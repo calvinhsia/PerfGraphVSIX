@@ -556,7 +556,7 @@
                 }
             }
             int nCntInstances = 0;
-            if (_objTracker != null)
+            if (_objTracker != null && DoFullGCPerSample) // GetCounts calls HasBeenClosedOrDisposed, which is very expensive and significantly slows down fast iterations. We'll only do it if we're also doing GC
             {
                 var (createdObjs, lstLeakedObjs) = _objTracker.GetCounts();
                 CreatedObjs.Clear();
