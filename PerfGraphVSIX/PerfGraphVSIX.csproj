@@ -168,7 +168,7 @@
     <Content Include="CodeSamples\VSDemos\RunCodeIn64Bit.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="CodeSamples\Util\CreateAsm.cs">
+    <Content Include="CodeSamples\Util\AssemblyCreator.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

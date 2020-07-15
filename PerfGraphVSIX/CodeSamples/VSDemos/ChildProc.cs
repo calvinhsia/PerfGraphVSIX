@@ -28,7 +28,6 @@ using System.IO;
 
 namespace MyCodeToExecute
 {
-
     public class MyClass : MyCodeBaseClass
     {
         public static async Task DoMain(object[] args)
@@ -120,63 +119,63 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
 
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                ChildProcTree childProcTree = new ChildProcTree();
-                try
-                {
-                    gridUser.Children.Clear();
-                    gridUser.Children.Add(childProcTree);
-                    int hashLastTree = 0;
-                    DateTime dtlastTree;
-                    while (!ctsCancelMonitor.IsCancellationRequested)
-                    {
-                        await TaskScheduler.Default;
-                        if (Monitor && RefreshRate > 0)
-                        {
-                            var processEx = new ProcessEx();
-                            var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
-                            var curHash = 0;
-                            processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
-                            {
-                                curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
-                                return true;
-                            });
-                            if (curHash != hashLastTree)
-                            {
-                                // get the mem measurements on background thread
-                                processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
-                                 {
-                                     _ = node.MemSize.Value; // instantiate lazy
-                                     return true;
-                                 });
-                                dtlastTree = DateTime.Now;
-                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                                childProcTree.Items.Clear();
-                                childProcTree.AddNodes(childProcTree, devenvTree);
-                                childProcTree.ToolTip = $"Refreshed {dtlastTree}";
-                                await TaskScheduler.Default;
-                                if (!ShowMemChangestoo)
-                                {
-                                    hashLastTree = curHash;
-                                }
-                            }
-                        }
-                        //_logger.LogMessage("in loop");
-                        await Task.Delay(TimeSpan.FromMilliseconds(RefreshRate), ctsCancelMonitor.Token);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogMessage(ex.ToString());
-                }
-                //_logger.LogMessage("Monitor done");
-                //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                //childProcTree.Background = Brushes.Cornsilk;
-            });
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+              {
+                  ChildProcTree childProcTree = new ChildProcTree();
+                  try
+                  {
+                      gridUser.Children.Clear();
+                      gridUser.Children.Add(childProcTree);
+                      int hashLastTree = 0;
+                      DateTime dtlastTree;
+                      while (!ctsCancelMonitor.IsCancellationRequested)
+                      {
+                          await TaskScheduler.Default;
+                          if (Monitor && RefreshRate > 0)
+                          {
+                              var processEx = new ProcessEx();
+                              var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                              var curHash = 0;
+                              processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                              {
+                                  curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
+                                  return true;
+                              });
+                              if (curHash != hashLastTree)
+                              {
+                                  // get the mem measurements on background thread
+                                  processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                                     {
+                                         _ = node.MemSize.Value; // instantiate lazy
+                                         return true;
+                                     });
+                                  dtlastTree = DateTime.Now;
+                                  await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                  childProcTree.Items.Clear();
+                                  childProcTree.AddNodes(childProcTree, devenvTree);
+                                  childProcTree.ToolTip = $"Refreshed {dtlastTree}";
+                                  await TaskScheduler.Default;
+                                  if (!ShowMemChangestoo)
+                                  {
+                                      hashLastTree = curHash;
+                                  }
+                              }
+                          }
+                          //_logger.LogMessage("in loop");
+                          await Task.Delay(TimeSpan.FromMilliseconds(RefreshRate), ctsCancelMonitor.Token);
+                      }
+                  }
+                  catch (OperationCanceledException)
+                  {
+                  }
+                  catch (Exception ex)
+                  {
+                      _logger.LogMessage(ex.ToString());
+                  }
+                  //_logger.LogMessage("Monitor done");
+                  //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                  //childProcTree.Background = Brushes.Cornsilk;
+              });
         }
 
         class ChildProcTree : TreeView
@@ -203,7 +202,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                         spData.Children.Add(tbThrds);
                         var tbMem = new TextBlock()
                         {
-                            Text = $"Mem={node.MemSize.Value,12:n0}",
+                            Text = $"Mem={node.MemSize.Value,12:n0} " + (node.Is64Bit ? "64" : "32"),
                             Margin = new Thickness(3, 0, 0, 0),
                             Background = Brushes.LightSalmon
                         };
@@ -322,6 +321,15 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     {
                         var proc = Process.GetProcessById(procId);
                         memsize = proc.PrivateMemorySize64;
+                        var IsRunningUnderWow64 = false;
+                        if (IsWow64Process(proc.Handle, ref IsRunningUnderWow64) && IsRunningUnderWow64)
+                        {
+                            this.Is64Bit= false;
+                        }
+                        else
+                        {
+                            this.Is64Bit = true;
+                        }
                     }
                     catch (ArgumentException) // process is not running
                     {
@@ -336,6 +344,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             public PROCESSENTRY32 ProcEntry;
 
             public Lazy<long> MemSize;
+            public bool Is64Bit = false; // must calc MemSize first!!
             public int procId { get { return ProcEntry.th32ProcessID; } }
             public int ParentProcId { get { return ProcEntry.th32ParentProcessID; } }
             public List<ProcNode> Children;
@@ -344,6 +353,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 return string.Format("{0} {1} {2}", procId, ParentProcId, ProcEntry.szExeFile);
             }
         }
+
+        [DllImport("Kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        public static extern bool IsWow64Process(IntPtr hProcess, ref bool IsrunningUnderWow64);
 
         [DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
         static extern IntPtr CreateToolhelp32Snapshot([In] UInt32 dwFlags, [In] UInt32 th32ProcessID);

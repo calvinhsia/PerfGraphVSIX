@@ -2,9 +2,9 @@
 //Desc: Creates a 64 bit assembly that calls the code in a 32 bit asm and runs it as 64 bit
 //Desc: Example: some code doesn't work in 32 bit assemblies (like taking a dump of a 64 bit process from 32 bit)
 //Desc: The code allocates as much memory as it can before throwing an OutOfMemoryException and shows the result.
-//Desc: on my 16G SurfaceBook with 25G Paging file, it allocates 2G in the 32 bit devenv process, and 35G in the 64 bit process. 
+//Desc: on my 16G SurfaceBook with 25G Paging file, it allocates 2G in the 32 bit devenv process, and 43G in the 64 bit process. 
 //Include: ..\Util\LeakBaseClass.cs
-//Include: ..\Util\CreateAsm.cs
+//Include: ..\Util\AssemblyCreator.cs
 
 using System;
 using System.Threading;
