@@ -77,8 +77,6 @@ namespace Fish
             WindowState = System.Windows.WindowState.Maximized;
             this.Loaded += (ol, el) =>
             {
-                this.Top = 0;
-                this.Left = 0;
                 try
                 {
                     // Make a namespace referring to our namespace and assembly
