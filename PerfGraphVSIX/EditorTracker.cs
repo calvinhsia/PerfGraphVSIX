@@ -97,7 +97,7 @@ namespace PerfGraphVSIX
         {
             try
             {
-                if (!_perfGraph.TrackTextViews)
+                if (_perfGraph == null || !_perfGraph.TrackTextViews)
                 {
                     return;
                 }

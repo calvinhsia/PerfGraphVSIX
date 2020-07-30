@@ -33,6 +33,13 @@ namespace MyCodeToExecute
             {
                 var ev = new TelemetryEvent("PerfGraphVSIX/Telemetry/EventFromCodeSample");
                 ev.Properties["localtime"] = DateTime.Now.ToString(); // to test what time zones
+                var testStr = new string('a', 1020) + "123456";
+                ev.Properties["longstring"] = testStr;// the 1 will show, followed by "..." = 1024
+                var telc = new TelemetryComplexProperty(new // complex	{"Strvalue":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                {
+                    Strvalue = testStr + testStr + testStr + testStr + "hi"
+                });
+                ev.Properties["complex"] = telc; // limit 60k: https://wiki.vsdata.io/event_telemetry_properties#limits
                 _logger.LogMessage($"Sending TelemetryEvent '{ev}'");
                 //
                 TelemetryService.DefaultSession.PostEvent(ev);

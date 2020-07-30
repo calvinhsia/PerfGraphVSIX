@@ -328,9 +328,12 @@ namespace Microsoft.Test.Stress
                                         IsApexTest={IsTestApexTest()}
                                         NumIterations = {NumIterations}
                                         DateTime = {DateTime.Now}
+                                        TimeZone = {TimeZone.CurrentTimeZone.StandardName} {TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now)}
                                         Sensitivity = {Sensitivity}
+                                        UserName = {Environment.GetEnvironmentVariable("USERNAME")}
                                         COMPUTERNAME = {Environment.GetEnvironmentVariable("COMPUTERNAME")}
-                                        CurProcId = {Process.GetCurrentProcess().Id}
+                                        CurProc = {Process.GetCurrentProcess().Id} {Process.GetCurrentProcess().ProcessName}
+                                        IntPtr.Size = {IntPtr.Size}
                                         CurDir = '{Environment.CurrentDirectory}'
                                         TestDeploymentDir = '{testContext.TestDeploymentDir}'
                                         TestRunDirectory = '{testContext.TestRunDirectory}'  
@@ -342,7 +345,10 @@ namespace Microsoft.Test.Stress
             VSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
             {
-                lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true);
+                if (lstPerfCountersToUse == null) // allow tests to override
+                {
+                    lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true);
+                }
             }
             else
             {

@@ -248,7 +248,6 @@ namespace Microsoft.Test.Stress
             return sBuilderMeasurementResult.ToString();
         }
 
-
         public void TakeRawMeasurement(StringBuilder sBuilderMeasurementResult = null, bool IsForInteractiveGraph = false)
         {
             foreach (var ctr in LstPerfCounterData.Where(pctr => IsForInteractiveGraph ? pctr.IsEnabledForGraph : pctr.IsEnabledForMeasurement))
@@ -258,7 +257,15 @@ namespace Microsoft.Test.Stress
                     lst = new List<uint>();
                     measurements[ctr.perfCounterType] = lst;
                 }
-                var pcValueAsFloat = ctr.ReadNextValue();
+                var pcValueAsFloat = 0f;
+                try
+                {
+                    pcValueAsFloat = ctr.ReadNextValue();
+                }
+                catch (InvalidOperationException ex) //From Eventlog:The Open procedure for service ".NETFramework" in DLL "C:\Windows\system32\mscoree.dll" failed with error code 5. Performance data for this service will not be available.
+                {
+                    Logger.LogMessage($"***EXCEPTION PerfCounter '{ex.Message}' {ctr} ProcId{ctr.ProcToMonitor.Id} StartTime= {ctr.ProcToMonitor.StartTime} HasExited={ctr.ProcToMonitor.HasExited}");
+                }
                 uint priorValue = 0;
                 if (lst.Count > 0)
                 {

@@ -204,7 +204,6 @@ namespace Microsoft.Test.Stress
             }
             return lst;
         }
-        
 
         public PerfCounterData(PerfCounterType perfCounterType, string perfCounterCategory, string perfCounterName, string perfCounterInstanceName)
         {
