@@ -15,6 +15,7 @@ namespace TestStressDll
     [TestClass]
     public class StressLeakyClass
     {
+        public static string didGetLeakException = "didGetLeakException";
         public TestContext TestContext { get; set; }
 
         class BigStuffWithLongNameSoICanSeeItBetter
@@ -39,9 +40,62 @@ namespace TestStressDll
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
+        public async Task StressLeakyBadPerfCounterCat()
+        {
+            int numIter = 11;
+            var stressOptions = new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = false };
+            stressOptions.lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true);
+            stressOptions.lstPerfCountersToUse[0].PerfCounterCategory = "foobar"; // an invalid category
+            try
+            {
+                await StressUtil.DoIterationsAsync(
+                    this,
+                    stressOptions
+                    );
+                _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
+            }
+            catch (LeakException ex)
+            {
+                TestContext.WriteLine($"Caught exception {ex.Message}");
+                var lstFileResults = (List<FileResultsData>)TestContext.Properties[StressUtil.PropNameListFileResults];
+                foreach (var result in lstFileResults.OrderBy(r => r.filename))
+                {
+                    TestContext.WriteLine($"File result {Path.GetFileName(result.filename)}");
+                }
+                var expectedFiles = new[] {
+                "Graph # Bytes in all Heaps.png",
+"Graph GDIHandles.png",
+"Graph Handle Count.png",
+"Graph Private Bytes.png",
+"Graph Thread Count.png",
+"Graph UserHandles.png",
+"Graph Virtual Bytes.png",
+"Measurements.txt",
+$"{TestContext.TestName}_{numIter}_0.dmp",
+$"{TestContext.TestName}_{numIter-4}_0.dmp",
+"StressTestLog.log",
+$"String and Type Count differences_{numIter}.txt",
+};
+                foreach (var itm in expectedFiles)
+                {
+                    Assert.IsTrue(lstFileResults.Where(r => Path.GetFileName(r.filename) == itm).Count() == 1, $"Expected File attachment {itm}");
+                }
+
+                var strAndTypeDiff = File.ReadAllText(lstFileResults.Where(r => Path.GetFileName(r.filename) == $"String and Type Count differences_{numIter}.txt").First().filename);
+                TestContext.WriteLine($"String and Type Count differences_{numIter}.txt");
+                TestContext.WriteLine(strAndTypeDiff);
+                Assert.IsTrue(strAndTypeDiff.Contains(nameof(BigStuffWithLongNameSoICanSeeItBetter)), $"Type must be in StringandTypeDiff");
+                Assert.IsTrue(strAndTypeDiff.Contains("leaking string"), $"'leaking string' must be in StringandTypeDiff");
+                Assert.AreEqual(expectedFiles.Length, lstFileResults.Count, $"# file results");
+                TestContext.Properties[didGetLeakException] = 1;
+                throw;
+            }
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeaky()
         {
-            string didGetLeakException = "didGetLeakException";
             if (TestContext.Properties.Contains(StressUtil.PropNameCurrentIteration) && // only do once, but after logger has been set
                 (int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]) == 0)
             {
@@ -80,11 +134,10 @@ namespace TestStressDll
 "Graph UserHandles.png",
 "Graph Virtual Bytes.png",
 "Measurements.txt",
-$"StressLeaky_{numIter}_0.dmp",
-$"StressLeaky_{numIter-4}_0.dmp",
+$"{TestContext.TestName}_{numIter}_0.dmp",
+$"{TestContext.TestName}_{numIter-4}_0.dmp",
 "StressTestLog.log",
 $"String and Type Count differences_{numIter}.txt",
-//MeasurementHolder._xmlResultFileName,
 };
                 foreach (var itm in expectedFiles)
                 {
@@ -94,10 +147,9 @@ $"String and Type Count differences_{numIter}.txt",
                 var strAndTypeDiff = File.ReadAllText(lstFileResults.Where(r => Path.GetFileName(r.filename) == $"String and Type Count differences_{numIter}.txt").First().filename);
                 TestContext.WriteLine($"String and Type Count differences_{numIter}.txt");
                 TestContext.WriteLine(strAndTypeDiff);
-                Assert.IsTrue(strAndTypeDiff.Contains(nameof(BigStuffWithLongNameSoICanSeeItBetter)),$"Type must be in StringandTypeDiff");
+                Assert.IsTrue(strAndTypeDiff.Contains(nameof(BigStuffWithLongNameSoICanSeeItBetter)), $"Type must be in StringandTypeDiff");
                 Assert.IsTrue(strAndTypeDiff.Contains("leaking string"), $"'leaking string' must be in StringandTypeDiff");
                 Assert.AreEqual(expectedFiles.Length, lstFileResults.Count, $"# file results");
-                //                Assert.IsTrue(TestContext.at)
                 TestContext.Properties[didGetLeakException] = 1;
                 throw;
             }
@@ -111,7 +163,6 @@ $"String and Type Count differences_{numIter}.txt",
             {
                 throw new LeakException("Throwing expected exception so test passes", null);
             }
-            string didGetLeakException = "didGetLeakException";
             int numIter = 11;
             try
             {
@@ -193,7 +244,6 @@ $"String and Type Count differences_{numIter}.txt",
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         public async Task StressLeakyLimitNumSamples()
         {
-            string didGetLeakException = "didGetLeakException";
             int numIter = 23;
             try
             {
@@ -234,7 +284,6 @@ $"String and Type Count differences_{numIter}.txt",
             {
                 throw new LeakException("Throwing expected exception so test passes", null);
             }
-            string prop_didGetLeakException = "didGetLeakException";
             string prop_countActions = "countActions";
             int numIter = 5;
             try
@@ -323,7 +372,7 @@ $"String and Type Count differences_{numIter}.txt",
             }
             catch (LeakException)
             {
-                TestContext.Properties[prop_didGetLeakException] = 1;
+                TestContext.Properties[didGetLeakException] = 1;
                 throw;
             }
 
