@@ -91,7 +91,7 @@ namespace Microsoft.Test.Stress
                     var nObjCount = 0;
                     var lstStrings = new List<ClrObject>();
                     var markedObjects = new HashSet<ulong>();
-                    foreach (var obj in runtime.Heap.EnumerateObjects())
+                    foreach (var obj in EnumerateRootedObjects(runtime.Heap))
                     {
                         var typ = obj.Type.Name;
                         if (typ == "System.String")
@@ -322,6 +322,48 @@ namespace Microsoft.Test.Stress
         {
             var args = $"/m \"{_DumpFileName}\"";
             System.Diagnostics.Process.Start(GetClrObjExplorerPath(), args);
+        }
+
+        /// <summary>
+        /// Enumerates all objects reachable from GC roots in the given heap. Each object is returned exactly once.
+        /// </summary>
+        private IEnumerable<ClrObject> EnumerateRootedObjects(ClrHeap heap)
+        {
+            HashSet<ulong> visitedObjects = new HashSet<ulong>();
+            Queue<ClrObject> objectQueue = new Queue<ClrObject>();
+
+            foreach (ClrRoot root in heap.EnumerateRoots())
+            {
+                if (!visitedObjects.Contains(root.Object))
+                {
+                    ClrObject rootObj = heap.GetObject(root.Object);
+                    objectQueue.Enqueue(rootObj);
+                    visitedObjects.Add(root.Object);
+                    if (rootObj.Type != null)
+                    {
+                        yield return rootObj;
+                    }
+
+                    while (objectQueue.Count > 0)
+                    {
+                        ClrObject obj = objectQueue.Dequeue();
+                        if (obj.IsNull || obj.Type == null)
+                        {
+                            continue;
+                        }
+                        // Follow all references.
+                        foreach (var reference in obj.EnumerateObjectReferences())
+                        {
+                            if (!reference.IsNull && !visitedObjects.Contains(reference.Address))
+                            {
+                                objectQueue.Enqueue(reference);
+                                visitedObjects.Add(reference.Address);
+                                yield return reference;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void CalculateTypeStatisticsPhase1(ClrObject rootObj, Regex typesToReportStatisticsOnRegex, HashSet<ulong> markedObjects, TypeStatistics typeStatistics)
