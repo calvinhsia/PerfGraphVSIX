@@ -264,7 +264,19 @@ namespace Microsoft.Test.Stress
                 }
                 catch (InvalidOperationException ex) //From Eventlog:The Open procedure for service ".NETFramework" in DLL "C:\Windows\system32\mscoree.dll" failed with error code 5. Performance data for this service will not be available.
                 {
-                    Logger.LogMessage($"***EXCEPTION PerfCounter '{ex.Message}' {ctr} ProcId{ctr.ProcToMonitor.Id} StartTime= {ctr.ProcToMonitor.StartTime} HasExited={ctr.ProcToMonitor.HasExited}");
+                    string clrFilePath = string.Empty;
+                    string clrFileVersion = string.Empty;
+                    foreach (ProcessModule module in Process.GetCurrentProcess().Modules)
+                    {
+                        if (module.ModuleName.Equals("clr.dll", StringComparison.OrdinalIgnoreCase))
+                        {
+                            clrFilePath = module.FileName;
+                            clrFileVersion = module.FileVersionInfo.FileVersion;
+                            break;
+                        }
+                    }
+                    Logger.LogMessage($"***EXCEPTION PerfCounter '{ex.Message}' {ctr} ProcId{ctr.ProcToMonitor.Id} StartTime= {ctr.ProcToMonitor.StartTime} HasExited={ctr.ProcToMonitor.HasExited} ClrPath={clrFilePath} ClrVersion={clrFileVersion}");
+
                 }
                 uint priorValue = 0;
                 if (lst.Count > 0)
