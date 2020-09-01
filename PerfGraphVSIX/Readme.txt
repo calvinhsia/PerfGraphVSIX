@@ -46,6 +46,10 @@ xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\release\
 
 When PR build succeeds, wait for rolling build, then check Artifacts-> filter to "stress" to get version # like "1.1.30"
 
+Ensure the version is a public release: the # does not have a hyphenated git commit suffix.
+
+https://github.com/dotnet/Nerdbank.GitVersioning/blob/master/doc/public_vs_stable.md
+
 To change VS repo: change .corext\Configs\default.config
 
     <package id="Microsoft.Test.Stress" version="1.1.30" link="src\ExternalAPIs\Microsoft.Test.Stress" tags="exapis" />
