@@ -24,7 +24,7 @@ Tools->Options:
 
 
 
-Note: this will cause significant delay every UpdateInterval because it does Full GC and tracking of newly referenced objects
+Note: If UpdateInterval is non-zero, this will cause significant delay every UpdateInterval because it does Full GC and tracking of newly referenced objects
 
 
 
