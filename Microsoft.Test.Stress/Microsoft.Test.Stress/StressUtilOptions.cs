@@ -220,7 +220,13 @@ namespace Microsoft.Test.Stress
             // the file settings override the passed in values, if any
             PerfCounterOverrideSettings = fileOptions.PerfCounterOverrideSettings;
             // read each value and override the current settings, except for exemptions
-            var exemptionFromOverrides = $"{nameof(logger)},{nameof(PerfCounterOverrideSettings)},{nameof(actExecuteBeforeEveryIterationAsync)},{nameof(actExecuteAfterEveryIterationAsync)},";
+            var exemptionFromOverrides = 
+                $"{nameof(logger)}," +
+                $"{nameof(PerfCounterOverrideSettings)}," +
+                $"{nameof(actExecuteBeforeEveryIterationAsync)}," +
+                $"{nameof(actExecuteAfterEveryIterationAsync)}," +
+                $"{nameof(TargetDevEnvProcessId)},";
+
             var mems = typeof(StressUtilOptions).GetMembers(BindingFlags.Public | BindingFlags.Instance);
             foreach (var mem in mems)
             {
@@ -229,7 +235,12 @@ namespace Microsoft.Test.Stress
                     if (!exemptionFromOverrides.Contains(fldInfo.Name + ","))
                     {
                         var newval = fldInfo.GetValue(fileOptions);
-                        //                        logger.LogMessage($"Override Setting {fldInfo.Name}  from {fldInfo.GetValue(this)} to {newval}");
+
+                        if (logger != null)
+                        {
+                            logger.LogMessage($"Override Setting {fldInfo.Name} from {fldInfo.GetValue(this)} to {newval}");
+                        }
+
                         fldInfo.SetValue(this, newval);
                     }
                 }
