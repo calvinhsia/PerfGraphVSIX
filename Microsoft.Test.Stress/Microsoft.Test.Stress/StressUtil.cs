@@ -31,6 +31,7 @@ namespace Microsoft.Test.Stress
 
     public class StressUtil
     {
+        public const string PropNameNumIterations = "NumIterations";
         public const string PropNameCurrentIteration = "IterationNumber"; // range from 0 - #Iter -  1
         public const string PropNameMinimumIteration = "MinimumIteration";
         public const string PropNameListFileResults = "DictListFileResults";
