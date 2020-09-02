@@ -344,7 +344,7 @@ namespace Microsoft.Test.Stress
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
 
-            if (PerfCounterOverrideSettings.Count > 0)
+            if ((PerfCounterOverrideSettings != null) && (PerfCounterOverrideSettings.Count > 0))
             {
                 logger.LogMessage("The following perf counter thresholds are being overridden:");
 
@@ -354,6 +354,10 @@ namespace Microsoft.Test.Stress
                 }
 
                 logger.LogMessage("");
+            }
+            else
+            {
+                logger.LogMessage("No perf counter thresholds are being overridden.");
             }
 
             VSHandler theVSHandler = null;
