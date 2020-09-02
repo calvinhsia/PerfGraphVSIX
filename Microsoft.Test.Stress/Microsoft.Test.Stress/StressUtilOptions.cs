@@ -235,7 +235,12 @@ namespace Microsoft.Test.Stress
                     if (!exemptionFromOverrides.Contains(fldInfo.Name + ","))
                     {
                         var newval = fldInfo.GetValue(fileOptions);
-                        logger.LogMessage($"Override Setting {fldInfo.Name} from {fldInfo.GetValue(this)} to {newval}");
+
+                        if (logger != null)
+                        {
+                            logger.LogMessage($"Override Setting {fldInfo.Name} from {fldInfo.GetValue(this)} to {newval}");
+                        }
+
                         fldInfo.SetValue(this, newval);
                     }
                 }
