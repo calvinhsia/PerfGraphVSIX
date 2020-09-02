@@ -324,6 +324,9 @@ namespace Microsoft.Test.Stress
                     mylogger.LogOutputToDesktopFile = LoggerLogOutputToDestkop;
                 }
             }
+
+            testContext.Properties[StressUtil.PropNameNumIterations] = NumIterations;
+
             logger.LogMessage($@"TestName = {testContext.TestName} 
                                         IsApexTest={IsTestApexTest()}
                                         NumIterations = {NumIterations}
@@ -341,6 +344,17 @@ namespace Microsoft.Test.Stress
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
 
+            if (PerfCounterOverrideSettings.Count > 0)
+            {
+                logger.LogMessage("The following perf counter thresholds are being overridden:");
+
+                foreach (PerfCounterOverrideThreshold thresholdOverride in PerfCounterOverrideSettings)
+                {
+                    logger.LogMessage($"\t{thresholdOverride.perfCounterType} = {thresholdOverride.regressionThreshold}.");
+                }
+
+                logger.LogMessage("");
+            }
 
             VSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
