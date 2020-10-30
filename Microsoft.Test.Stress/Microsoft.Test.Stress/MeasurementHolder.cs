@@ -496,8 +496,22 @@ namespace Microsoft.Test.Stress
         {
             if (IsMeasuringCurrentProcess)
             {
-                GC.Collect();
-                Marshal.CleanupUnusedObjectsInCurrentContext();
+                const int MAX_CLEANUP_CYCLES = 10;
+
+                // Each time a GC occurs more COM objects can become available for cleanup. 
+                // So we keep calling until no more objects are available for cleanup OR 
+                // we reach a hard coded limit.
+                for (int iLoopCount = 0; iLoopCount < MAX_CLEANUP_CYCLES; ++iLoopCount)
+                {
+                    GC.Collect(GC.MaxGeneration);
+                    GC.WaitForPendingFinalizers();
+
+                    if (!Marshal.AreComObjectsAvailableForCleanup())
+                    {
+                        break;
+                    }
+                    Marshal.CleanupUnusedObjectsInCurrentContext();
+                }
             }
             else
             {
