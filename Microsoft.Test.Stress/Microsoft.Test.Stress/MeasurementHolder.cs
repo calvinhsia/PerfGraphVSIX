@@ -474,7 +474,6 @@ namespace Microsoft.Test.Stress
             {
                 Logger.LogMessage($"Delay {stressUtilOptions.SecsDelayBeforeTakingDump} before taking dump at iteration {nSamplesTaken}");
                 await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsDelayBeforeTakingDump));
-                await DoForceGCAsync();
             }
 
             Logger.LogMessage(desc);
@@ -733,6 +732,7 @@ namespace Microsoft.Test.Stress
             var pathDumpFile = DumperViewerMain.CreateNewFileName(ResultsFolder, desc);
             try
             {
+                await DoForceGCAsync();
                 var arglist = new List<string>()
                     {
                         "-p", pid.ToString(),

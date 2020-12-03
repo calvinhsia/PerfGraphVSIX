@@ -274,7 +274,10 @@ namespace Microsoft.Test.Stress
 
         public string GetClrObjExplorerPath()
         {
-            if (_ClrObjExplorerExe == null)
+            if (_ClrObjExplorerExe == null
+                || !File.Exists(_ClrObjExplorerExe)
+                || !File.Exists(Path.Combine(Path.GetDirectoryName(_ClrObjExplorerExe), "ClrLib.dll"))
+                )
             {
                 var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), @"..\ClrObjExplorer");
                 //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
