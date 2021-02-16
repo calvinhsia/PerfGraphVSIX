@@ -170,10 +170,10 @@ namespace Microsoft.Test.Stress
             }
             switch (perfCounterType)
             {
-                case PerfCounterType.UserHandleCount:
+                case PerfCounterType.GDIHandleCount:
                     retVal = GetGuiResourcesGDICount();
                     break;
-                case PerfCounterType.GDIHandleCount:
+                case PerfCounterType.UserHandleCount:
                     retVal = GetGuiResourcesUserCount();
                     break;
                 default:
