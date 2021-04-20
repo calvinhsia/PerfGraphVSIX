@@ -276,15 +276,12 @@ namespace Microsoft.Test.Stress
             var ClrObjExplorerExe = string.Empty;
             try
             {
-                // always extract from zip, because temp files get deleted unpredictably
-                var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), @"..\ClrObjExplorer");
+                var clrObjDir = Path.Combine(
+                    Path.GetDirectoryName(this.GetType().Assembly.Location),
+                    @"ClrObjExplorer");
                 //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
-                var testClrObjExpPath = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
-                if (Directory.Exists(clrObjDir))
-                {
-                    Directory.Delete(clrObjDir, recursive: true);
-                }
-                if (string.IsNullOrEmpty(ClrObjExplorerExe))
+                ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
+                if (!File.Exists(ClrObjExplorerExe))
                 {
                     logger.LogMessage($"Creating {clrObjDir}");
                     Directory.CreateDirectory(clrObjDir);
@@ -296,7 +293,6 @@ namespace Microsoft.Test.Stress
                     ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
                     logger.LogMessage($"Done Extracting zip {tempZipFile}");
                     File.Delete(tempZipFile);
-                    ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
                 }
             }
             catch (Exception ex)
