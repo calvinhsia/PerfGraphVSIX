@@ -268,54 +268,40 @@ namespace Microsoft.Test.Stress
             }
         }
 
-        static string _ClrObjExplorerExe = null;
         public Dictionary<string, Tuple<int, int>> _dictTypeDiffs;
         public Dictionary<string, Tuple<int, int>> _dictStringDiffs;
 
         public string GetClrObjExplorerPath()
         {
-            if (_ClrObjExplorerExe == null)
+            var ClrObjExplorerExe = string.Empty;
+            try
             {
-                var clrObjDir = Path.Combine(DumperViewerMain.EnsureResultsFolderExists(), @"..\ClrObjExplorer");
+                var clrObjDir = Path.Combine(
+                    Path.GetDirectoryName(this.GetType().Assembly.Location),
+                    @"ClrObjExplorer");
                 //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
-                try
+                ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
+                if (!File.Exists(ClrObjExplorerExe))
                 {
-                    var testClrObjExpPath = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
-                    if (Directory.Exists(clrObjDir))
-                    {
-                        if (File.Exists(testClrObjExpPath))
-                        {
-                            _ClrObjExplorerExe = testClrObjExpPath;
-                        }
-                        else
-                        {
-                            logger.LogMessage($"Deleting existing {clrObjDir}");
-                            Directory.Delete(clrObjDir, recursive: true);
-                        }
-                    }
-                    if (string.IsNullOrEmpty(_ClrObjExplorerExe))
-                    {
-                        logger.LogMessage($"Creating {clrObjDir}");
-                        Directory.CreateDirectory(clrObjDir);
-                        var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-                        //                        logger.LogMessage($"Unzip to {tempZipFile}");
-                        var zipArray = Properties.Resources.ClrObjExplorer;
-                        File.WriteAllBytes(tempZipFile, zipArray);
-                        //                        logger.LogMessage($"Extracting zip {tempZipFile}");
-                        ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
-                        logger.LogMessage($"Done Extracting zip {tempZipFile}");
-                        File.Delete(tempZipFile);
-                        _ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
-                    }
+                    logger.LogMessage($"Creating {clrObjDir}");
+                    Directory.CreateDirectory(clrObjDir);
+                    var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
+                    //                        logger.LogMessage($"Unzip to {tempZipFile}");
+                    var zipArray = Properties.Resources.ClrObjExplorer;
+                    File.WriteAllBytes(tempZipFile, zipArray);
+                    //                        logger.LogMessage($"Extracting zip {tempZipFile}");
+                    ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
+                    logger.LogMessage($"Done Extracting zip {tempZipFile}");
+                    File.Delete(tempZipFile);
                 }
-                catch (Exception ex)
-                {
-                    logger.LogMessage(ex.ToString());
-                    // use existing ClrObjExplorer: user may have left it open examining a prior trace (Unauth exce if in use) or it could be 
-                }
-                //                logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
             }
-            return _ClrObjExplorerExe;
+            catch (Exception ex)
+            {
+                logger.LogMessage(ex.ToString());
+                // use existing ClrObjExplorer: user may have left it open examining a prior trace (Unauth exce if in use) or it could be 
+            }
+            //                logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
+            return ClrObjExplorerExe;
         }
 
         public void StartClrObjExplorer(string _DumpFileName)

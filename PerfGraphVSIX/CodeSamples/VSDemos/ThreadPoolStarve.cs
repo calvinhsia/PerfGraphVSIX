@@ -69,13 +69,13 @@ namespace MyCodeToExecute
             };
             timer.Start();
             _MyWindow.Closed += (o, e) =>
-             {
-                 timer.Stop();
-                 if (!tcsMyWindow.Task.IsCompleted)
-                 {
-                     tcsMyWindow.SetResult(0);
-                 }
-             };
+            {
+                timer.Stop();
+                if (!tcsMyWindow.Task.IsCompleted)
+                {
+                    tcsMyWindow.SetResult(0);
+                }
+            };
             _MyWindow.Show();
             await tcsMyWindow.Task;
             _MyWindow.Close();
@@ -112,7 +112,7 @@ The CLR may retire extra idle active threads
             {
                 // we want to read the threadid 
                 //and time immediately on current thread
-                var dt = string.Format("[{0}],TID={1,2},",
+                var dt = string.Format("[{0,13}],TID={1,3},",
                     DateTime.Now.ToString("hh:mm:ss:fff"),
                     Thread.CurrentThread.ManagedThreadId);
                 _txtStatus.Dispatcher.BeginInvoke(
@@ -303,7 +303,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                     try
                     {
                         var tid = Thread.CurrentThread.ManagedThreadId;
-                        AddStatusMsg($"Task {i} Start");
+                        AddStatusMsg($"Task {i,3} Start");
                         // in this method we do the work that might take a long time in bkgd thread (several seconds)
                         // keep in mind how the thread that does the work is used: 
                         // if it's calling Thread.Sleep, the CPU load will be low, but the threadpool thread will be occupied
@@ -312,7 +312,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                             while (!tcs.Task.IsCompleted && !tokenStarveDetected.IsCancellationRequested)
                             {
                                 // 1 sec is the threadpool starvation threshold. We'll sleep a different amount so we can tell its not this sleep causing the 1 sec pauses.
-                                Thread.Sleep(TimeSpan.FromSeconds(0.3));
+                                Thread.Sleep(TimeSpan.FromSeconds(1.3));
                             }
                         }
                         else
@@ -320,7 +320,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                             // if the tcs isn't complete, then the curthread will be relinquished back to the theadpool with a continuation queued when the task is done
                             await tcs.Task;
                         }
-                        AddStatusMsg($"Task {i} Done on " + (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread");
+                        AddStatusMsg($"Task {i,3} Done on " + (tid == Thread.CurrentThread.ManagedThreadId ? "Same" : "diff") + " Thread");
                     }
                     catch (OperationCanceledException)
                     {
@@ -508,7 +508,7 @@ Microsoft-Windows-DotNETRuntime/ThreadPoolWorkerThreadAdjustment/Adjustment	8,36
                     }
                 }
                 _tcsWatcherThread.TrySetResult(0);
-            }, maxStackSize:262144)
+            }, maxStackSize: 262144)
             {
                 Name = nameof(MyThreadPoolWatcher),
                 IsBackground = true

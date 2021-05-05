@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -473,7 +474,6 @@ namespace Microsoft.Test.Stress
             {
                 Logger.LogMessage($"Delay {stressUtilOptions.SecsDelayBeforeTakingDump} before taking dump at iteration {nSamplesTaken}");
                 await Task.Delay(TimeSpan.FromSeconds(stressUtilOptions.SecsDelayBeforeTakingDump));
-                await DoForceGCAsync();
             }
 
             Logger.LogMessage(desc);
@@ -495,7 +495,22 @@ namespace Microsoft.Test.Stress
         {
             if (IsMeasuringCurrentProcess)
             {
-                GC.Collect();
+                const int MAX_CLEANUP_CYCLES = 10;
+
+                // Each time a GC occurs more COM objects can become available for cleanup. 
+                // So we keep calling until no more objects are available for cleanup OR 
+                // we reach a hard coded limit.
+                for (int iLoopCount = 0; iLoopCount < MAX_CLEANUP_CYCLES; ++iLoopCount)
+                {
+                    GC.Collect(GC.MaxGeneration);
+                    GC.WaitForPendingFinalizers();
+
+                    if (!Marshal.AreComObjectsAvailableForCleanup())
+                    {
+                        break;
+                    }
+                    Marshal.CleanupUnusedObjectsInCurrentContext();
+                }
             }
             else
             {
@@ -717,6 +732,7 @@ namespace Microsoft.Test.Stress
             var pathDumpFile = DumperViewerMain.CreateNewFileName(ResultsFolder, desc);
             try
             {
+                await DoForceGCAsync();
                 var arglist = new List<string>()
                     {
                         "-p", pid.ToString(),

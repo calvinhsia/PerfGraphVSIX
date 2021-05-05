@@ -107,6 +107,10 @@
 
         public List<PerfCounterData> LstPerfCounterData;
 
+        private bool _AutoDumpIsEnabled;
+        public bool AutoDumpIsEnabled { get { return _AutoDumpIsEnabled; } set { _AutoDumpIsEnabled = value; RaisePropChanged(); } }
+        public uint AutoDumpThresh { get; set; }
+
         public event PropertyChangedEventHandler PropertyChanged;
         void RaisePropChanged([CallerMemberName] string propName = "")
         {
@@ -439,7 +443,22 @@
                 try
                 {
                     res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, DoForceGC, IsForInteractiveGraph: UpdateInterval != 0);
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     await AddDataPointsAsync(measurementHolder);
+                    if (AutoDumpIsEnabled)
+                    {
+                        var lastmeasurements = measurementHolder.GetLastMeasurements();
+                        if (lastmeasurements.Count == 1)
+                        {
+                            var val = lastmeasurements.Values.First();
+                            if (val >= AutoDumpThresh)
+                            {
+                                await AddStatusMsgAsync($"Autodump Threshold triggered: {lastmeasurements.Keys.First()}  {val} > {AutoDumpThresh}");
+                                AutoDumpIsEnabled = false;
+                                var pathDump = await CreateDumpFileAsync(MemoryAnalysisType.JustCreateDump, "AutoDump", tspanDelayAfterGC: TimeSpan.FromSeconds(0.2));
+                            }
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -661,20 +680,31 @@
 
         void BtnClrObjExplorer_Click(object sender, RoutedEventArgs e)
         {
+            btnClrObjExplorer.IsEnabled = false;
+            ThreadHelper.ThrowIfNotOnUIThread();
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                {
+                    await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
+                    btnClrObjExplorer.IsEnabled = true;
+                }
+            );
+        }
+
+        public async Task<string> CreateDumpFileAsync(MemoryAnalysisType memoryAnalysisType, string descDump, TimeSpan tspanDelayAfterGC)
+        {
+            var pathDumpFile = string.Empty;
+            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                btnClrObjExplorer.IsEnabled = false;
                 await WaitForInitializationCompleteAsync();
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 DoGC(); //must be on main thread
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                await measurementHolderInteractiveUser.CreateDumpAsync(
+                await Task.Delay(tspanDelayAfterGC);
+                pathDumpFile = await measurementHolderInteractiveUser.CreateDumpAsync(
                     System.Diagnostics.Process.GetCurrentProcess().Id,
-                    MemoryAnalysisType.StartClrObjExplorer,
-                    desc: "InteractiveDump");
-
-                btnClrObjExplorer.IsEnabled = true;
+                    memoryAnalysisType,
+                    desc: descDump);
             });
+            return pathDumpFile;
         }
 
         private async Task WaitForInitializationCompleteAsync()

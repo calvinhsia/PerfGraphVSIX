@@ -180,6 +180,26 @@ To learn how to add your own, see VSDemos/Simple.cs
                         <Label Content="Counters to track:"/>
                         <ListBox Name="lbPCounters" SelectionMode="Extended" Width="160" MaxHeight = "200" VerticalAlignment="Top" ToolTip="Multiselect various Performance Counters to graph" />
                     </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <Label Content="AutoDumpCollection">
+                            <Label.ToolTip>
+                                <ToolTip xml:space="preserve">
+                                    
+Sometimes VS emmory use is spikey. To catch a dump of a spike automatically, select a single Counter to track and set UpdateInterval to non-zero.
+e.g. select ProcessorVirtualBytes and threshold to be 3000000000 to get a dump when the measurement goes above 3Gigs.
+You can also get a dump when e.g. the ThreadCount > 10
+You can monitor the graph on the Graph tab
+When selected counter goes above threshold, will create a dump, then self disable. Requires UpdateInterval to be non-zero
+To get another dump, re-enable
+                                </ToolTip>
+                            </Label.ToolTip>
+                        </Label>
+                        <CheckBox Content="Enabled" IsChecked="{Binding AutoDumpIsEnabled}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Label Content="Threshold"/>
+                            <TextBox Width="100" Text="{Binding AutoDumpThresh}" ToolTip="integer threshold to collect a dump, like # of bytes or # of threads"/>
+                        </StackPanel>
+                    </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>

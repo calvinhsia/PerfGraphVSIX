@@ -216,8 +216,14 @@ namespace Microsoft.Test.Stress
             }
             foreach (var progFileDir in lstProgFileDirs)
             {
-                progfiles = Path.Combine(progfiles, "Microsoft Visual Studio");
-                foreach (var vsdir in Directory.GetDirectories(progfiles).Where(d => d.IndexOf("Installer") < 0 && d.IndexOf("Shared") < 0))
+                string progFilesVs = Path.Combine(progFileDir, "Microsoft Visual Studio");
+
+                if(!Directory.Exists(progFilesVs))
+                {
+                    continue;
+                }
+
+                foreach (var vsdir in Directory.GetDirectories(progFilesVs).Where(d => d.IndexOf("Installer") < 0 && d.IndexOf("Shared") < 0))
                 {
                     foreach (var subdir in Directory.GetDirectories(vsdir))
                     {
