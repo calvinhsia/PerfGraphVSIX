@@ -124,7 +124,7 @@ namespace Tests
             var r1 = await DoSomethingAsync();
             LogMessage($"awaiting tcs.task {r1}");
             await tcs.Task;
-            var res = tcs.Task.Result;
+            var res = await tcs.Task;
             LogMessage($"done awaiting tcs.task res = {res}" );
         }
 

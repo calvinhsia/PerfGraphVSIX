@@ -113,7 +113,7 @@ namespace DoesntMatter
 
 
         [TestMethod]
-        public void TestCompileCodeReturnTask()
+        public async Task TestCompileCodeReturnTask()
         {
             var strCodeToExecute = @"
 // can add the fullpath to an assembly for reference like so:
@@ -154,8 +154,8 @@ public class foo {}
                 var res = compileHelper.ExecuteTheCode();
                 if (res is Task<string> task)
                 {
-                    task.Wait();
-                    Assert.AreEqual("did main 100 ", task.Result);
+                    var result = await task;
+                    Assert.AreEqual("did main 100 ", result);
                 }
                 else
                 {
