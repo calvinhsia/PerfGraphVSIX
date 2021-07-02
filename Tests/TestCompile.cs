@@ -106,7 +106,7 @@ namespace DoesntMatter
             using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile1, CancellationToken.None))
             {
                 var res = compileHelper.ExecuteTheCode();
-                LogMessage($"Got output {res.ToString()}");
+                LogMessage($"Got output {res}");
                 Assert.AreEqual("did main In Base Method NumIter= 97", res.ToString());
             }
         }
@@ -712,8 +712,12 @@ public class foo {}
             await Task.Yield();
             int nCompiled = 0;
             int nErrors = 0;
-
-            foreach (var codesample in Directory.EnumerateFiles(@"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples", "*.*", SearchOption.AllDirectories)
+            var pathtosamples = @"C:\Users\calvinh\source\repos\Stress\PerfGraphVSIX\CodeSamples";
+            if (!Directory.Exists(pathtosamples))
+            {
+                pathtosamples = @"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples";
+            }
+            foreach (var codesample in Directory.EnumerateFiles(pathtosamples, "*.*", SearchOption.AllDirectories)
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
                 )
             {

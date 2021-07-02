@@ -839,7 +839,7 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
                 }
             }
         }
-        private void WriteResultsToXML(string outputXMLFile)
+        public void WriteResultsToXML(string outputXMLFile)
         {
             try
             {
