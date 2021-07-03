@@ -63,7 +63,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="StressLeakyWithCustomXMLSettings.settings.xml">
+    <Content Include="StressLeakyWithCustomXMLSettingsAsync.settings.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

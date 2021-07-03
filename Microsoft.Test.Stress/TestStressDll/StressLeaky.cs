@@ -442,7 +442,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        [DeploymentItem("StressLeakyWithCustomXMLSettings.settings.xml", "Assets")]
+        [DeploymentItem("StressLeakyWithCustomXMLSettingsAsync.settings.xml", "Assets")]
         public async Task StressLeakyWithCustomXMLSettingsAsync()
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
