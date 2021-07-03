@@ -36,9 +36,9 @@ namespace TestStress
                 // 30 min for 7 iter
                 await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { ShowUI = true, NumIterations = 3 });
 
-                await _VSHandler.OpenSolution(StressVS.SolutionToLoad);
+                await _VSHandler.OpenSolutionAsync(StressVS.SolutionToLoad);
 
-                await _VSHandler.CloseSolution();
+                await _VSHandler.CloseSolutionAsync();
             }
             catch (Exception ex)
             {

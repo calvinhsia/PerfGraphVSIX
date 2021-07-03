@@ -48,7 +48,7 @@ namespace TestStressDll
     public class TestMeasures : BaseTestClass
     {
         [TestMethod]
-        public async Task TestOutliers()
+        public async Task TestOutliersAsync()
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
@@ -166,7 +166,7 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        public async Task TestXmlSerializeOptions()
+        public async Task TestXmlSerializeOptionsAsync()
         {
             var thresh = 1e6f;
             var stressUtilOptions = new StressUtilOptions()
@@ -210,7 +210,7 @@ namespace TestStressDll
 
         [TestMethod]
         [Ignore]
-        public async Task TestMeasureRegressionVerifyGraph()
+        public async Task TestMeasureRegressionVerifyGraphAsync()
         {
             await Task.Yield();
             var resultsFolder = string.Empty;
@@ -244,46 +244,46 @@ namespace TestStressDll
         }
 
         [TestMethod]
-        public async Task TestPCMeasurementHolder1k()
+        public async Task TestPCMeasurementHolder1kAsync()
         {
             // too small to trigger threshold
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024, RatioThresholdSensitivity: 1f);
+            var res = await DoStressSimulationAsync(nIter: 100, nArraySize: 1024, RatioThresholdSensitivity: 1f);
             Assert.IsFalse(res, $"Expected no Regression");
         }
 
         [TestMethod]
-        public async Task TestPCMeasurementHolder500k()
+        public async Task TestPCMeasurementHolder500kAsync()
         {
             // too small to trigger threshold, but close to boundary
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 1f);
+            var res = await DoStressSimulationAsync(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 1f);
             Assert.IsFalse(res, $"Expected no Regression because lower than threshold");
         }
         [TestMethod]
-        public async Task TestPCMeasurementHolder500kSensitive()
+        public async Task TestPCMeasurementHolder500kSensitiveAsync()
         {
 
             var eatmem = new byte[1024 * 1024 * 8];
 
             // too small to trigger threshold, but close to boundary, so making more sensitive triggers regression
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 5f);
+            var res = await DoStressSimulationAsync(nIter: 100, nArraySize: 1024 * 500, RatioThresholdSensitivity: 5f);
             Assert.IsTrue(res, $"Expected Regression because more sensitive");
         }
 
         [TestMethod]
-        public async Task TestPCMeasurementHolder2Meg()
+        public async Task TestPCMeasurementHolder2MegAsync()
         {
             // Big triggers regression
-            var res = await DoStressSimulation(nIter: 100, nArraySize: 1024 * 1024 * 2, RatioThresholdSensitivity: 1f);
+            var res = await DoStressSimulationAsync(nIter: 100, nArraySize: 1024 * 1024 * 2, RatioThresholdSensitivity: 1f);
             Assert.IsTrue(res, $"Expected Regression");
         }
 
 
         [TestMethod]
-        public async Task TestPCMeasurementHolderLeakHandle()
+        public async Task TestPCMeasurementHolderLeakHandleAsync()
         {
             //            var cts = new CancellationTokenSource();
             var lstHandles = new List<HANDLE>();
-            var res = await DoStressSimulation(nIter: 10, nArraySize: 0, RatioThresholdSensitivity: 1, action: () =>
+            var res = await DoStressSimulationAsync(nIter: 10, nArraySize: 0, RatioThresholdSensitivity: 1, action: () =>
             {
                 // see https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3803/CancellationToken-and-CancellationTokenSource-Leaks
                 for (int i = 0; i < 1; i++)
@@ -318,7 +318,7 @@ namespace TestStressDll
         /// return true if regression found
         /// These tests will be affected by other tests running in the same instance of testhost because they share the same memory
         /// </summary>
-        private async Task<bool> DoStressSimulation(int nIter, int nArraySize, float RatioThresholdSensitivity, Action action = null)
+        private async Task<bool> DoStressSimulationAsync(int nIter, int nArraySize, float RatioThresholdSensitivity, Action action = null)
         {
             var lstPCs = PerfCounterData.GetPerfCountersToUse(Process.GetCurrentProcess(), IsForStress: true);
             foreach (var ctr in lstPCs)

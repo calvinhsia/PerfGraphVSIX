@@ -270,7 +270,7 @@ namespace Microsoft.Test.Stress
         /// if we're being called from a test, pass the test in. Else being called from a dynamic asm in devenv process from vsix (in which case SetTest is not called)
         /// </summary>
         /// <returns>false if recurring</returns>
-        internal async Task<bool> SetTest(object test)
+        internal async Task<bool> SetTestAsync(object test)
         {
             theTest = test;
             var testType = test.GetType();

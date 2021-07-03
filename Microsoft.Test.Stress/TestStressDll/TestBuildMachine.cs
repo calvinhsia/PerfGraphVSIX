@@ -16,7 +16,7 @@ namespace TestStressDll
         ILogger logger;
         VSHandler _VSHandler;
         [TestInitialize]
-        public async Task TestInitialize()
+        public async Task TestInitializeAsync()
         {
             await Task.Yield();
             logger = new Logger(new TestContextWrapper(TestContext));
@@ -60,15 +60,8 @@ TestContext Messages:
             await _VSHandler.StartVSAsync();
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
         }
-        [TestMethod]
-        [Ignore]
-        public async Task TestBuildMachineDTE()
-        {
-            await Task.Yield();
-
-        }
         [TestCleanup]
-        public async Task Cleanup()
+        public async Task CleanupAsync()
         {
             await _VSHandler.ShutDownVSAsync();
         }

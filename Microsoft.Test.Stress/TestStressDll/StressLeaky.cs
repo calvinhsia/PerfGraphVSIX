@@ -40,7 +40,7 @@ namespace TestStressDll
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        public async Task StressLeakyBadPerfCounterCat()
+        public async Task StressLeakyBadPerfCounterCatAsync()
         {
             int numIter = 11;
             var stressOptions = new StressUtilOptions() { NumIterations = numIter, ProcNamesToMonitor = string.Empty, ShowUI = false };
@@ -94,7 +94,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        public async Task StressLeaky()
+        public async Task StressLeakyAsync()
         {
             if (TestContext.Properties.Contains(StressUtil.PropNameCurrentIteration) && // only do once, but after logger has been set
                 (int)(TestContext.Properties[StressUtil.PropNameCurrentIteration]) == 0)
@@ -157,7 +157,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        public async Task StressMultiSample()
+        public async Task StressMultiSampleAsync()
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
@@ -242,7 +242,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        public async Task StressLeakyLimitNumSamples()
+        public async Task StressLeakyLimitNumSamplesAsync()
         {
             int numIter = 23;
             try
@@ -278,7 +278,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))]
-        public async Task TestLeakyWithCustomActions()
+        public async Task TestLeakyWithCustomActionsAsync()
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
@@ -381,7 +381,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
-        public async Task StressLeakyCustomThreshold()
+        public async Task StressLeakyCustomThresholdAsync()
         {
             // example to set custom threshold: here we override one counter's threshold. We can also change sensitivity
             var thresh = 1e7f;
@@ -432,7 +432,7 @@ $"String and Type Count differences_{numIter}.txt",
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         [Description("Sensitivity Leak a very small string of 14 chars")]
         [Ignore] // same test below with XML settings.
-        public async Task StressLeakyDetectVerySmallLeak()
+        public async Task StressLeakyDetectVerySmallLeakAsync()
         {
             await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { NumIterations = 711, ProcNamesToMonitor = "", Sensitivity = 1e6, DelayMultiplier = 0 });
 
@@ -443,7 +443,7 @@ $"String and Type Count differences_{numIter}.txt",
         [TestMethod]
         [ExpectedException(typeof(LeakException))] // to make the test pass, we need a LeakException. However, Pass deletes all the test results <sigh>
         [DeploymentItem("StressLeakyWithCustomXMLSettings.settings.xml", "Assets")]
-        public async Task StressLeakyWithCustomXMLSettings()
+        public async Task StressLeakyWithCustomXMLSettingsAsync()
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
@@ -475,7 +475,7 @@ $"String and Type Count differences_{numIter}.txt",
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))]
-        public async Task StressLeakyVerifyDiffFileResult()
+        public async Task StressLeakyVerifyDiffFileResultAsync()
         {
             int numiter = 11;
             try
@@ -504,7 +504,7 @@ $"String and Type Count differences_{numIter}.txt",
         [TestMethod]
         [MemSpectAttribute(NumIterations = 17)]
         [ExpectedException(typeof(LeakException))]
-        public async Task StressTestWithAttribute()
+        public async Task StressTestWithAttributeAsync()
         {
             await ProcessAttributesAsync(this);
             _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
@@ -512,11 +512,11 @@ $"String and Type Count differences_{numIter}.txt",
         [TestMethod]
         [MemSpectAttribute(NumIterations = 17, Sensitivity = 1)]
         [ExpectedException(typeof(LeakException))]
-        public void StressTestWithAttributeNotAsync()
+        public async Task StressTestWithAttributeNotAsync()
         {
             try
             {
-                ProcessAttributesAsync(this).Wait();
+                await ProcessAttributesAsync(this);
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
             }
             catch (AggregateException ex)
