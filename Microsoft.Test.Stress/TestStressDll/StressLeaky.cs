@@ -512,11 +512,13 @@ $"String and Type Count differences_{numIter}.txt",
         [TestMethod]
         [MemSpectAttribute(NumIterations = 17, Sensitivity = 1)]
         [ExpectedException(typeof(LeakException))]
-        public async Task StressTestWithAttributeNotAsync()
+        public void StressTestWithAttributeAsyncNot()
         {
             try
             {
-                await ProcessAttributesAsync(this);
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
+                ProcessAttributesAsync(this).Wait();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
             }
             catch (AggregateException ex)
