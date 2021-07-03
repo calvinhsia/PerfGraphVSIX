@@ -2,9 +2,8 @@
 {
     using EnvDTE;
     using Microsoft;
-    using Microsoft.Build.Utilities;
     using Microsoft.VisualStudio.PlatformUI;
-    using Microsoft.VisualStudio.ProjectSystem.Properties;
+//    using Microsoft.VisualStudio.ProjectSystem.Properties;
     using Microsoft.VisualStudio.Shell;
     using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Shell.Interop;
@@ -210,7 +209,7 @@
                     if (this.IsLeakTrackerServiceSupported())
                     {
                         this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
-                        this.inProcLeakTracker.Content = new InProcLeakTracker();
+//                        this.inProcLeakTracker.Content = new InProcLeakTracker();
                     }
                     await TaskScheduler.Default;
                     var telEvent = new TelemetryEvent(TelemetryEventBaseName + "Start");
@@ -304,25 +303,25 @@
 
                     if (this.TrackProjectObjects)
                     {
-                        var hier = e.Hierarchy;
-                        if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root,
-                            (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject,
-                            out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
-                        {
-                            var proj = extObject as EnvDTE.Project; // comobj or Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject 
-                            var name = proj.Name;
-                            var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
-                            if (context == null && proj != null)
-                            {
-                                context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
-                            }
-                            if (context != null)
-                            {
-                                //                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
-                                _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
-                                //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
-                            }
-                        }
+                        //var hier = e.Hierarchy;
+                        //if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root,
+                        //    (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject,
+                        //    out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
+                        //{
+                        //    var proj = extObject as EnvDTE.Project; // comobj or Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject 
+                        //    var name = proj.Name;
+                        //    var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
+                        //    if (context == null && proj != null)
+                        //    {
+                        //        context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
+                        //    }
+                        //    if (context != null)
+                        //    {
+                        //        //                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                        //        _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
+                        //        //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
+                        //    }
+                        //}
                     }
                 };
             }
@@ -361,8 +360,9 @@
         {
             try
             {
-                DoTryTypeLoadException();
-                return true;
+                //DoTryTypeLoadException();
+                throw new NotImplementedException();
+//                return true;
             }
             catch
             {
@@ -372,8 +372,8 @@
         }
 
         // Types get loaded before the method that uses them, so it can't be caught in the same method as the Catch: must be in a method below the Catch
-        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
-        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
+//        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
+//        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
 
         // use a circular buffer to store samples. 
         // dictionary of sample # (int from 0 to NumDataPoints) =>( List (PerfCtrValues in order)

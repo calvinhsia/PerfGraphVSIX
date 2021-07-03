@@ -27,11 +27,15 @@ namespace Microsoft.Test.Stress
                 // Invoke the function and alert the context to when it completes
                 var t = func();
                 if (t == null) throw new InvalidOperationException("No task provided.");
+#pragma warning disable VSTHRD110 // Observe result of async calls
                 t.ContinueWith(delegate { syncCtx.Complete(); }, TaskScheduler.Default);
+#pragma warning restore VSTHRD110 // Observe result of async calls
 
                 // Pump continuations and propagate any exceptions
                 syncCtx.RunOnCurrentThread();
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
                 t.GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
             }
             finally { SynchronizationContext.SetSynchronizationContext(prevCtx); }
         }
@@ -42,8 +46,6 @@ namespace Microsoft.Test.Stress
             /// <summary>The queue of work items.</summary>
             private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object>> m_queue =
                 new BlockingCollection<KeyValuePair<SendOrPostCallback, object>>();
-            /// <summary>The processing thread.</summary>
-            private readonly Thread m_thread = Thread.CurrentThread;
 
             /// <summary>Dispatches an asynchronous message to the synchronization context.</summary>
             /// <param name="d">The System.Threading.SendOrPostCallback delegate to call.</param>

@@ -63,7 +63,7 @@ namespace Microsoft.Test.Stress
                         NumIterations = NumIterations
                     };
                 }
-                if (!await stressUtilOptions.SetTest(test)) // are we recurring?
+                if (!await stressUtilOptions.SetTestAsync(test)) // are we recurring?
                 {
                     return;
                 }

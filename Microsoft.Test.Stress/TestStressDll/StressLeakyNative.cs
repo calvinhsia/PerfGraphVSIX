@@ -30,7 +30,7 @@ namespace TestStressDll
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))]
-        public async Task TestLeakyNative()
+        public async Task TestLeakyNativeAsync()
         {
             if (StressUtilOptions.IsRunningOnBuildMachine())
             {
@@ -56,7 +56,7 @@ namespace TestStressDll
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))]
-        public async Task TestLeakyDetectNativeVerySmallLeak()
+        public async Task TestLeakyDetectNativeVerySmallLeakAsync()
         {
             var thresh = 1e3f;
             var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
