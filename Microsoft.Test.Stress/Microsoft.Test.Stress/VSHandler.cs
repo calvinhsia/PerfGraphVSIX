@@ -102,7 +102,7 @@ namespace Microsoft.Test.Stress
                     }
                     vsProc = procDevenv;
                     _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
-                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+//                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     _solutionEvents = _vsDTE.Events.SolutionEvents;
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
@@ -280,7 +280,7 @@ namespace Microsoft.Test.Stress
             var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
             //LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
-            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+//            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             _vsDTE.Solution.Open(SolutionToLoad);
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
@@ -294,7 +294,7 @@ namespace Microsoft.Test.Stress
         {
             var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
             _tcsSolution = new TaskCompletionSource<int>();
-            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+//            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             _vsDTE.Solution.Close();
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
@@ -320,7 +320,7 @@ namespace Microsoft.Test.Stress
             await Task.Yield();
             if (_vsDTE != null)
             {
-                await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+//                await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 _vsDTE.Events.SolutionEvents.Opened -= SolutionEvents_Opened;
                 _vsDTE.Events.SolutionEvents.AfterClosing -= SolutionEvents_AfterClosing;
                 var tcs = new TaskCompletionSource<int>();
@@ -356,7 +356,7 @@ namespace Microsoft.Test.Stress
         {
             Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSecs));
             var didGC = false;
-            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+//            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             while (!timeoutTask.IsCompleted && !didGC)
             {
                 try
@@ -456,7 +456,7 @@ namespace Microsoft.Test.Stress
             }
             // can't register message filter because need to set STA apartment, which means the test needs to be run on STA
             //            MessageFilter.RegisterMessageFilter();
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+//            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             return runningObject as EnvDTE.DTE;
         }
 
