@@ -44,7 +44,16 @@ xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\release\
 
 
 
-When PR build succeeds, wait for rolling build, then check Artifacts-> filter to "stress" to get version # like "1.1.30"
+When PR build succeeds, wait for rolling build, 
+The build def: https://dev.azure.com/devdiv/Engineering/_build?definitionId=12376
+
+then check https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json with feedname="VS"
+ (create a new Wpf sln, use Sln->Manage NugetPackages for solution, choose the VS feed, the new version should show up)
+
+(no longer DevDiv Artifacts-> Engineering feed since feeds moved upstream for security vulnerabililty) filter to "stress" to get version # like "1.1.185"
+	https://devdiv.visualstudio.com/DevDiv/_packaging?_a=feed&feed=Engineering%40Local
+	https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json
+
 
 Ensure the version is a public release: the # does not have a hyphenated git commit suffix.
 
