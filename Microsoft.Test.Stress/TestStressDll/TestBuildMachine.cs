@@ -29,7 +29,7 @@ namespace TestStressDll
             logger.LogMessage($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
             logger.LogMessage($"ProgramFiles(x86)=" + Environment.GetEnvironmentVariable("ProgramFiles(x86)"));
             logger.LogMessage($"Path=" + Environment.GetEnvironmentVariable("path"));
-            logger.LogMessage($"VS Path={VSHandler.GetVSFullPath()}");
+            logger.LogMessage($"VS Path={_VSHandler.GetVSFullPath()}");
 
             /*
              
@@ -58,7 +58,7 @@ TestContext Messages:
             }
 
             await _VSHandler.StartVSAsync();
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
         [TestCleanup]
         public async Task CleanupAsync()

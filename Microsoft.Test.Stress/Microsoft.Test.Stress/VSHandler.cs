@@ -14,49 +14,56 @@ namespace Microsoft.Test.Stress
     /// <summary>
     /// Handles Visual Studio via DTE (used for Apex to do ForceGc between iterations)
     /// </summary>
-    public class VSHandler
+    public class VSHandler : IVSHandler
     {
         public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
-        private readonly ILogger logger;
+        private ILogger logger;
         public int _DelayMultiplier;
-        public EnvDTE.DTE _vsDTE;
+        EnvDTE.DTE _vsDTE;
         /// <summary>
         /// The process we're monitoring may be different from vs: e.g. servicehub
         /// We need the vsProc to get DTE so we can force GC between iterations, automate via DTE, etc.
         /// </summary>
-        public Process vsProc;
+        public Process VsProcess { get; private set; }
         TaskCompletionSource<int> _tcsSolution = new TaskCompletionSource<int>();
 
         EnvDTE.SolutionEvents _solutionEvents; // need a strong ref to survive GCs
 
         public VSHandler(ILogger logger, int delayMultiplier = 1)
         {
+            this.Initialize(logger, delayMultiplier);
+        }
+
+        public void Initialize(ILogger logger, int delayMultiplier = 1)
+        {
             this.logger = logger;
             this._DelayMultiplier = delayMultiplier;
         }
 
+        ///// <summary>
+        ///// Get the DTE for a specific devenv process.
+        ///// </summary>
+        ///// <param name="targetDevEnvProcessId"></param>
+        ///// <returns></returns>
+        //public async Task<bool> EnsureGotDTE(int targetDevEnvProcessId)
+        //{
+        //    return await EnsureGotDTE(timeSpan: default, targetDevEnvProcessId);
+        //}
 
-        /// <summary>
-        /// Get the DTE for a specific devenv process.
-        /// </summary>
-        /// <param name="targetDevEnvProcessId"></param>
-        /// <returns></returns>
-        public async Task<bool> EnsureGotDTE(int targetDevEnvProcessId)
-        {
-            return await EnsureGotDTE(timeSpan: default, targetDevEnvProcessId);
-        }
-
-        /// <summary>
-        /// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
-        /// </summary>
-        /// <param name="timeSpan"></param>
-        /// <returns></returns>
-        public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
-        {
-            return await EnsureGotDTE(timeSpan, targetDevEnvProcessId: 0);
-        }
-
-        private async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default, int targetDevEnvProcessId = 0)
+        ///// <summary>
+        ///// We don't want an old VS session: we want to find the devenv process that was started by the test: +/- timeSpan seconds
+        ///// </summary>
+        ///// <param name="timeSpan"></param>
+        ///// <returns></returns>
+        //public async Task<bool> EnsureGotDTE(TimeSpan timeSpan = default)
+        //{
+        //    return await EnsureGotDTE(timeSpan, targetDevEnvProcessId: 0);
+        //}
+        //public object GetDTE()
+        //{
+        //    return _vsDTE;
+        //}
+        public async Task<object> EnsureGotDTE(TimeSpan timeSpan = default, int targetDevEnvProcessId = 0)
         {
             if (_vsDTE == null)
             {
@@ -100,9 +107,9 @@ namespace Microsoft.Test.Stress
                             }
                         }
                     }
-                    vsProc = procDevenv;
-                    _vsDTE = await GetDTEAsync(vsProc.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
-//                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    VsProcess = procDevenv;
+                    _vsDTE = await GetDTEAsync(VsProcess.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
+                    //                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     _solutionEvents = _vsDTE.Events.SolutionEvents;
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
@@ -110,14 +117,21 @@ namespace Microsoft.Test.Stress
                     logger.LogMessage($"{nameof(EnsureGotDTE)} done PID={procDevenv.Id} {procDevenv.MainModule}  {procDevenv.MainModule.FileVersionInfo}");
                     foreach (var proc in Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime))
                     {
-                        if (proc.Id != vsProc.Id)
+                        if (proc.Id != VsProcess.Id)
                         {
-                            logger.LogMessage($"   Other {procToFind} instances running on machine: ID={proc.Id} '{proc.MainWindowTitle}' {proc.MainModule.FileName} StartTime: {proc.StartTime}");
+                            try
+                            {
+                                logger.LogMessage($"   Other {procToFind} instances running on machine: ID={proc.Id} '{proc.MainWindowTitle}' StartTime: {proc.StartTime}");
+                            }
+                            catch (Exception ex) // System.ComponentModel.Win32Exception: A 32 bit processes cannot access modules of a 64 bit process..
+                            {
+                                logger.LogMessage(ex.ToString());
+                            }
                         }
                     }
                 });
             }
-            return true;
+            return _vsDTE;
         }
 
         // "c:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\VsRegEdit.exe"
@@ -130,20 +144,20 @@ namespace Microsoft.Test.Stress
         /// <summary>
         /// set things like Navigtion history to small, so it doesn't look like a leak. changes settings that are read when VS Starts
         /// </summary>
-        public static void PrepareVSSettingsForLeakDetection(string vsPath = null, ILogger logger = null)
+        public void PrepareVSSettingsForLeakDetection()
         {
-            var r = VSHandler.DoVSRegEdit("set local HKCU General DelayTimeThreshold dword 20000", vsPath);
+            var r = DoVSRegEdit("set local HKCU General DelayTimeThreshold dword 20000");
             logger?.LogMessage(r);
-            r = VSHandler.DoVSRegEdit("set local HKCU General MaxNavigationHistoryDepth dword 2", vsPath);
+            r = DoVSRegEdit("set local HKCU General MaxNavigationHistoryDepth dword 2");
             logger?.LogMessage(r);
         }
 
 
-        public static string DoVSRegEdit(string arg, string vsPath = null)
+        public string DoVSRegEdit(string arg, string vsPath = null)
         {
             if (string.IsNullOrEmpty(vsPath))
             {
-                vsPath = VSHandler.GetVSFullPath();
+                vsPath = GetVSFullPath();
             }
             var vsRegEdit = Path.Combine(Path.GetDirectoryName(vsPath), "VsRegedit.exe");
             var sb = new StringBuilder();
@@ -157,7 +171,6 @@ namespace Microsoft.Test.Stress
             }
             return sb.ToString();
         }
-
 
         /// <summary>
         /// Execute the given process
@@ -199,7 +212,7 @@ namespace Microsoft.Test.Stress
         /// Find the location of the latest VS instance. Return the full path of Devenv.exe
         /// </summary>
         /// <returns></returns>
-        public static string GetVSFullPath()
+        public string GetVSFullPath()
         {
             var vsPath = string.Empty;
             var lstFileInfos = new List<FileInfo>();
@@ -207,6 +220,12 @@ namespace Microsoft.Test.Stress
             var lstProgFileDirs = new List<string>();
             var dprogFiles = @"D:\Program Files (x86)";
             var progfiles = Environment.GetEnvironmentVariable("ProgramFiles(x86)");
+            if (IntPtr.Size == 8)
+            {
+                dprogFiles = @"D:\Program Files";
+                progfiles = Environment.GetEnvironmentVariable("ProgramFiles");
+            }
+
             if (progfiles.ToUpper().StartsWith("C"))
             {
                 lstProgFileDirs.Add(progfiles);
@@ -219,7 +238,7 @@ namespace Microsoft.Test.Stress
             {
                 string progFilesVs = Path.Combine(progFileDir, "Microsoft Visual Studio");
 
-                if(!Directory.Exists(progFilesVs))
+                if (!Directory.Exists(progFilesVs))
                 {
                     continue;
                 }
@@ -252,12 +271,9 @@ namespace Microsoft.Test.Stress
             VisualStudio.Configuration.Environment.Add("FooBar", "FooBar3");
             VisualStudio.Start();
          */
-        public async Task<Process> StartVSAsync(string vsPath = null, MemSpectModeFlags memSpectModeFlags = MemSpectModeFlags.MemSpectModeNone, string MemSpectDllPath = "")
+        public async Task<Process> StartVSAsync(MemSpectModeFlags memSpectModeFlags = MemSpectModeFlags.MemSpectModeNone, string MemSpectDllPath = "")
         {
-            if (string.IsNullOrEmpty(vsPath))
-            {
-                vsPath = GetVSFullPath();
-            }
+            var vsPath = GetVSFullPath();
             logger.LogMessage($"{ nameof(StartVSAsync)}  VSPath= {vsPath}");
             var startOptions = new ProcessStartInfo(vsPath)
             {
@@ -268,11 +284,11 @@ namespace Microsoft.Test.Stress
                 StressUtil.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags, MemSpectDllPath);
             }
             startOptions.Environment["__VSDisableStartWindow"] = "1"; // Pull Request 187145: Fix #859144: Use environment variables instead of registry for Apex StartWindowStartupOption
-            vsProc = Process.Start(startOptions);
-            logger.LogMessage($"Started VS PID= {vsProc.Id}");
+            VsProcess = Process.Start(startOptions);
+            logger.LogMessage($"Started VS PID= {VsProcess.Id}");
             await EnsureGotDTE(timeSpan: default);
             logger.LogMessage($"done {nameof(StartVSAsync)}");
-            return vsProc;
+            return VsProcess;
         }
 
         public async Task OpenSolutionAsync(string SolutionToLoad)
@@ -280,7 +296,7 @@ namespace Microsoft.Test.Stress
             var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
             //LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
-//            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            //            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             _vsDTE.Solution.Open(SolutionToLoad);
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
@@ -294,7 +310,7 @@ namespace Microsoft.Test.Stress
         {
             var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
             _tcsSolution = new TaskCompletionSource<int>();
-//            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            //            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             _vsDTE.Solution.Close();
             if (await Task.WhenAny(_tcsSolution.Task, Task.Delay(TimeSpan.FromSeconds(timeoutVSSlnEventsSecs))) != _tcsSolution.Task)
             {
@@ -320,11 +336,11 @@ namespace Microsoft.Test.Stress
             await Task.Yield();
             if (_vsDTE != null)
             {
-//                await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                //                await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 _vsDTE.Events.SolutionEvents.Opened -= SolutionEvents_Opened;
                 _vsDTE.Events.SolutionEvents.AfterClosing -= SolutionEvents_AfterClosing;
                 var tcs = new TaskCompletionSource<int>();
-                vsProc.Exited += (o, e) => // doesn't fire reliably
+                VsProcess.Exited += (o, e) => // doesn't fire reliably
                 {
                     tcs.SetResult(0);
                 };
@@ -336,14 +352,14 @@ namespace Microsoft.Test.Stress
                 {
                     if (await Task.WhenAny(tcs.Task, taskOneSecond) != tcs.Task)
                     {
-                        if (vsProc.HasExited)
+                        if (VsProcess.HasExited)
                         {
                             break;
                         }
                         taskOneSecond = Task.Delay(1000);
                     }
                 }
-                if (!vsProc.HasExited)
+                if (!VsProcess.HasExited)
                 {
                     logger.LogMessage($"******************Did not close in {timeoutForClose} secs");
                 }
@@ -356,7 +372,7 @@ namespace Microsoft.Test.Stress
         {
             Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSecs));
             var didGC = false;
-//            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            //            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             while (!timeoutTask.IsCompleted && !didGC)
             {
                 try
@@ -456,7 +472,7 @@ namespace Microsoft.Test.Stress
             }
             // can't register message filter because need to set STA apartment, which means the test needs to be run on STA
             //            MessageFilter.RegisterMessageFilter();
-//            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+            //            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             return runningObject as EnvDTE.DTE;
         }
 

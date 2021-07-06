@@ -23,7 +23,7 @@ namespace TestStress
             _VSHandler = new VSHandler(logger, delayMultiplier: 10);
 
             await _VSHandler.StartVSAsync(memSpectModeFlags: MemSpectModeFlags.MemSpectModeFull);
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
 
         [TestMethod]

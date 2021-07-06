@@ -16,9 +16,10 @@ namespace Tests
         [TestMethod]
         public void TestVSHandlerSettingsForLeakDetection()
         {
-            LogMessage(VSHandler.DoVSRegEdit("read local HKCU General DelayTimeThreshold dword"));
+            var vsHandler = new VSHandler(this);
+            LogMessage(vsHandler.DoVSRegEdit("read local HKCU General DelayTimeThreshold dword"));
 
-            LogMessage(VSHandler.DoVSRegEdit("read local HKCU General MaxNavigationHistoryDepth dword"));
+            LogMessage(vsHandler.DoVSRegEdit("read local HKCU General MaxNavigationHistoryDepth dword"));
 
         }
 

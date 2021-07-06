@@ -25,7 +25,7 @@ namespace TestStress
             _VSHandler = new VSHandler(logger);
 
             await _VSHandler.StartVSAsync();
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
             await _VSHandler.EnsureGotDTE(TimeSpan.FromSeconds(60));
             await _VSHandler.DteExecuteCommandAsync("View.ErrorList");
 
@@ -193,7 +193,7 @@ namespace TestStress
             logger = new Logger(new TestContextWrapper(TestContext));
             _VSHandler = new VSHandler(logger);
             await _VSHandler.StartVSAsync();
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
 
         [TestCleanup]
@@ -224,7 +224,9 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            procVS = Process.Start(VSHandler.GetVSFullPath()); // simulate Apex starting VS
+            var vsHandler = new VSHandler(null);
+
+            procVS = Process.Start(vsHandler.GetVSFullPath()); // simulate Apex starting VS
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
         }
 
@@ -278,7 +280,8 @@ namespace TestStress
                     }
                     await Task.Delay(TimeSpan.FromSeconds(nDelay));
                     logger.LogMessage($"TestInit : starting VS after {nDelay} secs delay");
-                    Process.Start(VSHandler.GetVSFullPath()); // simulate Apex starting VS
+                    var vsHandler = new VSHandler(null);
+                    Process.Start(vsHandler.GetVSFullPath()); // simulate Apex starting VS
                 });
 
             }

@@ -199,7 +199,7 @@ namespace Microsoft.Test.Stress
         internal bool SendTelemetry = true;
 
         [XmlIgnore]
-        public VSHandler VSHandler; // public so can be called from lambda
+        public IVSHandler VSHandler; // public so can be called from lambda
 
         internal bool? _isApexTest;
 
@@ -408,10 +408,10 @@ namespace Microsoft.Test.Stress
                 }
                 else
                 {
-                    await theVSHandler?.EnsureGotDTE(TargetDevEnvProcessId);
+                    await theVSHandler?.EnsureGotDTE(targetDevEnvProcessId: TargetDevEnvProcessId);
                 }
                 VSHandler = theVSHandler;
-                lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.vsProc, IsForStress: true);
+                lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.VsProcess, IsForStress: true);
             }
             SetPerfCounterOverrideSettings();
 

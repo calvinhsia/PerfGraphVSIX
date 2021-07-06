@@ -95,6 +95,7 @@
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
     <Compile Include="ILogger.cs" />
+    <Compile Include="IVSHandler.cs" />
     <Compile Include="LeakAnalysisResult.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
@@ -115,7 +116,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.206" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.11.9" />
-    <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7"/>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="ClrObjExplorer\ClrObjExplorer.zip">
