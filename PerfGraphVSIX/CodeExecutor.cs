@@ -51,9 +51,9 @@ namespace PerfGraphVSIX
             public const string DoMain = "DoMain"; // not domain
             public const string VSRootSubstitution = "%VSRoot%";
             public const string progfiles86 = @"C:\Program Files (x86)";
-            public string refPathPrefix => $"{CommentPrefix}Ref:";
-            public string includePathPrefix => $"{CommentPrefix}Include:";
-            public string pragmaPrefix => $"{CommentPrefix}Pragma:";
+            public string RefPathPrefix => $"{CommentPrefix}Ref:";
+            public string IncludePathPrefix => $"{CommentPrefix}Include:";
+            public string PragmaPrefix => $"{CommentPrefix}Pragma:";
             public string CommentPrefix; // for vb "'". For C# "//"
             bool _fDidAddAssemblyResolver;
 
@@ -130,13 +130,13 @@ namespace PerfGraphVSIX
                             hashofCodeToExecute += strCodeToExecute.GetHashCode();
                             var srcLines = strCodeToExecute.Split("\r\n".ToArray());
                             foreach (var srcline in srcLines.Where(
-                                s => s.StartsWith(refPathPrefix) ||
-                                s.StartsWith(pragmaPrefix) ||
-                                s.StartsWith(includePathPrefix)))
+                                s => s.StartsWith(RefPathPrefix) ||
+                                s.StartsWith(PragmaPrefix) ||
+                                s.StartsWith(IncludePathPrefix)))
                             {
-                                if (srcline.StartsWith(pragmaPrefix)) ////Pragma: GenerateInMemory=false
+                                if (srcline.StartsWith(PragmaPrefix)) ////Pragma: GenerateInMemory=false
                                 {
-                                    var splitPragma = srcline.Substring(pragmaPrefix.Length).Split(new[] { '=', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                    var splitPragma = srcline.Substring(PragmaPrefix.Length).Split(new[] { '=', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                                     switch (splitPragma[0].ToLower())
                                     {
                                         case "generateinmemory":
@@ -167,9 +167,9 @@ namespace PerfGraphVSIX
                                             throw new InvalidOperationException($"Unknown Pragma {srcline}");
                                     }
                                 }
-                                else if (srcline.StartsWith(refPathPrefix))
+                                else if (srcline.StartsWith(RefPathPrefix))
                                 {
-                                    var refAsm = srcline.Replace(refPathPrefix, string.Empty).Trim();
+                                    var refAsm = srcline.Replace(RefPathPrefix, string.Empty).Trim();
                                     if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
                                     {
                                         refAsm = refAsm.Replace("\"", string.Empty);
@@ -223,9 +223,9 @@ namespace PerfGraphVSIX
                                     }
                                     compParams.ReferencedAssemblies.Add(refAsm);
                                 }
-                                else if (srcline.StartsWith(includePathPrefix))
+                                else if (srcline.StartsWith(IncludePathPrefix))
                                 {
-                                    var include = srcline.Replace(includePathPrefix, string.Empty).Trim();
+                                    var include = srcline.Replace(IncludePathPrefix, string.Empty).Trim();
                                     if (include.StartsWith("\"") && include.EndsWith("\""))
                                     {
                                         include = include.Replace("\"", string.Empty);
@@ -428,7 +428,7 @@ namespace PerfGraphVSIX
                 {
                     result = strres;
                 }
-                if (res is System.Threading.Tasks.Task task)
+                if (res is System.Threading.Tasks.Task)
                 {
                     result = res;
                 }
