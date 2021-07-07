@@ -16,7 +16,7 @@ namespace Tests
         [TestMethod]
         public void TestGetVSPath()
         {
-            var vsHandler = new VSHandler(null);
+            var vsHandler = StressUtil.CreateVSHandler(null);
 
             Assert.IsNotNull(vsHandler.GetVSFullPath());
         }

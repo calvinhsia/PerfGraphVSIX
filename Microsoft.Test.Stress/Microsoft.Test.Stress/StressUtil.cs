@@ -203,6 +203,19 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
                 // need to WritePrivateProfileString  "TrackClrObjects"  "fTrackHeap" "EnableAsserts"
             }
         }
+
+        /// <summary>
+        /// Need a VS Handler that's built against the right VSSdk for ENVDTE interop (Dev17, Dev16)
+        /// </summary>
+        public static IVSHandler CreateVSHandler(ILogger logger, int delayMultiplier = 1)
+        {
+            IVSHandler vsHandler = null;
+            Assembly asm = Assembly.Load("VSHandler" + (IntPtr.Size == 8? "64":"32"));
+            var typ = asm.GetType("VSHandler");
+            vsHandler = (IVSHandler)Activator.CreateInstance(typ);
+            vsHandler.Initialize(logger, delayMultiplier);
+            return vsHandler;
+        }
     }
 
     public class LeakException : Exception

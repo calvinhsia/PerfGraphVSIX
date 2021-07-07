@@ -12,11 +12,12 @@ namespace Microsoft.Test.Stress
         void Initialize(ILogger logger, int delayMultiplier = 1);
         string GetVSFullPath();
         Process VsProcess { get; }
-        Task<object> EnsureGotDTE(TimeSpan timeout, int TargetProcessid); // 32 or 64 bit version is different
-        string DoVSRegEdit(string regeditparam, string vsPath);
+        int DelayMultiplier { get; set; }
+        Task<object> EnsureGotDTE(TimeSpan timeout, int TargetProcessid = 0); // 32 or 64 bit version is different
+        string DoVSRegEdit(string regeditparam, string vsPath="");
         void PrepareVSSettingsForLeakDetection();
-        Task DteExecuteCommandAsync(string dteCommand, int TimeoutSecs);
-        Task<Process> StartVSAsync(MemSpectModeFlags flags, string MemSpectDllPath);
+        Task DteExecuteCommandAsync(string dteCommand, int TimeoutSecs = 0);
+        Task<Process> StartVSAsync(MemSpectModeFlags flags = MemSpectModeFlags.MemSpectModeNone, string MemSpectDllPath = "");
         Task OpenSolutionAsync(string solutionPath);
         Task CloseSolutionAsync();
         Task ShutDownVSAsync();

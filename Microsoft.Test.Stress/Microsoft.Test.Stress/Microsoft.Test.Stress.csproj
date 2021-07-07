@@ -111,7 +111,6 @@
     <Compile Include="StressUtil.cs" />
     <Compile Include="StressUtilOptions.cs" />
     <Compile Include="TestContextWrapper.cs" />
-    <Compile Include="VSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.206" ExcludeAssets="runtime" />

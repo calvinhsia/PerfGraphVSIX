@@ -15,14 +15,14 @@ namespace TestStress
 
         public TestContext TestContext { get; set; }
         ILogger logger;
-        VSHandler _VSHandler;
+        IVSHandler _VSHandler;
         [TestInitialize]
         public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = new VSHandler(logger, delayMultiplier: 10);
+            _VSHandler = StressUtil.CreateVSHandler(logger, delayMultiplier: 10);
 
-            await _VSHandler.StartVSAsync(memSpectModeFlags: MemSpectModeFlags.MemSpectModeFull);
+            await _VSHandler.StartVSAsync(flags: MemSpectModeFlags.MemSpectModeFull);
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
 

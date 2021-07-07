@@ -14,13 +14,13 @@ namespace TestStressDll
     {
         public TestContext TestContext { get; set; }
         ILogger logger;
-        VSHandler _VSHandler;
+        IVSHandler _VSHandler;
         [TestInitialize]
         public async Task TestInitializeAsync()
         {
             await Task.Yield();
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = new VSHandler(logger);
+            _VSHandler = StressUtil.CreateVSHandler(logger);
             logger.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
             logger.LogMessage($"TEMP=" + Environment.GetEnvironmentVariable("TEMP"));
             logger.LogMessage($"LOCALAPPDATA=" + Environment.GetEnvironmentVariable("LOCALAPPDATA"));

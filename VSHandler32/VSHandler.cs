@@ -18,7 +18,7 @@ namespace Microsoft.Test.Stress
     {
         public const string procToFind = "devenv"; // we need devenv to start, manipulate DTE. We may want to monitor child processes like servicehub
         private ILogger logger;
-        public int _DelayMultiplier;
+        public int DelayMultiplier { get; set; }
         EnvDTE.DTE _vsDTE;
         /// <summary>
         /// The process we're monitoring may be different from vs: e.g. servicehub
@@ -37,7 +37,7 @@ namespace Microsoft.Test.Stress
         public void Initialize(ILogger logger, int delayMultiplier = 1)
         {
             this.logger = logger;
-            this._DelayMultiplier = delayMultiplier;
+            this.DelayMultiplier = delayMultiplier;
         }
 
         ///// <summary>
@@ -108,7 +108,7 @@ namespace Microsoft.Test.Stress
                         }
                     }
                     VsProcess = procDevenv;
-                    _vsDTE = await GetDTEAsync(VsProcess.Id, TimeSpan.FromSeconds(30 * _DelayMultiplier));
+                    _vsDTE = await GetDTEAsync(VsProcess.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
                     //                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     _solutionEvents = _vsDTE.Events.SolutionEvents;
 
@@ -293,7 +293,7 @@ namespace Microsoft.Test.Stress
 
         public async Task OpenSolutionAsync(string SolutionToLoad)
         {
-            var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
+            var timeoutVSSlnEventsSecs = 15 * DelayMultiplier;
             //LogMessage($"Opening solution {SolutionToLoad}");
             _tcsSolution = new TaskCompletionSource<int>();
             //            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -303,12 +303,12 @@ namespace Microsoft.Test.Stress
                 logger.LogMessage($"******************Solution Open event not fired in {timeoutVSSlnEventsSecs} seconds");
             }
             _tcsSolution = new TaskCompletionSource<int>();
-            await Task.Delay(TimeSpan.FromSeconds(10 * _DelayMultiplier));
+            await Task.Delay(TimeSpan.FromSeconds(10 * DelayMultiplier));
         }
 
         public async Task CloseSolutionAsync()
         {
-            var timeoutVSSlnEventsSecs = 15 * _DelayMultiplier;
+            var timeoutVSSlnEventsSecs = 15 * DelayMultiplier;
             _tcsSolution = new TaskCompletionSource<int>();
             //            await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             _vsDTE.Solution.Close();
@@ -316,7 +316,7 @@ namespace Microsoft.Test.Stress
             {
                 logger.LogMessage($"******************Solution Close event not fired in {timeoutVSSlnEventsSecs} seconds");
             }
-            await Task.Delay(TimeSpan.FromSeconds(5 * _DelayMultiplier));
+            await Task.Delay(TimeSpan.FromSeconds(5 * DelayMultiplier));
         }
 
         private void SolutionEvents_AfterClosing()
@@ -345,7 +345,7 @@ namespace Microsoft.Test.Stress
                     tcs.SetResult(0);
                 };
                 _vsDTE.Quit();
-                var timeoutForClose = 15 * _DelayMultiplier;
+                var timeoutForClose = 15 * DelayMultiplier;
                 var taskOneSecond = Task.Delay(1000);
 
                 while (timeoutForClose > 0)

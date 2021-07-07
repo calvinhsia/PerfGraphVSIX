@@ -16,7 +16,7 @@ namespace Tests
         [TestMethod]
         public void TestVSHandlerSettingsForLeakDetection()
         {
-            var vsHandler = new VSHandler(this);
+            var vsHandler = StressUtil.CreateVSHandler(this);
             LogMessage(vsHandler.DoVSRegEdit("read local HKCU General DelayTimeThreshold dword"));
 
             LogMessage(vsHandler.DoVSRegEdit("read local HKCU General MaxNavigationHistoryDepth dword"));

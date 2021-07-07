@@ -17,12 +17,12 @@ namespace TestStress
 
         public TestContext TestContext { get; set; }
         ILogger logger;
-        VSHandler _VSHandler;
+        IVSHandler _VSHandler;
         [TestInitialize]
         public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = new VSHandler(logger);
+            _VSHandler = StressUtil.CreateVSHandler(logger);
 
             await _VSHandler.StartVSAsync();
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
@@ -185,13 +185,13 @@ namespace TestStress
     {
         ILogger logger;
         public TestContext TestContext { get; set; }
-        VSHandler _VSHandler;
+        IVSHandler _VSHandler;
 
         [TestInitialize]
         public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = new VSHandler(logger);
+            _VSHandler = StressUtil.CreateVSHandler(logger);
             await _VSHandler.StartVSAsync();
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
@@ -224,7 +224,7 @@ namespace TestStress
         public void TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            var vsHandler = new VSHandler(null);
+            var vsHandler = StressUtil.CreateVSHandler(null);
 
             procVS = Process.Start(vsHandler.GetVSFullPath()); // simulate Apex starting VS
             logger.LogMessage($"TestInit starting VS pid= {procVS.Id}");
@@ -233,7 +233,7 @@ namespace TestStress
         [TestCleanup]
         public async Task TestCleanup()
         {
-            VSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
+            IVSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as IVSHandler;
             await VSHandler.ShutDownVSAsync();
         }
 
@@ -245,7 +245,7 @@ namespace TestStress
                 await StressUtil.DoIterationsAsync(this, NumIterations: 2);
 
 
-                if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
+                if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is IVSHandler vSHandler))
                 {
                     throw new InvalidOperationException("null vshandler");
                 }
@@ -280,7 +280,7 @@ namespace TestStress
                     }
                     await Task.Delay(TimeSpan.FromSeconds(nDelay));
                     logger.LogMessage($"TestInit : starting VS after {nDelay} secs delay");
-                    var vsHandler = new VSHandler(null);
+                    var vsHandler = StressUtil.CreateVSHandler(null);
                     Process.Start(vsHandler.GetVSFullPath()); // simulate Apex starting VS
                 });
 
@@ -289,7 +289,7 @@ namespace TestStress
             [TestCleanup]
             public async Task TestCleanupAsync()
             {
-                VSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
+                IVSHandler VSHandler = TestContext.Properties[StressUtil.PropNameVSHandler] as IVSHandler;
                 await VSHandler.ShutDownVSAsync();
             }
 
@@ -302,7 +302,7 @@ namespace TestStress
                     await StressUtil.DoIterationsAsync(this, NumIterations: 2);
 
 
-                    if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is VSHandler vSHandler))
+                    if (!(TestContext.Properties[StressUtil.PropNameVSHandler] is IVSHandler vSHandler))
                     {
                         throw new InvalidOperationException("null vshandler");
                     }

@@ -371,7 +371,7 @@ namespace Microsoft.Test.Stress
                 logger.LogMessage("No perf counter thresholds are being overridden.");
             }
 
-            VSHandler theVSHandler = null;
+            IVSHandler theVSHandler = null;
             if (string.IsNullOrEmpty(ProcNamesToMonitor))
             {
                 if (lstPerfCountersToUse == null) // allow tests to override
@@ -386,29 +386,29 @@ namespace Microsoft.Test.Stress
                     .Where(m => m.FieldType.Name == nameof(VSHandler)).FirstOrDefault();
                 if (vsHandlerFld != null)
                 {
-                    theVSHandler = vsHandlerFld.GetValue(test) as VSHandler;
-                    if (theVSHandler._DelayMultiplier > DelayMultiplier) //take the longer of the delaymultipliers
+                    theVSHandler = vsHandlerFld.GetValue(test) as IVSHandler;
+                    if (theVSHandler.DelayMultiplier > DelayMultiplier) //take the longer of the delaymultipliers
                     {
-                        DelayMultiplier = theVSHandler._DelayMultiplier;
+                        DelayMultiplier = theVSHandler.DelayMultiplier;
                     }
                 }
                 if (theVSHandler == null)
                 {
-                    theVSHandler = testContext.Properties[StressUtil.PropNameVSHandler] as VSHandler;
+                    theVSHandler = testContext.Properties[StressUtil.PropNameVSHandler] as IVSHandler;
                     if (theVSHandler == null)
                     {
-                        theVSHandler = new VSHandler(logger, DelayMultiplier);
+                        theVSHandler = StressUtil.CreateVSHandler(logger, DelayMultiplier);
                         testContext.Properties[StressUtil.PropNameVSHandler] = theVSHandler;
                     }
                 }
                 // ensure we get the DTE. Even for Apex tests, we need to Tools.ForceGC
                 if (TargetDevEnvProcessId == 0)
                 {
-                    await theVSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv * DelayMultiplier));
+                    await theVSHandler?.EnsureGotDTE(TimeSpan.FromSeconds(SecsToWaitForDevenv * DelayMultiplier), TargetProcessid:0);
                 }
                 else
                 {
-                    await theVSHandler?.EnsureGotDTE(targetDevEnvProcessId: TargetDevEnvProcessId);
+                    await theVSHandler?.EnsureGotDTE(timeout: default, TargetProcessid: TargetDevEnvProcessId);
                 }
                 VSHandler = theVSHandler;
                 lstPerfCountersToUse = PerfCounterData.GetPerfCountersToUse(VSHandler.VsProcess, IsForStress: true);
