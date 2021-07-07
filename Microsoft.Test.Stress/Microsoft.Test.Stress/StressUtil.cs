@@ -148,19 +148,56 @@ Language:         Language Neutral
 
         /// <summary>
         /// Need a VS Handler that's built against the right VSSdk for ENVDTE interop (Dev17, Dev16)
+        /// Problem: We want one "Microsoft.Stress.Test.dll" but it needs to work for both 32 and 64 bits. This means depending on 2 different SDKs Dev16 and Dev17.
+        /// Solution: factor out VSHandler, create a VSHandler32 and VSHandler64, each dependant on their own SDKs. Also cannot have "Microsoft.Test.Stress.dll" reference VSHandler* at all
+        ///   so we use Reflection to instantiate and cast to the desired interface.
+        /// 
+        /// Problem: VSHandler depends on Microsoft.Stress.Test.dll, so needs to be built after, but also needs to be published in the Microsoft.Stress.Test.nuspec
+        /// Solution: remove the dependency from VSHandler to Microsoft.Stress.Test.dll by putting the definitions in another assembly on which both depend
+        /// Problem: multiple different Test projects in this repo need to get the VSHandler.
+        /// One solution is to Xcopy the VSHandler to each test dir. (yuk)
+        /// Other way is to search up folders for the VSHandler output under Microsoft.Test.Stress folder.
+        /// Problem: Tests (not in this repo) need to get the VSHandler via Nuget
+        /// Solution: modify the nuspec.
         /// </summary>
         public static IVSHandler CreateVSHandler(ILogger logger, int delayMultiplier = 1)
         {
-            var thisasmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var thisasmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location); // C:\Users\calvinh\source\repos\Stress\TestStress\bin\Debug
             var seg = IntPtr.Size == 8 ? "64" : "32";
-            var pathHandler = Path.Combine( // in subfolder called VSHandler32\VSHandler32.dll so dependent assemblies are separate for 32 and 64 bit
-                thisasmDir,
+            var partPath = Path.Combine(
                 $"VSHandler{seg}",
                 $"VSHandler{seg}.dll");
+            var pathHandler = Path.Combine( // in subfolder called VSHandler32\VSHandler32.dll so dependent assemblies are separate for 32 and 64 bit
+                thisasmDir, partPath);
+            logger?.LogMessage($"Could not find {pathHandler} . Searching for built folder");
             if (!File.Exists(pathHandler))
             {
-                throw new FileNotFoundException(pathHandler);
+                // could be repo tests, so we find them in sibling folder
+                var pathParts = thisasmDir.Split(Path.DirectorySeparatorChar);
+                var targetfolder = @"Microsoft.Test.Stress";
+
+                if (pathParts.Length > 7) 
+                {
+                    var upone = Path.GetDirectoryName(thisasmDir);
+                    int max = 4;
+                    while (max > 0)
+                    {
+                        if (Directory.Exists(Path.Combine(upone, targetfolder)))
+                        {
+                            // "C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Debug\VSHandler32\VSHandler32.dll"
+                            pathHandler = Path.Combine(upone, targetfolder, targetfolder, pathParts[pathParts.Length - 2], pathParts[pathParts.Length - 1], partPath); // add "bin\Debug" 
+                            break;
+                        }
+                        upone = Path.GetDirectoryName(upone);
+                        max--;
+                    }
+                }
+                if (!File.Exists(pathHandler))
+                {
+                    throw new FileNotFoundException(pathHandler);
+                }
             }
+            logger?.LogMessage($"Found VSHandler at {pathHandler}");
             Assembly asm = Assembly.LoadFrom(pathHandler);
             var typ = asm.GetType("Microsoft.Test.Stress.VSHandler");
             var vsHandler = (IVSHandler)Activator.CreateInstance(typ);

@@ -25,7 +25,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Microsoft.Test.Stress.xml</DocumentationFile>
-    <NoWarn>NU5128;NU5118;CS1591</NoWarn>
+    <NoWarn>NU5128;NU5118;CS1591;NU5100</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
