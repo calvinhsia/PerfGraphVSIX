@@ -16,7 +16,7 @@ namespace Microsoft.Test.Stress
         Task<object> EnsureGotDTE(TimeSpan timeout, int TargetProcessid = 0); // 32 or 64 bit version is different
         string DoVSRegEdit(string regeditparam, string vsPath="");
         void PrepareVSSettingsForLeakDetection();
-        Task DteExecuteCommandAsync(string dteCommand, int TimeoutSecs = 0);
+        Task DteExecuteCommandAsync(string dteCommand, int TimeoutSecs = 60);
         Task<Process> StartVSAsync(MemSpectModeFlags flags = MemSpectModeFlags.MemSpectModeNone, string MemSpectDllPath = "");
         Task OpenSolutionAsync(string solutionPath);
         Task CloseSolutionAsync();

@@ -75,7 +75,8 @@ namespace Microsoft.Test.Stress
                     bool GetTargetDevenvProcess() // need to find devenv that is not currently running test, but was started by test (either before or after this code is called
                     {
                         bool fGotit = false;
-                        procDevenv = Process.GetProcessesByName(procToFind).OrderByDescending(p => p.StartTime).FirstOrDefault();
+                        var allDevEnvProcs = Process.GetProcessesByName(procToFind);
+                        procDevenv = allDevEnvProcs.OrderByDescending(p => p.StartTime).FirstOrDefault();
                         // the process start time must have started very recently, but we need to exclude the case where user starts devenv, then immediately runs the test
                         // IOW, it must have started at most 30 seconds ago
                         if (procDevenv.StartTime > DateTime.Now - TimeSpan.FromSeconds(30))

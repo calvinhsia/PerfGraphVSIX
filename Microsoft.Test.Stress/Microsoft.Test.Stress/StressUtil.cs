@@ -246,8 +246,12 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
         /// </summary>
         public static IVSHandler CreateVSHandler(ILogger logger, int delayMultiplier = 1)
         {
-            var path = @"C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\VSHandler32\bin\Debug";
-            Assembly asm = Assembly.LoadFrom(path + @"\VSHandler" + (IntPtr.Size == 8 ? "64" : "32") + ".dll");
+            var pathHandler = @"C:\Users\calvinh\source\repos\PerfGraphVSIX\Microsoft.Test.Stress\VSHandler64\bin\Debug" + @"\VSHandler" + (IntPtr.Size == 8 ? "64" : "32") + ".dll";
+            if (!File.Exists(pathHandler))
+            {
+                throw new FileNotFoundException(pathHandler);
+            }
+            Assembly asm = Assembly.LoadFrom(pathHandler);
             var typ = asm.GetType("Microsoft.Test.Stress.VSHandler");
             var vsHandler = (IVSHandler)Activator.CreateInstance(typ);
             vsHandler.Initialize(logger, delayMultiplier);
