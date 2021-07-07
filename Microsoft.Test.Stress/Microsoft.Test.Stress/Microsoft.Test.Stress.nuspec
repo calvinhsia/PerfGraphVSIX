@@ -16,5 +16,7 @@
   <files>
       <file src="bin\Release\*.dll" target="lib\net461" />
       <file src="bin\Release\Microsoft.Test.Stress.xml" target="lib\net461" />
+	  <file src="bin\Release\VSHandler32\**" target="Content\VSHandler32" />
+	  <file src="bin\Release\VSHandler64\**" target="Content\VSHandler64" />
   </files>
 </package>

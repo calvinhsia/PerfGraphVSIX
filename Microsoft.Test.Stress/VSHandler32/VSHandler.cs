@@ -158,7 +158,7 @@ namespace Microsoft.Test.Stress
             var vsRegEdit = Path.Combine(Path.GetDirectoryName(vsPath), "VsRegedit.exe");
             var sb = new StringBuilder();
 
-            using (var proc = StressUtil.CreateProcess(vsRegEdit, arg, sb))
+            using (var proc = Utility.CreateProcess(vsRegEdit, arg, sb))
             {
                 proc.Start();
                 proc.BeginOutputReadLine();
@@ -241,7 +241,7 @@ namespace Microsoft.Test.Stress
             };
             if (memSpectModeFlags != MemSpectModeFlags.MemSpectModeNone)
             {
-                StressUtil.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags, MemSpectDllPath);
+                Utility.SetEnvironmentForMemSpect(startOptions.Environment, memSpectModeFlags, MemSpectDllPath);
             }
             startOptions.Environment["__VSDisableStartWindow"] = "1"; // Pull Request 187145: Fix #859144: Use environment variables instead of registry for Apex StartWindowStartupOption
             VsProcess = Process.Start(startOptions);

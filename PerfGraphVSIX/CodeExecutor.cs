@@ -298,7 +298,7 @@ namespace PerfGraphVSIX
                                 {
                                     _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args);
                                 }
-                                using (var proc = StressUtil.CreateProcess(roslynExe, args, sb))
+                                using (var proc = Utility.CreateProcess(roslynExe, args, sb))
                                 {
                                     proc.Start();
                                     proc.BeginOutputReadLine();

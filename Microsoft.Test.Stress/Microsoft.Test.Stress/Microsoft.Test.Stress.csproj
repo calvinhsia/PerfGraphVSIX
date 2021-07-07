@@ -35,7 +35,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Microsoft.Test.Stress.xml</DocumentationFile>
-    <NoWarn>NU5128;NU5118;CS1591</NoWarn>
+    <NoWarn>NU5128;NU5118;CS1591;NU5100</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -94,8 +94,6 @@
     <Compile Include="GraphWin.xaml.cs">
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ILogger.cs" />
-    <Compile Include="IVSHandler.cs" />
     <Compile Include="LeakAnalysisResult.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
@@ -141,6 +139,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Definitions\Definitions.csproj">
+      <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
+      <Name>Definitions</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
