@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 
 
@@ -203,6 +204,42 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
                 // need to WritePrivateProfileString  "TrackClrObjects"  "fTrackHeap" "EnableAsserts"
             }
         }
+        /// <summary>
+        /// Execute the given process
+        /// </summary>
+        /// <param name="exeName">Process to be executed</param>
+        /// <param name="arguments">Process arguments</param>
+        /// <param name="sb">stringbuild for result</param>
+        /// <returns></returns>
+        public static Process CreateProcess(string exeName, string arguments, StringBuilder sb)
+        {
+            ProcessStartInfo info = new ProcessStartInfo(exeName, arguments)
+            {
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            Process process = new Process();
+            process.OutputDataReceived += (o, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    sb.AppendLine(string.Format("{0}", e.Data));
+                }
+            };
+            process.ErrorDataReceived += (o, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                {
+                    sb.AppendLine(string.Format("{0}", e.Data));
+                }
+            };
+            info.CreateNoWindow = true;
+            process.StartInfo = info;
+            return process;
+        }
+
 
         /// <summary>
         /// Need a VS Handler that's built against the right VSSdk for ENVDTE interop (Dev17, Dev16)
@@ -210,8 +247,9 @@ Set COR_PROFILER_PATH=c:\MemSpect\MemSpectDll.dll
         public static IVSHandler CreateVSHandler(ILogger logger, int delayMultiplier = 1)
         {
             IVSHandler vsHandler = null;
-            Assembly asm = Assembly.Load("VSHandler" + (IntPtr.Size == 8? "64":"32"));
-            var typ = asm.GetType("VSHandler");
+            var path = @"C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\VSHandler32\bin\Debug";
+            Assembly asm = Assembly.LoadFrom(path + @"\VSHandler" + (IntPtr.Size == 8 ? "64" : "32") + ".dll");
+            var typ = asm.GetType("Microsoft.Test.Stress.VSHandler");
             vsHandler = (IVSHandler)Activator.CreateInstance(typ);
             vsHandler.Initialize(logger, delayMultiplier);
             return vsHandler;

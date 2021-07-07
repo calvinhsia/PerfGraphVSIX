@@ -1,5 +1,4 @@
 ﻿//using Microsoft.Diagnostics.Runtime;
-using EnvDTE;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;

@@ -176,7 +176,7 @@ namespace TestStress
         [TestCleanup]
         public async Task TestCleanupAsync()
         {
-            await _VSHandler.ShutDownVSAsync();
+            await _VSHandler?.ShutDownVSAsync();
         }
     }
 
