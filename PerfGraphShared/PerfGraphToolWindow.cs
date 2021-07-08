@@ -18,7 +18,7 @@
     [Guid("6772729d-d216-4ae2-8d05-da9f47416168")]
     public class PerfGraphToolWindow : ToolWindowPane
     {
-        internal const string CaptionString = "PerfGraphToolWindow";
+        internal const string CaptionString = "PerfGraph";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PerfGraphToolWindow"/> class.

@@ -4,6 +4,7 @@ using PerfGraphVSIX;
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -353,7 +354,7 @@ namespace MyCustomCode
 
 //  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
 //                      %VSRoot% will be changed to the fullpath to VS: e.g. ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview""
-
+//Pragma: verbose=true
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.11.0.dll
@@ -575,6 +576,10 @@ namespace MyCustomCode
             File.WriteAllText(tempFile, sampleVSCodeToExecute);
             using (var compileHelper = codeExecutor.CompileTheCode(null, tempFile, CancellationToken.None))
             {
+                if (!string.IsNullOrEmpty(compileHelper.CompileResults))
+                {
+                    throw new InvalidOperationException(compileHelper.CompileResults);
+                }
                 var res = compileHelper.ExecuteTheCode();
                 if (res is string resString)
                 {
@@ -712,14 +717,20 @@ public class foo {}
             await Task.Yield();
             int nCompiled = 0;
             int nErrors = 0;
-            var pathtosamples = @"C:\Users\calvinh\source\repos\Stress\PerfGraphVSIX\CodeSamples";
-            if (!Directory.Exists(pathtosamples))
+            var thisasmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location); // C:\Users\calvinh\source\repos\Stress\TestStress\bin\Debug
+            var upone = thisasmDir;
+            var pathtosamples = "";
+            while (true)
             {
-                pathtosamples = @"C:\Users\calvinh\source\repos\PerfGraphVSIX\PerfGraphVSIX\CodeSamples";
+                upone = Path.GetDirectoryName(upone);
+                pathtosamples = Path.Combine(upone, "CodeSamples");
+                if (Directory.Exists(pathtosamples))
+                {
+                    break;
+                }
             }
             foreach (var codesample in Directory.EnumerateFiles(pathtosamples, "*.*", SearchOption.AllDirectories)
-                        .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
-                )
+                        .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower())))
             {
                 //LogMessage($"Compiling {codesample}");
                 {

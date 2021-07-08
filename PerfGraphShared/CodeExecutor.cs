@@ -187,7 +187,9 @@ namespace PerfGraphVSIX
                                             _lstRefDirs.Add(dir);
                                         }
                                         compParams.ReferencedAssemblies.Add(refAsm);
-                                        refAsm = typeof(ILogger).Assembly.Location;
+                                        refAsm = typeof(ILogger).Assembly.Location; // definitions
+                                        compParams.ReferencedAssemblies.Add(refAsm);
+                                        refAsm = typeof(StressUtil).Assembly.Location;
                                     }
                                     else
                                     {
