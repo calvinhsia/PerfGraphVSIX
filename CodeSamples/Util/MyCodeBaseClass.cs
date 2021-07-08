@@ -5,6 +5,7 @@
 
 //  Macro substitution: %PerfGraphVSIX% will be changed to the fullpath to PerfGraphVSIX
 //                      %VSRoot% will be changed to the fullpath to VS: e.g. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview"
+//                      "C:\Program Files (x86)" will be changed to the appropriate environment variable ('ProgramFiles' or 'ProgramFiles(x86)') depending on 32 or 64 bit
 
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.8.0.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Interop.10.0.dll

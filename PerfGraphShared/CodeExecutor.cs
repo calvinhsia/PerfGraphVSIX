@@ -175,7 +175,7 @@ namespace PerfGraphVSIX
                                     }
                                     if (refAsm.Contains(progfiles86))// C:\Program Files (x86)\
                                     {
-                                        var pfiles = Environment.GetEnvironmentVariable("ProgramFiles(x86)");
+                                        var pfiles = Environment.GetEnvironmentVariable("ProgramFiles" + (IntPtr.Size == 8 ? "(x86)" : string.Empty));
                                         refAsm = refAsm.Replace(progfiles86, pfiles);
                                     }
                                     if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
