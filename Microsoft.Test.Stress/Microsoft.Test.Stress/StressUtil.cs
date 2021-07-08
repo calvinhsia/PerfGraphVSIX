@@ -168,7 +168,10 @@ Language:         Language Neutral
                 $"VSHandler{seg}",
                 $"VSHandler{seg}.dll");
             var pathHandler = Path.Combine( // in subfolder called VSHandler32\VSHandler32.dll so dependent assemblies are separate for 32 and 64 bit
-                thisasmDir, partPath);
+                thisasmDir, partPath); 
+            // sometimes tests run from TestDeployment folder (no bin\debug)
+            // "C:\Users\calvinh\source\repos\Stress\TestResults\Deploy_calvinh 2021-07-08 14_02_38\Out\Microsoft.Test.Stress.dll"
+            // C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Deploy_calvinh 2021-07-08 14_02_38\Out\VSHandler32\VSHandler32.dll
             logger?.LogMessage($"Could not find {pathHandler} . Searching for built folder");
             if (!File.Exists(pathHandler))
             {
@@ -185,7 +188,14 @@ Language:         Language Neutral
                         if (Directory.Exists(Path.Combine(upone, targetfolder)))
                         {
                             // "C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Debug\VSHandler32\VSHandler32.dll"
-                            pathHandler = Path.Combine(upone, targetfolder, targetfolder, pathParts[pathParts.Length - 2], pathParts[pathParts.Length - 1], partPath); // add "bin\Debug" 
+                            if (pathParts[pathParts.Length-2] == "bin")
+                            {
+                                pathHandler = Path.Combine(upone, targetfolder, targetfolder, pathParts[pathParts.Length - 2], pathParts[pathParts.Length - 1], partPath); // add "bin\Debug" 
+                            }
+                            else
+                            {
+                                pathHandler = Path.Combine(upone, targetfolder, targetfolder, @"bin\debug", partPath); // add "bin\Debug" 
+                            }
                             break;
                         }
                         upone = Path.GetDirectoryName(upone);
