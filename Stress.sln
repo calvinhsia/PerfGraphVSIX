@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.31501.297
+VisualStudioVersion = 16.0.31320.298
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfGraphVSIX", "PerfGraphVSIX\PerfGraphVSIX.csproj", "{1CE249E2-A3F2-43F6-A37F-9329FA947660}"
 EndProject
@@ -115,7 +115,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSDemos", "VSDemos", "{D2D5
 		CodeSamples\VSDemos\ThreadPoolStarve.cs = CodeSamples\VSDemos\ThreadPoolStarve.cs
 	EndProjectSection
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PerfGraphShared", "PerfGraphShared\PerfGraphShared.shproj", "{8405B4BC-03FC-48C1-932B-EBC9E6A590A3}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		PerfGraphShared\PerfGraphShared.projitems*{1ce249e2-a3f2-43f6-a37f-9329fa947660}*SharedItemsImports = 4
+		PerfGraphShared\PerfGraphShared.projitems*{8405b4bc-03fc-48c1-932b-ebc9e6a590a3}*SharedItemsImports = 13
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
