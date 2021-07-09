@@ -89,6 +89,12 @@
     <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ClrListener\ClrListener.vcxproj">
+      <Project>{BC8DE317-DADD-4685-B06F-849FC5518075}</Project>
+      <Name>ClrListener</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
     <ProjectReference Include="..\Microsoft.Test.Stress\Definitions\Definitions.csproj">
       <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
       <Name>Definitions</Name>
@@ -96,6 +102,8 @@
     <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
       <Project>{a9794ff3-c487-4801-b634-8de8c2b7c7ec}</Project>
       <Name>Microsoft.Test.Stress</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
   </ItemGroup>
   <Import Project="..\PerfGraphShared\PerfGraphShared.projitems" Label="Shared" />
