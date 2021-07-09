@@ -191,7 +191,7 @@
                 _fileSystemWatcher.Deleted += h;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
-                ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -629,7 +629,7 @@
 
         public void LogMessage(string msg, params object[] args)
         {
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 await AddStatusMsgAsync(msg, args);
             });
@@ -682,7 +682,7 @@
         {
             btnClrObjExplorer.IsEnabled = false;
             ThreadHelper.ThrowIfNotOnUIThread();
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
                     await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
                     btnClrObjExplorer.IsEnabled = true;
@@ -718,7 +718,7 @@
 
         public void BtnExecCode_Click(object sender, RoutedEventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {

@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.Workspace.VSIntegration.Contracts;
+﻿//using Microsoft.VisualStudio.Workspace.VSIntegration.Contracts;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -12,14 +12,14 @@ namespace PerfGraphVSIX
     [Export(typeof(OpenFolderTracker))]
     public class OpenFolderTracker
     {
-        public IVsFolderWorkspaceService _vsFolderWorkspaceService;
+//        public IVsFolderWorkspaceService _vsFolderWorkspaceService;
         internal PerfGraphToolWindowControl _perfGraph;
         internal ObjTracker _objTracker;
-        [ImportingConstructor]
-        public OpenFolderTracker(IVsFolderWorkspaceService vsFolderWorkspaceService)
-        {
-            _vsFolderWorkspaceService = vsFolderWorkspaceService;
-        }
+        //[ImportingConstructor]
+        //public OpenFolderTracker(IVsFolderWorkspaceService vsFolderWorkspaceService)
+        //{
+        //    _vsFolderWorkspaceService = vsFolderWorkspaceService;
+        //}
 
         internal void Initialize(PerfGraphToolWindowControl perfGraph, ObjTracker objTracker)
         {
