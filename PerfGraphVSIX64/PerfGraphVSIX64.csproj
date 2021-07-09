@@ -67,6 +67,226 @@
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.0.2150-preview2" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\CodeSamples\AutoExec.txt">
+      <Link>CodeSamples\AutoExec.txt</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\CodeSamples\Fun\Fish.cs">
+      <Link>CodeSamples\Fun\Fish.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Fun\Life.cs">
+      <Link>CodeSamples\Fun\Life.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Fun\LogoTurtle.cs">
+      <Link>CodeSamples\Fun\LogoTurtle.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Util\AssemblyCreator.cs">
+      <Link>CodeSamples\Util\AssemblyCreator.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Util\CloseableTabItem.cs">
+      <Link>CodeSamples\Util\CloseableTabItem.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Util\LeakBaseClass.cs">
+      <Link>CodeSamples\Util\LeakBaseClass.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Util\MyCodeBaseClass.cs">
+      <Link>CodeSamples\Util\MyCodeBaseClass.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\AArnottThreadDemo.cs">
+      <Link>CodeSamples\VSDemos\AArnottThreadDemo.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\ChildProc.cs">
+      <Link>CodeSamples\VSDemos\ChildProc.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\CodeMarkers.cs">
+      <Link>CodeSamples\VSDemos\CodeMarkers.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\GetServices.cs">
+      <Link>CodeSamples\VSDemos\GetServices.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\MapFileDictSample.cs">
+      <Link>CodeSamples\VSDemos\MapFileDictSample.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\MEF.cs">
+      <Link>CodeSamples\VSDemos\MEF.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\RunCodeIn64Bit.cs">
+      <Link>CodeSamples\VSDemos\RunCodeIn64Bit.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\Simple.cs">
+      <Link>CodeSamples\VSDemos\Simple.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\STAThread.cs">
+      <Link>CodeSamples\VSDemos\STAThread.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\TargetedTrace.cs">
+      <Link>CodeSamples\VSDemos\TargetedTrace.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\TelemetryMonitor.cs">
+      <Link>CodeSamples\VSDemos\TelemetryMonitor.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\TelemetrySendEvent.cs">
+      <Link>CodeSamples\VSDemos\TelemetrySendEvent.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\ThreadPoolStarve.cs">
+      <Link>CodeSamples\VSDemos\ThreadPoolStarve.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\LeakWpfEventHandler.cs">
+      <Link>CodeSamples\LeakDemos\LeakWpfEventHandler.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\Leaky.cs">
+      <Link>CodeSamples\LeakDemos\Leaky.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\LeakyEvent.cs">
+      <Link>CodeSamples\LeakDemos\LeakyEvent.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\LeakyHandle.cs">
+      <Link>CodeSamples\LeakDemos\LeakyHandle.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\LeakyNative.cs">
+      <Link>CodeSamples\LeakDemos\LeakyNative.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\ThreadPoolLeak.cs">
+      <Link>CodeSamples\LeakDemos\ThreadPoolLeak.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\LeakDemos\CancellationTokenSource.cs">
+      <Link>CodeSamples\LeakDemos\CancellationTokenSource.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\BuildSln.cs">
+      <Link>CodeSamples\VSLeakTests\BuildSln.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\BuildSlnCpp.cs">
+      <Link>CodeSamples\VSLeakTests\BuildSlnCpp.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\Debug.cs">
+      <Link>CodeSamples\VSLeakTests\Debug.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\DebugCpp.cs">
+      <Link>CodeSamples\VSLeakTests\DebugCpp.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\NavOneFile.cs">
+      <Link>CodeSamples\VSLeakTests\NavOneFile.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\NavTwoFiles.cs">
+      <Link>CodeSamples\VSLeakTests\NavTwoFiles.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\NavTwoFilesCpp.cs">
+      <Link>CodeSamples\VSLeakTests\NavTwoFilesCpp.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\OpenCloseFolder.cs">
+      <Link>CodeSamples\VSLeakTests\OpenCloseFolder.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\OpenCloseOneFile.cs">
+      <Link>CodeSamples\VSLeakTests\OpenCloseOneFile.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\OpenCloseSln.cs">
+      <Link>CodeSamples\VSLeakTests\OpenCloseSln.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs">
+      <Link>CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Fun\Cartoon.vb">
+      <Link>CodeSamples\Fun\Cartoon.vb</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Fun\hwndHost.dll">
+      <Link>CodeSamples\Fun\hwndHost.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\Fun\HWndHost.vb">
+      <Link>CodeSamples\Fun\HWndHost.vb</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\MapFileDict.dll">
+      <Link>CodeSamples\VSDemos\MapFileDict.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\MapFileDict.pdb">
+      <Link>CodeSamples\VSDemos\MapFileDict.pdb</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <VSCTCompile Include="..\PerfGraphVSIX\PerfGraphToolWindowPackage.vsct">
       <Link>PerfGraphToolWindowPackage.vsct</Link>
       <ResourceName>Menus.ctmenu</ResourceName>

@@ -267,6 +267,16 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="..\CodeSamples\VSDemos\MapFileDict.dll">
+      <Link>CodeSamples\VSDemos\MapFileDict.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="..\CodeSamples\VSDemos\MapFileDict.pdb">
+      <Link>CodeSamples\VSDemos\MapFileDict.pdb</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <VSCTCompile Include="PerfGraphToolWindowPackage.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
     </VSCTCompile>
@@ -278,18 +288,6 @@
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\CodeSamples\VSDemos\MapFileDict.dll">
-      <Link>CodeSamples\VSDemos\MapFileDict.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
-    <Content Include="..\CodeSamples\VSDemos\MapFileDict.pdb">
-      <Link>CodeSamples\VSDemos\MapFileDict.pdb</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
