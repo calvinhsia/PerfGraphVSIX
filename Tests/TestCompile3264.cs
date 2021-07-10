@@ -363,10 +363,10 @@ namespace MyCustomCode
                 }
 
             }
-            searchForIt(targPath);
-
-
-
+            if (Directory.Exists(targPath))
+            {
+                searchForIt(targPath);
+            }
         }
     }
 }
