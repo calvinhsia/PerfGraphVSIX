@@ -51,9 +51,9 @@ namespace MyCodeToExecute
                 _MyWindow = new MainWindow(this);
                 var isClosed = false;
                 _MyWindow.Closed += (o, e) =>
-                 {
-                     isClosed = true;
-                 };
+                {
+                    isClosed = true;
+                };
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
                     while (!_CancellationTokenExecuteCode.IsCancellationRequested)
@@ -163,8 +163,8 @@ namespace MyCodeToExecute
         public MainWindow(MyClass myclass)
         {
             this.myClass = myclass;
-                Width = 800;
-                Height = 400;
+            Width = 800;
+            Height = 400;
             this.Loaded += MainWindow_Loaded;
         }
         void LogMessage(string msg, params object[] args)
@@ -210,6 +210,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <TextBox xml:space=""preserve"" >
 This Window is running on it's own private UI thread, as can be seen in the Log Messages, which show the ThreadId
 The bouncing ball will be jerky if the thread is too busy to update the User Interface (UIDelay)
+Run the ChildProc sample at the same time because it shows a bouncing ball in the PerfGraph window on the VS UI thread
 If you cause a UI delay in the VS main thread, this thread will be less affected.
 The ChildProc sample has a bouncing ball that will not be animated during UI delays.
 The Telemetry monitor sample will show a vs/delays/ui/start event
@@ -234,21 +235,21 @@ ToolTip=""Cause UI delay on main thread of VS: if you have telemetry monitor or 
                 grid.DataContext = this;
                 var btnClose = (Button)grid.FindName("btnClose");
                 btnClose.Click += (o, e) =>
-                  {
-                      this.Close();
-                  };
+                {
+                    this.Close();
+                };
                 var btnUIDelay = (Button)grid.FindName("btnUIDelay");
                 btnUIDelay.Click += async (o, e) =>
-                 {
-                     // switch to main thread of VS
-                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                     LogMessage($"Causing UI delay on main thread of VS {UIDelayMSecs}");
-                     Thread.Sleep(TimeSpan.FromMilliseconds(UIDelayMSecs));
-                 };
+                {
+                    // switch to main thread of VS
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    LogMessage($"Causing UI delay on main thread of VS by Thread.Sleep({UIDelayMSecs})");
+                    Thread.Sleep(TimeSpan.FromMilliseconds(UIDelayMSecs));
+                };
                 var btnUIDelayMySTA = (Button)grid.FindName("btnUIDelayMySTA");
                 btnUIDelayMySTA.Click += async (o, e) =>
                 {
-                    LogMessage($"Causing UI delay on main thread of STA form {UIDelayMSecs}");
+                    LogMessage($"Causing UI delay on main thread of STA form by Thread.Sleep({UIDelayMSecs})");
                     Thread.Sleep(TimeSpan.FromMilliseconds(UIDelayMSecs));
                 };
                 this.Content = grid;
