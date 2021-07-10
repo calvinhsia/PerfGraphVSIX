@@ -51,6 +51,12 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Tests\BaseTestClass.cs">
+      <Link>BaseTestClass.cs</Link>
+    </Compile>
+    <Compile Include="..\Tests\TestCompile3264.cs">
+      <Link>TestCompile3264.cs</Link>
+    </Compile>
     <Compile Include="Stress64Tests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -65,6 +71,10 @@
     <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
       <Project>{A9794FF3-C487-4801-B634-8DE8C2B7C7EC}</Project>
       <Name>Microsoft.Test.Stress</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PerfGraphVSIX64\PerfGraphVSIX64.csproj">
+      <Project>{05e220c5-e539-4ee6-afa2-6309e2003740}</Project>
+      <Name>PerfGraphVSIX64</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
