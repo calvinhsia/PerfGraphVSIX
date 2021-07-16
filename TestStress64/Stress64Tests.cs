@@ -59,6 +59,7 @@ namespace TestStress
                 {
                     FailTestAsifLeaksFound = true,
                     NumIterations = 7,
+                    LoggerLogOutputToDestkop = true,
                     actExecuteAfterEveryIterationAsync = async (nIter, measurementHolder) =>
                     {
                         await Task.Yield();

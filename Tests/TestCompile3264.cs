@@ -341,6 +341,7 @@ namespace MyCustomCode
         }
 
         [TestMethod]
+        [Ignore]
         public void TestAsmVersions()
         {
             if (IntPtr.Size == 4)
