@@ -372,8 +372,9 @@
         }
 
         // Types get loaded before the method that uses them, so it can't be caught in the same method as the Catch: must be in a method below the Catch
-//        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
-//        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
+        //        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
+        //        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
+        // A reference to 'C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\CommonExtensions\Microsoft\Editor\Microsoft.VisualStudio.CoreUtility.dll' could not be added. This component is already automatically referenced by the build system.
 
         // use a circular buffer to store samples. 
         // dictionary of sample # (int from 0 to NumDataPoints) =>( List (PerfCtrValues in order)

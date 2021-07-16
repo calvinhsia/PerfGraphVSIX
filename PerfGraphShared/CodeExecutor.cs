@@ -223,6 +223,19 @@ namespace PerfGraphVSIX
                                             if (refAsm.Contains(VSRootSubstitution))
                                             {
                                                 refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
+                                                var filename = Path.GetFileName(refAsm); //https://devdiv.visualstudio.com/DevDiv/_git/VS/pullrequest/336955?_a=files
+                                                if (filename == "Microsoft.VisualStudio.Threading.dll") // %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.16.0\Microsoft.VisualStudio.Threading.dll
+                                                {
+                                                    if (!File.Exists(refAsm)) // // %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.17.x\Microsoft.VisualStudio.Threading.dll
+                                                    {
+                                                        var publicasms = Path.GetDirectoryName(Path.GetDirectoryName(refAsm));
+                                                        var vstfolders = Directory.GetDirectories(publicasms, "Microsoft.VisualStudio.Threading.*");
+                                                        if (vstfolders.Length == 1)
+                                                        {
+                                                            refAsm = Path.Combine(vstfolders[0], filename);
+                                                        }
+                                                    }
+                                                }
                                             }
                                             var dir = System.IO.Path.GetDirectoryName(refAsm);
                                             if (string.IsNullOrEmpty(dir))
