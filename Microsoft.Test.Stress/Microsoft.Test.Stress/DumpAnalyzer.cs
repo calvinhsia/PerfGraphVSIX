@@ -278,21 +278,24 @@ namespace Microsoft.Test.Stress
                 var clrObjDir = Path.Combine(
                     Path.GetDirectoryName(this.GetType().Assembly.Location),
                     @"ClrObjExplorer");
-                //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
-                ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
-                if (!File.Exists(ClrObjExplorerExe))
+                var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
+                File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
+                var zipArray = DumpAnalyzer.GetZipFile();
+                File.WriteAllBytes(tempZipFile, zipArray);
+                using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
                 {
-                    logger.LogMessage($"Creating {clrObjDir}");
-                    Directory.CreateDirectory(clrObjDir);
-                    var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-                    //                        logger.LogMessage($"Unzip to {tempZipFile}");
-                    var zipArray = Properties.Resources.ClrObjExplorer;
-                    File.WriteAllBytes(tempZipFile, zipArray);
-                    //                        logger.LogMessage($"Extracting zip {tempZipFile}");
-                    ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
-                    logger.LogMessage($"Done Extracting zip {tempZipFile}");
-                    File.Delete(tempZipFile);
+                    foreach (var entry in archive.Entries)
+                    {
+                        var destfilename = Path.Combine(clrObjDir, entry.Name);
+                        if (File.Exists(destfilename) && new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
+                        {
+                            entry.ExtractToFile(destfilename, overwrite: true);
+                        }
+                    }
                 }
+                //                ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
+                logger.LogMessage($"Done Extracting zip {tempZipFile}");
+                File.Delete(tempZipFile);
             }
             catch (Exception ex)
             {
@@ -301,6 +304,10 @@ namespace Microsoft.Test.Stress
             }
             //                logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
             return ClrObjExplorerExe;
+        }
+        public static byte[] GetZipFile()
+        {
+            return Properties.Resources.ClrObjExplorer;
         }
 
         public void StartClrObjExplorer(string _DumpFileName)

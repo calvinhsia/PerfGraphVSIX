@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Test.Stress;
 using HANDLE = System.IntPtr;
 using System.Diagnostics;
+using System.IO.Compression;
 
 namespace TestStressDll
 {
@@ -47,6 +48,37 @@ namespace TestStressDll
     [TestClass]
     public class TestMeasures : BaseTestClass
     {
+        [TestMethod]
+//        [Ignore]
+        public void TestZip()
+        {
+            var clrObjDir = Path.Combine(Environment.CurrentDirectory, "clrotest");
+
+//            var ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
+            LogMessage($"Creating {clrObjDir}");
+            Directory.CreateDirectory(clrObjDir); // succeeds even if dir exists
+            var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
+            File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
+            //                        logger.LogMessage($"Unzip to {tempZipFile}");
+            var zipArray = DumpAnalyzer.GetZipFile();
+            File.WriteAllBytes(tempZipFile, zipArray);
+            //                        logger.LogMessage($"Extracting zip {tempZipFile}");
+            using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    var destfilename = Path.Combine(clrObjDir, entry.Name);
+                    if (File.Exists(destfilename) && new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
+                    {
+                        entry.ExtractToFile(destfilename, overwrite: true);
+                    }
+                }
+            }
+            //                ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
+            LogMessage($"Done Extracting zip {tempZipFile}");
+            File.Delete(tempZipFile);
+        }
+
         [TestMethod]
         public async Task TestOutliersAsync()
         {

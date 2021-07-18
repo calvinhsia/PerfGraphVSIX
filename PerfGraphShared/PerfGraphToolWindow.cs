@@ -32,7 +32,7 @@
             // the object returned by the Content property.
             this.Content = new PerfGraphToolWindowControl();
         }
-        public PerfGraphToolWindow(string message): this()
+        public PerfGraphToolWindow(string _ /*message*/): this()
         {
 
         }

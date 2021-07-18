@@ -114,9 +114,7 @@
     <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ClrObjExplorer\ClrObjExplorer.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="ClrObjExplorer\ClrObjExplorer.zip" />
     <None Include="Key.snk" />
     <None Include="Microsoft.Test.Stress.nuspec" />
     <None Include="version.json" />
