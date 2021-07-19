@@ -68,7 +68,7 @@ namespace TestStressDll
                 foreach (var entry in archive.Entries)
                 {
                     var destfilename = Path.Combine(clrObjDir, entry.Name);
-                    if (File.Exists(destfilename) && new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
+                    if (!File.Exists(destfilename) || new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
                     {
                         entry.ExtractToFile(destfilename, overwrite: true);
                     }
