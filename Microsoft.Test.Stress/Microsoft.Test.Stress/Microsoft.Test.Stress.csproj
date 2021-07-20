@@ -139,9 +139,9 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Definitions\Definitions.csproj">
+    <ProjectReference Include="..\Definitions\Microsoft.Test.Stress.Definitions.csproj">
       <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
-      <Name>Definitions</Name>
+      <Name>Microsoft.Test.Stress.Definitions</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

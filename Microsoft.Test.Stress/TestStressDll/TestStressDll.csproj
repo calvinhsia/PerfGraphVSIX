@@ -54,9 +54,9 @@
     <None Include="Key.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Definitions\Definitions.csproj">
+    <ProjectReference Include="..\Definitions\Microsoft.Test.Stress.Definitions.csproj">
       <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
-      <Name>Definitions</Name>
+      <Name>Microsoft.Test.Stress.Definitions</Name>
     </ProjectReference>
     <ProjectReference Include="..\Microsoft.Test.Stress\Microsoft.Test.Stress.csproj">
       <Project>{A9794FF3-C487-4801-B634-8DE8C2B7C7EC}</Project>

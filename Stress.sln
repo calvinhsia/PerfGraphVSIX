@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31430.505
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31501.297
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfGraphVSIX", "PerfGraphVSIX\PerfGraphVSIX.csproj", "{1CE249E2-A3F2-43F6-A37F-9329FA947660}"
 EndProject
@@ -34,7 +34,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VSHandler64", "Microsoft.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestStress64", "TestStress64\TestStress64.csproj", "{EE726E24-32BB-48E5-8EB5-D3D9DD2C8E80}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Definitions", "Microsoft.Test.Stress\Definitions\Definitions.csproj", "{EA339A28-09A1-4635-987E-B044D4600D79}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Test.Stress.Definitions", "Microsoft.Test.Stress\Definitions\Microsoft.Test.Stress.Definitions.csproj", "{EA339A28-09A1-4635-987E-B044D4600D79}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeSamples", "CodeSamples", "{CDF99097-ABDF-46CF-BB11-5E272D74C925}"
 	ProjectSection(SolutionItems) = preProject
