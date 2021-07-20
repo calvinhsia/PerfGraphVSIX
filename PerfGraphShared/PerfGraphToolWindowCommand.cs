@@ -74,7 +74,7 @@ namespace PerfGraphVSIX
         {
             // Switch to the main thread - the call to AddCommand in PerfGraphToolWindowCommand's constructor requires
             // the UI thread.
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
+            await package.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
             OleMenuCommandService commandService = await package.GetServiceAsync((typeof(IMenuCommandService))) as OleMenuCommandService;
             Instance = new PerfGraphToolWindowCommand(package, commandService);

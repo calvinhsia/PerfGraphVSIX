@@ -115,6 +115,7 @@
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         }
+        AsyncPackage package => PerfGraphToolWindowCommand.Instance.package;
 
         public class LeakedObject
         {
@@ -153,7 +154,7 @@
                 LstPerfCounterData = PerfCounterData.GetPerfCountersToUse(System.Diagnostics.Process.GetCurrentProcess(), IsForStress: false);
                 async Task RefreshCodeToRunAsync()
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await package.JoinableTaskFactory.SwitchToMainThreadAsync();
                     FileInfo mostRecentFileInfo = null;
                     foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.*", SearchOption.AllDirectories)
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
@@ -191,9 +192,9 @@
                 _fileSystemWatcher.Deleted += h;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
-                _ = ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                _ = package.JoinableTaskFactory.StartOnIdle(async () =>
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await package.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                     if (PerfGraphToolWindowCommand.Instance.g_dte == null) // if the toolwindow was already opened, this is set in InitializeToolWindowAsync. 1st time opening set it here
                     {
@@ -224,7 +225,7 @@
 
                 btnDoSample.Click += (o, e) =>
                   {
-                      ThreadHelper.JoinableTaskFactory.Run(async () =>
+                      package.JoinableTaskFactory.Run(async () =>
                           {
                               await WaitForInitializationCompleteAsync();
                               await DoSampleAsync(measurementHolderInteractiveUser, DoForceGC: true, descriptionOverride: "Manual");
@@ -411,7 +412,7 @@
         {
             _ctsPcounter = new CancellationTokenSource();
             _tcsPcounter = new TaskCompletionSource<int>();
-            _tskDoPerfMonitoring = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _tskDoPerfMonitoring = package.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
@@ -444,7 +445,7 @@
                 try
                 {
                     res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, DoForceGC, IsForInteractiveGraph: UpdateInterval != 0);
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await package.JoinableTaskFactory.SwitchToMainThreadAsync();
                     await AddDataPointsAsync(measurementHolder);
                     if (AutoDumpIsEnabled)
                     {
@@ -509,7 +510,7 @@
                     _bufferIndex = 0;
                 }
             }
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await package.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (DoFullGCPerSample)
             {
                 DoGC();// do a GC.Collect on main thread for every sample (the graphing uses memory)
@@ -630,7 +631,7 @@
 
         public void LogMessage(string msg, params object[] args)
         {
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = package.JoinableTaskFactory.RunAsync(async () =>
             {
                 await AddStatusMsgAsync(msg, args);
             });
@@ -665,7 +666,7 @@
             this.LastStatMsg = str;
             if (txtStatus != null)
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await package.JoinableTaskFactory.SwitchToMainThreadAsync();
                 // this action executes on main thread
                 var len = txtStatus.Text.Length;
 
@@ -683,7 +684,7 @@
         {
             btnClrObjExplorer.IsEnabled = false;
             ThreadHelper.ThrowIfNotOnUIThread();
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = package.JoinableTaskFactory.RunAsync(async () =>
                 {
                     await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
                     btnClrObjExplorer.IsEnabled = true;
@@ -694,10 +695,10 @@
         public async Task<string> CreateDumpFileAsync(MemoryAnalysisType memoryAnalysisType, string descDump, TimeSpan tspanDelayAfterGC)
         {
             var pathDumpFile = string.Empty;
-            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            await package.JoinableTaskFactory.RunAsync(async () =>
             {
                 await WaitForInitializationCompleteAsync();
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await package.JoinableTaskFactory.SwitchToMainThreadAsync();
                 DoGC(); //must be on main thread
                 await Task.Delay(tspanDelayAfterGC);
                 pathDumpFile = await measurementHolderInteractiveUser.CreateDumpAsync(
@@ -719,7 +720,7 @@
 
         public void BtnExecCode_Click(object sender, RoutedEventArgs e)
         {
-            _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = package.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
@@ -784,7 +785,7 @@
                 }
                 else
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await package.JoinableTaskFactory.SwitchToMainThreadAsync();
                     var res = compileHelper.ExecuteTheCode();
                     if (res is Task task)
                     {
@@ -801,7 +802,7 @@
                     }
                 }
             }
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await package.JoinableTaskFactory.SwitchToMainThreadAsync();
             _ctsExecuteCode = null;
             this.btnExecCode.Content = "ExecCode";
             this.btnExecCode.IsEnabled = true;
