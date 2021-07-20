@@ -172,9 +172,9 @@ Language:         Language Neutral
             // sometimes tests run from TestDeployment folder (no bin\debug)
             // "C:\Users\calvinh\source\repos\Stress\TestResults\Deploy_calvinh 2021-07-08 14_02_38\Out\Microsoft.Test.Stress.dll"
             // C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Deploy_calvinh 2021-07-08 14_02_38\Out\VSHandler32\VSHandler32.dll
-            logger?.LogMessage($"Could not find {pathHandler} . Searching for built folder");
             if (!File.Exists(pathHandler))
             {
+                logger?.LogMessage($"Could not find {pathHandler} . Searching for built folder");
                 // could be repo tests, so we find them in sibling folder
                 var pathParts = thisasmDir.Split(Path.DirectorySeparatorChar);
                 var targetfolder = @"Microsoft.Test.Stress";
