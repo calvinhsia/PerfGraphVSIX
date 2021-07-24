@@ -686,7 +686,14 @@
             ThreadHelper.ThrowIfNotOnUIThread();
             _ = MyPackage.JoinableTaskFactory.RunAsync(async () =>
                 {
-                    await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
+                    try
+                    {
+                        await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
+                    }
+                    catch (Exception ex)
+                    {
+                        _ =AddStatusMsgAsync(ex.ToString());
+                    }
                     btnClrObjExplorer.IsEnabled = true;
                 }
             );
