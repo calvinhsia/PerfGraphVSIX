@@ -279,7 +279,7 @@ namespace Microsoft.Test.Stress
                 {
                     var clrObjDir = Path.Combine(
                         Path.GetDirectoryName(this.GetType().Assembly.Location),
-                        @"ClrObjExplorer" + (IntPtr.Size == 8 ? "64" : string.Empty));
+                        @"ClrObjExplorer");
                     Directory.CreateDirectory(clrObjDir); // if already exists, no exception
                     var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
                     File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
@@ -299,7 +299,7 @@ namespace Microsoft.Test.Stress
                     //                ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
                     logger.LogMessage($"Done Extracting zip {tempZipFile}");
                     File.Delete(tempZipFile);
-                    ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
+                    ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer" + (IntPtr.Size == 8 ? "64" : string.Empty) + ".exe");
                 }
             }
             catch (Exception ex)
