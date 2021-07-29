@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -162,13 +163,56 @@ Language:         Language Neutral
         /// </summary>
         public static IVSHandler CreateVSHandler(ILogger logger, int delayMultiplier = 1)
         {
+            var vsHandlerFileName = "VSHandler" + (IntPtr.Size == 8 ? "64" : "32") + ".dll";
+            var dirVSHandler = Path.Combine(
+                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                Path.GetFileNameWithoutExtension(vsHandlerFileName));
+            Directory.CreateDirectory(dirVSHandler);
+            vsHandlerFileName = Path.Combine(dirVSHandler, vsHandlerFileName); //now full path
+            if (!File.Exists(vsHandlerFileName))
+            {
+                var zipVSHandlerRes = IntPtr.Size == 8 ? Properties.Resources.VSHandler64 : Properties.Resources.VSHandler32;
+                var tempZipFile = Path.Combine(dirVSHandler, vsHandlerFileName + ".zip");
+                File.WriteAllBytes(tempZipFile, zipVSHandlerRes);
+                //                        logger.LogMessage($"Extracting zip {tempZipFile}");
+                using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        var ndx = entry.FullName.IndexOf('/'); // subdir separator == '/'
+                        string destfilename;
+                        if (ndx > 0)
+                        {
+                            var subfolder = entry.FullName.Substring(0, ndx);
+                            Directory.CreateDirectory(Path.Combine(dirVSHandler, subfolder));
+                            destfilename = Path.Combine(dirVSHandler, subfolder, entry.Name);
+                        }
+                        else
+                        {
+                            destfilename = Path.Combine(dirVSHandler, entry.Name);
+                        }
+                        if (!File.Exists(destfilename) || new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
+                        {
+                            entry.ExtractToFile(destfilename, overwrite: true);
+                        }
+                    }
+                }
+            }
+            logger?.LogMessage($"Found VSHandler at {vsHandlerFileName}");
+            Assembly asm = Assembly.LoadFrom(vsHandlerFileName);
+            var typ = asm.GetType("Microsoft.Test.Stress.VSHandler");
+            var vsHandler = (IVSHandler)Activator.CreateInstance(typ);
+            vsHandler.Initialize(logger, delayMultiplier);
+            return vsHandler;
+
+#if false
             var thisasmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location); // C:\Users\calvinh\source\repos\Stress\TestStress\bin\Debug
             var seg = IntPtr.Size == 8 ? "64" : "32";
             var partPath = Path.Combine(
                 $"VSHandler{seg}",
                 $"VSHandler{seg}.dll");
             var pathHandler = Path.Combine( // in subfolder called VSHandler32\VSHandler32.dll so dependent assemblies are separate for 32 and 64 bit
-                thisasmDir, partPath); 
+                thisasmDir, partPath);
             // sometimes tests run from TestDeployment folder (no bin\debug)
             // "C:\Users\calvinh\source\repos\Stress\TestResults\Deploy_calvinh 2021-07-08 14_02_38\Out\Microsoft.Test.Stress.dll"
             // C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Deploy_calvinh 2021-07-08 14_02_38\Out\VSHandler32\VSHandler32.dll
@@ -179,7 +223,7 @@ Language:         Language Neutral
                 var pathParts = thisasmDir.Split(Path.DirectorySeparatorChar);
                 var targetfolder = @"Microsoft.Test.Stress";
 
-                if (pathParts.Length > 7) 
+                if (pathParts.Length > 7)
                 {
                     var upone = Path.GetDirectoryName(thisasmDir);
                     int max = 4;
@@ -188,7 +232,7 @@ Language:         Language Neutral
                         if (Directory.Exists(Path.Combine(upone, targetfolder)))
                         {
                             // "C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Debug\VSHandler32\VSHandler32.dll"
-                            if (pathParts[pathParts.Length-2] == "bin")
+                            if (pathParts[pathParts.Length - 2] == "bin")
                             {
                                 pathHandler = Path.Combine(upone, targetfolder, targetfolder, pathParts[pathParts.Length - 2], pathParts[pathParts.Length - 1], partPath); // add "bin\Debug" 
                             }
@@ -213,6 +257,18 @@ Language:         Language Neutral
             var vsHandler = (IVSHandler)Activator.CreateInstance(typ);
             vsHandler.Initialize(logger, delayMultiplier);
             return vsHandler;
+#endif
+        }
+        public static byte[] GetVSHandlerResource()
+        {
+            if (IntPtr.Size == 8)
+            {
+                return Properties.Resources.VSHandler64;
+            }
+            else
+            {
+                return Properties.Resources.VSHandler32;
+            }
         }
     }
 

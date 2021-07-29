@@ -26,7 +26,7 @@ namespace Tests
             return true;
         }
         [TestMethod]
-        public async Task TestCompileAllCodeSamples()
+        public async Task TestCompileAllCodeSamplesAsync()
         {
             if (!ShouldRunTest())
             {

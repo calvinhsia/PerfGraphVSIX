@@ -20,7 +20,7 @@ namespace TestStress
         ILogger logger;
         IVSHandler _VSHandler;
         [TestInitialize]
-        public async Task TestInitialize()
+        public async Task TestInitializeAsync()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
             if (!Is32bitVSHost)
@@ -45,7 +45,7 @@ namespace TestStress
 
         [TestMethod]
         [ExpectedException(typeof(LeakException))]
-        public async Task StressOpenCloseSln64()
+        public async Task StressOpenCloseSln64Async()
         {
             //LogMessage($"{Process.GetCurrentProcess().MainModule.FileName}"); // C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\Extensions\TestPlatform\testhost.net472.x86.exe
             if (IntPtr.Size == 4 || Is32bitVSHost)

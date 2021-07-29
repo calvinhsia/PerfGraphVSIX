@@ -17,7 +17,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\Microsoft.Test.Stress\bin\Debug\VSHandler32\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -25,7 +25,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\Microsoft.Test.Stress\bin\Release\VSHandler32\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -57,5 +57,14 @@
       <Version>16.0.206</Version>
     </PackageReference>
   </ItemGroup>
+	<Target Name="ZipOutputPath" 
+			Inputs ="VSHandler.cs"
+			Outputs="..\Microsoft.Test.Stress\bin\$(MSBuildProjectName).zip"
+			AfterTargets="Build">
+		<ZipDirectory
+            SourceDirectory="$(OutputPath)"
+			Overwrite="true"
+            DestinationFile="..\Microsoft.Test.Stress\bin\$(MSBuildProjectName).zip" />
+	</Target>	
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -69,5 +69,25 @@ namespace Microsoft.Test.Stress.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VSHandler32 {
+            get {
+                object obj = ResourceManager.GetObject("VSHandler32", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VSHandler64 {
+            get {
+                object obj = ResourceManager.GetObject("VSHandler64", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }

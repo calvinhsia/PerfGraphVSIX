@@ -114,7 +114,10 @@
     <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClrObjExplorer\ClrObjExplorer.zip" />
+    <None Include="bin\Release\VSHandler32.zip" />
+    <None Include="ClrObjExplorer\ClrObjExplorer.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Key.snk" />
     <None Include="Microsoft.Test.Stress.nuspec" />
     <None Include="version.json" />
@@ -129,6 +132,7 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
