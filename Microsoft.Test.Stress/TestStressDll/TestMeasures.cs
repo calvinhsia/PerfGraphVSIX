@@ -60,7 +60,7 @@ namespace TestStressDll
             var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
             File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
             //                        logger.LogMessage($"Unzip to {tempZipFile}");
-            var zipArray = DumpAnalyzer.GetZipFile();
+            var zipArray = StressUtil.GetResource("ClrObjExplorer.zip");
             File.WriteAllBytes(tempZipFile, zipArray);
             //                        logger.LogMessage($"Extracting zip {tempZipFile}");
             using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))

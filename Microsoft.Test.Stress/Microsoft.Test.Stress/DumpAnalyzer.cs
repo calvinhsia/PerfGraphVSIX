@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Resources;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -283,7 +284,7 @@ namespace Microsoft.Test.Stress
                     Directory.CreateDirectory(clrObjDir); // if already exists, no exception
                     var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
                     File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
-                    var zipArray = DumpAnalyzer.GetZipFile();
+                    var zipArray = StressUtil.GetResource("");
                     File.WriteAllBytes(tempZipFile, zipArray);
                     using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
                     {
@@ -309,10 +310,6 @@ namespace Microsoft.Test.Stress
             }
             //                logger.LogMessage($"Found ClrObjExplorer at {_ClrObjExplorerExe }");
             return ClrObjExplorerExe;
-        }
-        public static byte[] GetZipFile()
-        {
-            return Properties.Resources.ClrObjExplorer;
         }
 
         public void StartClrObjExplorer(string _DumpFileName)

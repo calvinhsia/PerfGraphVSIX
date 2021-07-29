@@ -59,12 +59,12 @@
   </ItemGroup>
 	<Target Name="ZipOutputPath" 
 			Inputs ="VSHandler.cs"
-			Outputs="..\Microsoft.Test.Stress\bin\$(MSBuildProjectName).zip"
+			Outputs="..\Microsoft.Test.Stress\Resources\$(MSBuildProjectName).zip"
 			AfterTargets="Build">
 		<ZipDirectory
             SourceDirectory="$(OutputPath)"
 			Overwrite="true"
-            DestinationFile="..\Microsoft.Test.Stress\bin\$(MSBuildProjectName).zip" />
+            DestinationFile="..\Microsoft.Test.Stress\Resources\$(MSBuildProjectName).zip" />
 	</Target>	
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

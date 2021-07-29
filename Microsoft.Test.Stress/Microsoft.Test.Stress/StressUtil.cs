@@ -167,14 +167,16 @@ Language:         Language Neutral
             var dirVSHandler = Path.Combine(
                 Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                 Path.GetFileNameWithoutExtension(vsHandlerFileName));
-            Directory.CreateDirectory(dirVSHandler);
+            Directory.CreateDirectory(dirVSHandler); //succeeds if it exists already
             vsHandlerFileName = Path.Combine(dirVSHandler, vsHandlerFileName); //now full path
             if (!File.Exists(vsHandlerFileName))
             {
-                var zipVSHandlerRes = IntPtr.Size == 8 ? Properties.Resources.VSHandler64 : Properties.Resources.VSHandler32;
-                var tempZipFile = Path.Combine(dirVSHandler, vsHandlerFileName + ".zip");
+                //                var zipVSHandlerRes = IntPtr.Size == 8 ? Properties.Resources.VSHandler64 : Properties.Resources.VSHandler32;
+                var resName = Path.GetFileNameWithoutExtension(vsHandlerFileName) + ".zip";
+                var zipVSHandlerRes = GetResource(resName);
+                var tempZipFile = Path.Combine(dirVSHandler, resName);
                 File.WriteAllBytes(tempZipFile, zipVSHandlerRes);
-                //                        logger.LogMessage($"Extracting zip {tempZipFile}");
+                logger.LogMessage($"Extracting zip {tempZipFile}");
                 using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
                 {
                     foreach (var entry in archive.Entries)
@@ -259,8 +261,29 @@ Language:         Language Neutral
             return vsHandler;
 #endif
         }
-        public static byte[] GetVSHandlerResource()
+        public static byte[] GetResource(string resourceName)
         {
+            resourceName = $"Microsoft.Test.Stress.Resources.{resourceName}";
+            //            return Properties.Resources.ClrObjExplorer; //keeps giving exception Could not load file or assembly 'Microsoft.Test.Stress.resources, Version=1.1.0.0, Culture=en-US, PublicKeyToken=207cdcbbae19dd71' or one of its dependencies. The system cannot find the file specified.
+            var strm = typeof(StressUtil).Assembly.GetManifestResourceStream(resourceName);
+            if (strm == null)
+            {
+                var resnames = typeof(StressUtil).Assembly.GetManifestResourceNames();
+                throw new Exception($"Resource '{resourceName}' not found.\n Valid resources are " + string.Join(",", resnames));
+            }
+            using (var reader = new StreamReader(strm))
+            {
+                using (var ms = new MemoryStream())
+                {
+                    reader.BaseStream.CopyTo(ms);
+                    var d = ms.ToArray();
+                    //                    return Properties.Resources.ClrObjExplorer; keeps giving exception Could not load file or assembly 'Microsoft.Test.Stress.resources, Version=1.1.0.0, Culture=en-US, PublicKeyToken=207cdcbbae19dd71' or one of its dependencies. The system cannot find the file specified.
+
+                    return d;
+                }
+            }
+            return Properties.Resources.ClrObjExplorer;
+
             if (IntPtr.Size == 8)
             {
                 return Properties.Resources.VSHandler64;
@@ -271,7 +294,6 @@ Language:         Language Neutral
             }
         }
     }
-
     public class LeakException : Exception
     {
         public List<LeakAnalysisResult> lstLeakResults;

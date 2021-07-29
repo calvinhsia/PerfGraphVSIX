@@ -115,11 +115,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\Release\VSHandler32.zip" />
-    <None Include="ClrObjExplorer\ClrObjExplorer.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <EmbeddedResource Include="Resources\ClrObjExplorer.zip" />
     <None Include="Key.snk" />
     <None Include="Microsoft.Test.Stress.nuspec" />
+    <EmbeddedResource Include="Resources\VSHandler32.zip" />
+    <EmbeddedResource Include="Resources\VSHandler64.zip" />
     <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
@@ -127,13 +127,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.DevDiv.NuGet.Build">
@@ -147,6 +140,12 @@
       <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
       <Name>Microsoft.Test.Stress.Definitions</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
