@@ -20,7 +20,7 @@ namespace TestStressDll
         {
             await Task.Yield();
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = StressUtil.CreateVSHandler(logger);
+            _VSHandler = new VSHandlerCreator().CreateVSHandler(logger);
             logger.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
             logger.LogMessage($"TEMP=" + Environment.GetEnvironmentVariable("TEMP"));
             logger.LogMessage($"LOCALAPPDATA=" + Environment.GetEnvironmentVariable("LOCALAPPDATA"));

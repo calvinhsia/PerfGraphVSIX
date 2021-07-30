@@ -25,7 +25,7 @@ namespace TestStress
             logger = new Logger(new TestContextWrapper(TestContext));
             if (!Is32bitVSHost)
             {
-                _VSHandler = StressUtil.CreateVSHandler(logger);
+                _VSHandler = new VSHandlerCreator().CreateVSHandler(logger);
 
                 await _VSHandler.StartVSAsync();
                 logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");

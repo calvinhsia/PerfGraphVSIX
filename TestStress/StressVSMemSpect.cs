@@ -20,7 +20,7 @@ namespace TestStress
         public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = StressUtil.CreateVSHandler(logger, delayMultiplier: 10);
+            _VSHandler = new VSHandlerCreator().CreateVSHandler(logger, delayMultiplier: 10);
 
             await _VSHandler.StartVSAsync(flags: MemSpectModeFlags.MemSpectModeFull);
             logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");

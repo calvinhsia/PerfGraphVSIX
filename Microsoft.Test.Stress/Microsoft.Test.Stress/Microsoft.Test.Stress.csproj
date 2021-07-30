@@ -109,6 +109,7 @@
     <Compile Include="StressUtil.cs" />
     <Compile Include="StressUtilOptions.cs" />
     <Compile Include="TestContextWrapper.cs" />
+    <Compile Include="VSHandlerCreator.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7" />

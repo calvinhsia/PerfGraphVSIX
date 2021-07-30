@@ -397,7 +397,7 @@ namespace Microsoft.Test.Stress
                     theVSHandler = testContext.Properties[StressUtil.PropNameVSHandler] as IVSHandler;
                     if (theVSHandler == null)
                     {
-                        theVSHandler = StressUtil.CreateVSHandler(logger, DelayMultiplier);
+                        theVSHandler = new VSHandlerCreator().CreateVSHandler(logger, DelayMultiplier);
                         testContext.Properties[StressUtil.PropNameVSHandler] = theVSHandler;
                     }
                 }
