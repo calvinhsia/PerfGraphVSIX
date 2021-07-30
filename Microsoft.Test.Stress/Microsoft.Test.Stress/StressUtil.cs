@@ -176,7 +176,7 @@ Language:         Language Neutral
                 var zipVSHandlerRes = GetResource(resName);
                 var tempZipFile = Path.Combine(dirVSHandler, resName);
                 File.WriteAllBytes(tempZipFile, zipVSHandlerRes);
-                logger.LogMessage($"Extracting zip {tempZipFile}");
+                logger?.LogMessage($"Extracting zip {tempZipFile}");
                 using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
                 {
                     foreach (var entry in archive.Entries)
@@ -205,6 +205,26 @@ Language:         Language Neutral
             var typ = asm.GetType("Microsoft.Test.Stress.VSHandler");
             var vsHandler = (IVSHandler)Activator.CreateInstance(typ);
             vsHandler.Initialize(logger, delayMultiplier);
+            var _additionalDirs = dirVSHandler;
+            AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
+            {
+                Assembly asmResolved = null;
+                var requestName = e.Name.Substring(0, e.Name.IndexOf(",")) + ".dll"; // Microsoft.VisualStudio.Telemetry, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+                var split = _additionalDirs.Split(new[] { ';' });
+                foreach (var dir in split)
+                {
+                    var trypath = Path.Combine(dir, requestName);
+                    if (File.Exists(trypath))
+                    {
+                        asmResolved = Assembly.LoadFrom(trypath);
+                        if (asmResolved != null)
+                        {
+                            break;
+                        }
+                    }
+                }
+                return asmResolved;
+            };
             return vsHandler;
 
 #if false
@@ -281,16 +301,6 @@ Language:         Language Neutral
 
                     return d;
                 }
-            }
-            return Properties.Resources.ClrObjExplorer;
-
-            if (IntPtr.Size == 8)
-            {
-                return Properties.Resources.VSHandler64;
-            }
-            else
-            {
-                return Properties.Resources.VSHandler32;
             }
         }
     }

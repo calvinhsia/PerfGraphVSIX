@@ -284,7 +284,7 @@ namespace Microsoft.Test.Stress
                     Directory.CreateDirectory(clrObjDir); // if already exists, no exception
                     var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
                     File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
-                    var zipArray = StressUtil.GetResource("");
+                    var zipArray = StressUtil.GetResource("ClrObjExplorer.zip");
                     File.WriteAllBytes(tempZipFile, zipArray);
                     using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
                     {

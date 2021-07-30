@@ -261,3 +261,9 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
+
+# built resources
+
+VSHandler32.zip
+VSHandler64.zip

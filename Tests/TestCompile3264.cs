@@ -17,7 +17,8 @@ namespace Tests
         bool ShouldRunTest()
         {
             //LogMessage($"{Process.GetCurrentProcess().MainModule.FileName}"); // C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\Extensions\TestPlatform\testhost.net472.x86.exe
-            bool Is32bitVSHost = Process.GetCurrentProcess().MainModule.FileName.Contains("2019");
+            var curProcMainModule = Process.GetCurrentProcess().MainModule.FileName;
+            bool Is32bitVSHost = curProcMainModule.Contains("2019");
             if (Is32bitVSHost && IntPtr.Size == 8 || (!Is32bitVSHost && IntPtr.Size == 4))
             {
                 LogMessage($"We can't run code that references the VS SDK from a different VS version");
@@ -101,8 +102,8 @@ namespace Tests
 //Ref64: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Interop.dll
 ////Ref64: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
 ////Ref64: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Threading.dll
-//Ref64: C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\Extensions\vn5stlgj.b0o\Microsoft.VisualStudio.Shell.Framework.dll
-//Ref64: C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\Extensions\vn5stlgj.b0o\Microsoft.VisualStudio.Threading.dll
+//Ref64: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
+//Ref64: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.dll
 
 //Ref: %PerfGraphVSIX%
 
