@@ -228,7 +228,7 @@ namespace PerfGraphVSIX
                                                 {
                                                     if (!File.Exists(refAsm)) // // %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.17.x\Microsoft.VisualStudio.Threading.dll
                                                     {
-                                                        var publicasms = Path.GetDirectoryName(refAsm);
+                                                        var publicasms = Path.Combine(vsRoot, @"Common7\IDE\PublicAssemblies");
                                                         var vstfolders = Directory.GetDirectories(publicasms, "Microsoft.VisualStudio.Threading.*");
                                                         if (vstfolders.Length == 1)
                                                         {
