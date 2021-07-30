@@ -11,7 +11,7 @@ namespace Microsoft.Test.Stress
 {
     public class VSHandlerCreator
     {
-        private readonly bool _addedAsmResolveHandler;
+        private bool _addedAsmResolveHandler;
 
         /// <summary>
         /// Need a VS Handler that's built against the right VSSdk for ENVDTE interop (Dev17, Dev16)
@@ -74,6 +74,7 @@ namespace Microsoft.Test.Stress
             var _additionalDirs = dirVSHandler;
             if (!_addedAsmResolveHandler)
             {
+                _addedAsmResolveHandler = true;
                 AppDomain.CurrentDomain.AssemblyResolve += (o, e) =>
                 {
                     Assembly asmResolved = null;
