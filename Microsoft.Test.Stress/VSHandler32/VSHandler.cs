@@ -438,6 +438,5 @@ namespace Microsoft.Test.Stress
 
         [DllImport("ole32.dll")]
         private static extern int CreateBindCtx(uint reserved, out IBindCtx ppbc);
-
     }
 }

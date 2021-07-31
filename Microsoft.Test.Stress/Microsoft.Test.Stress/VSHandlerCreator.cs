@@ -35,15 +35,17 @@ namespace Microsoft.Test.Stress
                 Path.GetFileNameWithoutExtension(vsHandlerFileName));
             Directory.CreateDirectory(dirVSHandler); //succeeds if it exists already
             vsHandlerFileName = Path.Combine(dirVSHandler, vsHandlerFileName); //now full path
-            if (!File.Exists(vsHandlerFileName))
+            var resName = Path.GetFileNameWithoutExtension(vsHandlerFileName) + ".zip";
+            var zipFile = Path.Combine(dirVSHandler, resName);
+            if (!File.Exists(vsHandlerFileName) || 
+                !File.Exists(zipFile) || 
+                (new FileInfo(vsHandlerFileName).LastWriteTime != new FileInfo(zipFile).LastWriteTime))
             {
                 //                var zipVSHandlerRes = IntPtr.Size == 8 ? Properties.Resources.VSHandler64 : Properties.Resources.VSHandler32;
-                var resName = Path.GetFileNameWithoutExtension(vsHandlerFileName) + ".zip";
                 var zipVSHandlerRes = StressUtil.GetResource(resName);
-                var tempZipFile = Path.Combine(dirVSHandler, resName);
-                File.WriteAllBytes(tempZipFile, zipVSHandlerRes);
-                logger?.LogMessage($"Extracting zip {tempZipFile}");
-                using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
+                File.WriteAllBytes(zipFile, zipVSHandlerRes); // overwrites
+                logger?.LogMessage($"Extracting zip {zipFile}");
+                using (var archive = ZipFile.Open(zipFile, ZipArchiveMode.Read))
                 {
                     foreach (var entry in archive.Entries)
                     {

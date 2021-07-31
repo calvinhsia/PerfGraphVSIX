@@ -23,5 +23,40 @@ namespace Tests
 
         }
 
+        [TestMethod]
+        public async Task TestVSHandlerGetDTEObj()
+        {
+            AsyncPump.Run(async () =>
+            {
+                try
+                {
+                    MessageFilter.RegisterMessageFilter();
+                    var vsHandler = new VSHandlerCreator().CreateVSHandler(this);
+                    await vsHandler.StartVSAsync();
+                    var dte = (EnvDTE._DTE)await vsHandler.EnsureGotDTE(timeout: TimeSpan.FromSeconds(10));
+
+                    Assert.IsNotNull(dte);
+
+                    var itmOperations = dte.ItemOperations.OpenFile(@"c:\t.txt");
+
+                    var actWindow = dte.ActiveWindow.Caption;
+
+                    Assert.IsNotNull(actWindow);
+                    Assert.AreEqual(actWindow, "t.txt");
+
+                    MessageFilter.RevokeMessageFilter();
+                    dte.Quit();
+                    Assert.IsTrue(true);
+
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail(ex.ToString());
+                }
+
+            });
+            await Task.Yield();
+        }
+
     }
 }
