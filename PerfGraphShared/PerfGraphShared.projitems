@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>8405b4bc-03fc-48c1-932b-ebc9e6a590a3</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>PerfGraphShared</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)index.html" />
+    <Content Include="$(MSBuildThisFileDirectory)Readme.txt" />
+    <Content Include="$(MSBuildThisFileDirectory)stylesheet.css" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CodeExecutor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CodeSamples.xaml.cs">
+      <DependentUpon>CodeSamples.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)EditorTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ITakeSample.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ObjTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ObjWeakRefData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)OpenFolderTracker.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PerfGraphToolWindow.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PerfGraphToolWindowCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PerfGraphToolWindowControl.xaml.cs">
+      <DependentUpon>PerfGraphToolWindowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)PerfGraphToolWindowPackage.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)CodeSamples.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)PerfGraphToolWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+</Project>

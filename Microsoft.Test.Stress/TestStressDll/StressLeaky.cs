@@ -516,9 +516,7 @@ $"String and Type Count differences_{numIter}.txt",
         {
             try
             {
-#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
                 ProcessAttributesAsync(this).Wait();
-#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
                 _lst.Add(new BigStuffWithLongNameSoICanSeeItBetter());
             }
             catch (AggregateException ex)

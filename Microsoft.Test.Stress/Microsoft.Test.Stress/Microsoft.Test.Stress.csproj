@@ -25,7 +25,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Microsoft.Test.Stress.xml</DocumentationFile>
-    <NoWarn>NU5128;NU5118;CS1591</NoWarn>
+    <NoWarn>NU5128;NU5118;CS1591;NU5100</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,7 +35,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Microsoft.Test.Stress.xml</DocumentationFile>
-    <NoWarn>NU5128;NU5118;CS1591</NoWarn>
+    <NoWarn>NU5128;NU5118;CS1591;NU5100</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -88,13 +88,12 @@
     <Compile Include="AsyncPump.cs" />
     <Compile Include="Browse.cs" />
     <Compile Include="DumpAnalyzer.cs" />
-    <Compile Include="Dumper.cs" />
+    <Compile Include="MemoryDumpHelper.cs" />
     <Compile Include="DumperViewerMain.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="GraphWin.xaml.cs">
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ILogger.cs" />
     <Compile Include="LeakAnalysisResult.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
@@ -110,19 +109,18 @@
     <Compile Include="StressUtil.cs" />
     <Compile Include="StressUtilOptions.cs" />
     <Compile Include="TestContextWrapper.cs" />
-    <Compile Include="VSHandler.cs" />
+    <Compile Include="VSHandlerCreator.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.206" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.11.9" />
-    <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7"/>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ClrObjExplorer\ClrObjExplorer.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="bin\Release\VSHandler32.zip" />
+    <EmbeddedResource Include="Resources\ClrObjExplorer.zip" />
     <None Include="Key.snk" />
     <None Include="Microsoft.Test.Stress.nuspec" />
+    <EmbeddedResource Include="Resources\VSHandler32.zip" />
+    <EmbeddedResource Include="Resources\VSHandler64.zip" />
     <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
@@ -132,17 +130,23 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Microsoft.DevDiv.NuGet.Build">
       <Version>0.3.12</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Definitions\Microsoft.Test.Stress.Definitions.csproj">
+      <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
+      <Name>Microsoft.Test.Stress.Definitions</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

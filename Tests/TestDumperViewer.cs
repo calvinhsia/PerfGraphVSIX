@@ -16,7 +16,9 @@ namespace Tests
         [TestMethod]
         public void TestGetVSPath()
         {
-            Assert.IsNotNull(VSHandler.GetVSFullPath());
+            var vsHandler = new VSHandlerCreator().CreateVSHandler(null);
+
+            Assert.IsNotNull(vsHandler.GetVSFullPath());
         }
 
         [TestMethod]
