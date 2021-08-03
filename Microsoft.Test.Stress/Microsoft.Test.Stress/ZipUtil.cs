@@ -22,17 +22,20 @@ namespace Microsoft.Test.Stress
             {
                 foreach (var entry in archive.Entries)
                 {
-                    var ndx = entry.FullName.IndexOf('/'); // subdir separator == '/'
-                    string destfilename;
-                    if (ndx > 0)
+                    string destfilename = destFolder;
+                    string restName = entry.FullName;
+                    while (true)
                     {
-                        var subfolder = entry.FullName.Substring(0, ndx);
-                        Directory.CreateDirectory(Path.Combine(destFolder, subfolder));
-                        destfilename = Path.Combine(destFolder, subfolder, entry.Name);
-                    }
-                    else
-                    {
-                        destfilename = Path.Combine(destFolder, entry.Name);
+                        var ndx = restName.IndexOf('/'); // subdir separator == '/'
+                        if (ndx < 0)
+                        {
+                            destfilename = Path.Combine(destfilename, entry.Name);
+                            break;
+                        }
+                        var subfolder = restName.Substring(0, ndx);
+                        restName = restName.Substring(ndx + 1);
+                        Directory.CreateDirectory(Path.Combine(destfilename, subfolder));
+                        destfilename = Path.Combine(destfilename, subfolder);
                     }
                     if (!File.Exists(destfilename) || new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
                     {
