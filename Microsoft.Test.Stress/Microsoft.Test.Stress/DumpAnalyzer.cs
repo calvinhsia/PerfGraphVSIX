@@ -281,25 +281,9 @@ namespace Microsoft.Test.Stress
                     var clrObjDir = Path.Combine(
                         Path.GetDirectoryName(this.GetType().Assembly.Location),
                         @"ClrObjExplorer");
-                    Directory.CreateDirectory(clrObjDir); // if already exists, no exception
-                    var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-                    File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
-                    var zipArray = StressUtil.GetResource("ClrObjExplorer.zip");
-                    File.WriteAllBytes(tempZipFile, zipArray);
-                    using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
-                    {
-                        foreach (var entry in archive.Entries)
-                        {
-                            var destfilename = Path.Combine(clrObjDir, entry.Name);
-                            if (!File.Exists(destfilename) || new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
-                            {
-                                entry.ExtractToFile(destfilename, overwrite: true);
-                            }
-                        }
-                    }
+                    ZipUtil.UnzipResource("ClrObjExplorer.zip", clrObjDir);
+
                     //                ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
-                    logger.LogMessage($"Done Extracting zip {tempZipFile}");
-                    File.Delete(tempZipFile);
                     ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer" + (IntPtr.Size == 8 ? "64" : string.Empty) + ".exe");
                 }
             }
