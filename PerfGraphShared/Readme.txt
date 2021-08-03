@@ -31,7 +31,7 @@ Note: If UpdateInterval is non-zero, this will cause significant delay every Upd
 
 To update ClrObjExplorer:
 // make sure to build release:
-xcopy /dy C:\Users\calvinh\source\repos\VSDbg\out\Release\ClrObjExplorer\bin\*.* C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources
+xcopy /sdy C:\Users\calvinh\source\repos\VSDbg\out\Release\ClrObjExplorer\bin\*.* C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources
 then zip them into "C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer\ClrObjExplorer.zip"
 
 
