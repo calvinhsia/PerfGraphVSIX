@@ -88,7 +88,7 @@
     <Compile Include="AsyncPump.cs" />
     <Compile Include="Browse.cs" />
     <Compile Include="DumpAnalyzer.cs" />
-    <Compile Include="Dumper.cs" />
+    <Compile Include="MemoryDumpHelper.cs" />
     <Compile Include="DumperViewerMain.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="GraphWin.xaml.cs">
