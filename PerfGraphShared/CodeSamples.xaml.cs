@@ -21,13 +21,11 @@ namespace PerfGraphVSIX.UserControls
     /// </summary>
     public partial class CodeSamples : TreeView
     {
-        private readonly string _codeSampleDirectory;
         private readonly string _targetToSelect;
 
         public CodeSamples(string codeSampleDirectory, string targetToSelect)
         {
             InitializeComponent();
-            this._codeSampleDirectory = codeSampleDirectory;
             this._targetToSelect = targetToSelect;
             //            ToolTip = @"Dbl-click a code sample to open in editor. 
             //The selected one will be run with the 'ExecCode' button. Create new files in the same folder as desired. 
