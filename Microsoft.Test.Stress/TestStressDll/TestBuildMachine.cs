@@ -14,13 +14,13 @@ namespace TestStressDll
     {
         public TestContext TestContext { get; set; }
         ILogger logger;
-        VSHandler _VSHandler;
+        IVSHandler _VSHandler;
         [TestInitialize]
-        public async Task TestInitialize()
+        public async Task TestInitializeAsync()
         {
             await Task.Yield();
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = new VSHandler(logger);
+            _VSHandler = new VSHandlerCreator().CreateVSHandler(logger);
             logger.LogMessage($"Computername=" + Environment.GetEnvironmentVariable("Computername"));
             logger.LogMessage($"TEMP=" + Environment.GetEnvironmentVariable("TEMP"));
             logger.LogMessage($"LOCALAPPDATA=" + Environment.GetEnvironmentVariable("LOCALAPPDATA"));
@@ -29,7 +29,7 @@ namespace TestStressDll
             logger.LogMessage($"UserDomain=" + Environment.GetEnvironmentVariable("userdomain"));
             logger.LogMessage($"ProgramFiles(x86)=" + Environment.GetEnvironmentVariable("ProgramFiles(x86)"));
             logger.LogMessage($"Path=" + Environment.GetEnvironmentVariable("path"));
-            logger.LogMessage($"VS Path={VSHandler.GetVSFullPath()}");
+            logger.LogMessage($"VS Path={_VSHandler.GetVSFullPath()}");
 
             /*
              
@@ -58,17 +58,10 @@ TestContext Messages:
             }
 
             await _VSHandler.StartVSAsync();
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
-        }
-        [TestMethod]
-        [Ignore]
-        public async Task TestBuildMachineDTE()
-        {
-            await Task.Yield();
-
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
         [TestCleanup]
-        public async Task Cleanup()
+        public async Task CleanupAsync()
         {
             await _VSHandler.ShutDownVSAsync();
         }

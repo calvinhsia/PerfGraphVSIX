@@ -2,6 +2,8 @@
 
 A Visual Studio extension that allows rapid prototyping: developing/running code inside the same instance of VS,
 accessing services from that instance of VS
+Works with VS 2019 and a new 64 bit version for VS 2022 +
+
 Code Samples of memory leaks, including Event Handlers (both normal event handlers and WPF RoutedEventHandlers), CancellationTokenSource leaks
 
 To use to show a graph of the current instance memory use:
@@ -14,7 +16,7 @@ To use to show a graph of the current instance memory use:
 
 You can:
 Develop and run code in the VS instance from within the same VS process with:
-1.	No cloning, no enlistment, no Init.cmd, no command line build, no MSBuild,
+1.	No cloning, no enlistment, no Init.cmd, no command line build, no MSBuild, no Nuget
 2.	No patching of VS install with built binaries
 3.	No solution, no project required
 4.	Full VS Editor, rename, some Intellisense

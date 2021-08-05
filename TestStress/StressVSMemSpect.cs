@@ -15,15 +15,15 @@ namespace TestStress
 
         public TestContext TestContext { get; set; }
         ILogger logger;
-        VSHandler _VSHandler;
+        IVSHandler _VSHandler;
         [TestInitialize]
         public async Task TestInitialize()
         {
             logger = new Logger(new TestContextWrapper(TestContext));
-            _VSHandler = new VSHandler(logger, delayMultiplier: 10);
+            _VSHandler = new VSHandlerCreator().CreateVSHandler(logger, delayMultiplier: 10);
 
-            await _VSHandler.StartVSAsync(memSpectModeFlags: MemSpectModeFlags.MemSpectModeFull);
-            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.vsProc.Id}");
+            await _VSHandler.StartVSAsync(flags: MemSpectModeFlags.MemSpectModeFull);
+            logger.LogMessage($"TestInit starting VS pid= {_VSHandler.VsProcess.Id}");
         }
 
         [TestMethod]
@@ -36,9 +36,9 @@ namespace TestStress
                 // 30 min for 7 iter
                 await StressUtil.DoIterationsAsync(this, new StressUtilOptions() { ShowUI = true, NumIterations = 3 });
 
-                await _VSHandler.OpenSolution(StressVS.SolutionToLoad);
+                await _VSHandler.OpenSolutionAsync(StressVS.SolutionToLoad);
 
-                await _VSHandler.CloseSolution();
+                await _VSHandler.CloseSolutionAsync();
             }
             catch (Exception ex)
             {

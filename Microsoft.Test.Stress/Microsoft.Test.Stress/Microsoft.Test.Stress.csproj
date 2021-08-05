@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.Test.Stress</RootNamespace>
     <AssemblyName>Microsoft.Test.Stress</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -25,7 +25,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Microsoft.Test.Stress.xml</DocumentationFile>
-    <NoWarn>NU5128;NU5118;CS1591</NoWarn>
+    <NoWarn>NU5128;NU5118;CS1591;NU5100</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,7 +35,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Microsoft.Test.Stress.xml</DocumentationFile>
-    <NoWarn>NU5128;NU5118;CS1591</NoWarn>
+    <NoWarn>NU5128;NU5118;CS1591;NU5100</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -64,10 +64,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Dependencies\Microsoft.VisualStudio.Utilities.Internal.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Dependencies\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -92,17 +88,20 @@
     <Compile Include="AsyncPump.cs" />
     <Compile Include="Browse.cs" />
     <Compile Include="DumpAnalyzer.cs" />
-    <Compile Include="Dumper.cs" />
+    <Compile Include="KeyboardAutomationService.cs" />
+    <Compile Include="MemoryDumpHelper.cs" />
     <Compile Include="DumperViewerMain.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="GraphWin.xaml.cs">
       <DependentUpon>GraphWin.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ILogger.cs" />
     <Compile Include="LeakAnalysisResult.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />
     <Compile Include="MessageFilter.cs" />
+    <Compile Include="MouseAutomationService.cs" />
+    <Compile Include="NativeMethods.Input.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -113,62 +112,19 @@
     <Compile Include="StressUtil.cs" />
     <Compile Include="StressUtilOptions.cs" />
     <Compile Include="TestContextWrapper.cs" />
-    <Compile Include="VSHandler.cs" />
+    <Compile Include="VSHandlerCreator.cs" />
+    <Compile Include="ZipUtil.cs" />
   </ItemGroup>
   <ItemGroup>
-    <COMReference Include="EnvDTE">
-      <Guid>{80CC9F66-E7D8-4DDD-85B6-D9E6CD0E93E2}</Guid>
-      <VersionMajor>8</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-    <COMReference Include="EnvDTE100">
-      <Guid>{26AD1324-4B7C-44BC-84F8-B86AED45729F}</Guid>
-      <VersionMajor>10</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-    <COMReference Include="EnvDTE80">
-      <Guid>{1A31287A-4D7D-413E-8E32-3B374931BD89}</Guid>
-      <VersionMajor>8</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-    <COMReference Include="EnvDTE90">
-      <Guid>{2CE2370E-D744-4936-A090-3FFFE667B0E1}</Guid>
-      <VersionMajor>9</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-    <COMReference Include="stdole">
-      <Guid>{00020430-0000-0000-C000-000000000046}</Guid>
-      <VersionMajor>2</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>primary</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="2.1.7" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ClrObjExplorer\ClrObjExplorer.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="bin\Release\VSHandler32.zip" />
+    <EmbeddedResource Include="Resources\ClrObjExplorer.zip" />
     <None Include="Key.snk" />
     <None Include="Microsoft.Test.Stress.nuspec" />
-    <None Include="packages.config" />
+    <EmbeddedResource Include="Resources\VSHandler32.zip" />
+    <EmbeddedResource Include="Resources\VSHandler64.zip" />
     <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
@@ -178,8 +134,21 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.DevDiv.NuGet.Build">
+      <Version>0.3.12</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Definitions\Microsoft.Test.Stress.Definitions.csproj">
+      <Project>{ea339a28-09a1-4635-987e-b044d4600d79}</Project>
+      <Name>Microsoft.Test.Stress.Definitions</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
+      <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
@@ -188,13 +157,4 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\..\packages\Nerdbank.GitVersioning.2.1.7\build\Nerdbank.GitVersioning.targets" Condition="Exists('..\..\packages\Nerdbank.GitVersioning.2.1.7\build\Nerdbank.GitVersioning.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\Nerdbank.GitVersioning.2.1.7\build\Nerdbank.GitVersioning.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Nerdbank.GitVersioning.2.1.7\build\Nerdbank.GitVersioning.targets'))" />
-    <Error Condition="!Exists('..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets'))" />
-  </Target>
-  <Import Project="..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets" Condition="Exists('..\..\packages\Microsoft.DevDiv.NuGet.Build.0.3.12\build\Microsoft.DevDiv.NuGet.Build.targets') And '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "/>
 </Project>

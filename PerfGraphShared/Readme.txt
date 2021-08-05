@@ -31,10 +31,7 @@ Note: If UpdateInterval is non-zero, this will cause significant delay every Upd
 
 To update ClrObjExplorer:
 // make sure to build release:
-xcopy /dy C:\Users\calvinh\Source\repos\VSDbg\out\release\VsDbg\bin\x86\ClrObjExplorer\Clrobjexplorer.exe C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer
-xcopy /dy C:\Users\calvinh\Source\repos\VSDbg\out\release\VsDbg\bin\x86\ClrObjExplorer\Clrobjexplorer.pdb C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer
-xcopy /dy C:\Users\calvinh\Source\repos\VSDbg\out\release\VsDbg\bin\x86\ClrObjExplorer\Clrlib.dll C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer
-xcopy /dy C:\Users\calvinh\Source\repos\VSDbg\out\release\VsDbg\bin\x86\ClrObjExplorer\Clrlib.pdb C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer
+xcopy /sdy C:\Users\calvinh\source\repos\VSDbg\out\Release\ClrObjExplorer\bin\*.* C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources
 then zip them into "C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer\ClrObjExplorer.zip"
 
 
@@ -44,7 +41,16 @@ xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\release\
 
 
 
-When PR build succeeds, wait for rolling build, then check Artifacts-> filter to "stress" to get version # like "1.1.30"
+When PR build succeeds, wait for rolling build, 
+The build def: https://dev.azure.com/devdiv/Engineering/_build?definitionId=12376
+
+then check https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json with feedname="VS"
+ (create a new Wpf sln, use Sln->Manage NugetPackages for solution, choose the VS feed, the new version should show up)
+
+(no longer DevDiv Artifacts-> Engineering feed since feeds moved upstream for security vulnerabililty) filter to "stress" to get version # like "1.1.185"
+	https://devdiv.visualstudio.com/DevDiv/_packaging?_a=feed&feed=Engineering%40Local
+	https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json
+
 
 Ensure the version is a public release: the # does not have a hyphenated git commit suffix.
 
@@ -57,7 +63,8 @@ To change VS repo: change .corext\Configs\default.config
 
 
 // deploy to diff machine with VS enlistment
-xcopy /dy \\calvinh2\c$\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Release\Microsoft.Test.Stress.dll \vs\src\ExternalAPIs\Microsoft.Test.Stress\lib\net461
+xcopy /dy c:\Users\calvinh\Source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Release\*.dll \vs\src\ExternalAPIs\Microsoft.Test.Stress\lib\net461
+xcopy /dy c:\Users\calvinh\Source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\bin\Release\VSHandler64\*.dll \vs\src\ExternalAPIs\Microsoft.Test.Stress\lib\net461\VSHandler64\
 
 this repo is in 2 places: 
 	https://github.com/calvinhsia/PerfGraphVSIX.git

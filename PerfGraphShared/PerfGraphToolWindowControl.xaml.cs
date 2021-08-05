@@ -2,9 +2,8 @@
 {
     using EnvDTE;
     using Microsoft;
-    using Microsoft.Build.Utilities;
     using Microsoft.VisualStudio.PlatformUI;
-    using Microsoft.VisualStudio.ProjectSystem.Properties;
+//    using Microsoft.VisualStudio.ProjectSystem.Properties;
     using Microsoft.VisualStudio.Shell;
     using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Shell.Interop;
@@ -84,6 +83,11 @@
                 {
                     return dirDev;
                 }
+                dirDev = @"C:\Users\calvinh\Source\Repos\Stress\PerfGraphVSIX\CodeSamples";
+                if (Directory.Exists(dirDev))
+                {
+                    return dirDev;
+                }
                 return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
             }
         }
@@ -116,6 +120,7 @@
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         }
+        AsyncPackage MyPackage => PerfGraphToolWindowCommand.Instance.package;
 
         public class LeakedObject
         {
@@ -154,7 +159,7 @@
                 LstPerfCounterData = PerfCounterData.GetPerfCountersToUse(System.Diagnostics.Process.GetCurrentProcess(), IsForStress: false);
                 async Task RefreshCodeToRunAsync()
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
                     FileInfo mostRecentFileInfo = null;
                     foreach (var file in Directory.GetFiles(CodeSampleDirectory, "*.*", SearchOption.AllDirectories)
                         .Where(f => ".vb|.cs".Contains(Path.GetExtension(f).ToLower()))
@@ -192,9 +197,9 @@
                 _fileSystemWatcher.Deleted += h;
                 _fileSystemWatcher.EnableRaisingEvents = true;
 
-                ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                _ = MyPackage.JoinableTaskFactory.StartOnIdle(async () =>
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                     if (PerfGraphToolWindowCommand.Instance.g_dte == null) // if the toolwindow was already opened, this is set in InitializeToolWindowAsync. 1st time opening set it here
                     {
@@ -210,7 +215,7 @@
                     if (this.IsLeakTrackerServiceSupported())
                     {
                         this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
-                        this.inProcLeakTracker.Content = new InProcLeakTracker();
+//                        this.inProcLeakTracker.Content = new InProcLeakTracker();
                     }
                     await TaskScheduler.Default;
                     var telEvent = new TelemetryEvent(TelemetryEventBaseName + "Start");
@@ -225,7 +230,7 @@
 
                 btnDoSample.Click += (o, e) =>
                   {
-                      ThreadHelper.JoinableTaskFactory.Run(async () =>
+                      MyPackage.JoinableTaskFactory.Run(async () =>
                           {
                               await WaitForInitializationCompleteAsync();
                               await DoSampleAsync(measurementHolderInteractiveUser, DoForceGC: true, descriptionOverride: "Manual");
@@ -304,25 +309,25 @@
 
                     if (this.TrackProjectObjects)
                     {
-                        var hier = e.Hierarchy;
-                        if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root,
-                            (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject,
-                            out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
-                        {
-                            var proj = extObject as EnvDTE.Project; // comobj or Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject 
-                            var name = proj.Name;
-                            var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
-                            if (context == null && proj != null)
-                            {
-                                context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
-                            }
-                            if (context != null)
-                            {
-                                //                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
-                                _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
-                                //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
-                            }
-                        }
+                        //var hier = e.Hierarchy;
+                        //if (hier.GetProperty((uint)Microsoft.VisualStudio.VSConstants.VSITEMID.Root,
+                        //    (int)Microsoft.VisualStudio.Shell.Interop.__VSHPROPID.VSHPROPID_ExtObject,
+                        //    out var extObject) == Microsoft.VisualStudio.VSConstants.S_OK)
+                        //{
+                        //    var proj = extObject as EnvDTE.Project; // comobj or Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject 
+                        //    var name = proj.Name;
+                        //    var context = proj as IVsBrowseObjectContext; // Microsoft.VisualStudio.ProjectSystem.VS.Implementation.Package.Automation.OAProject
+                        //    if (context == null && proj != null)
+                        //    {
+                        //        context = proj.Object as IVsBrowseObjectContext; // {Microsoft.VisualStudio.Project.VisualC.VCProjectEngine.VCProjectShim}
+                        //    }
+                        //    if (context != null)
+                        //    {
+                        //        //                                var task = AddStatusMsgAsync($"{nameof(Microsoft.VisualStudio.Shell.Events.SolutionEvents.OnAfterOpenProject)} {proj.Name}   Context = {context}");
+                        //        _objTracker.AddObjectToTrack(context, ObjSource.FromProject, description: proj.Name);
+                        //        //var x = proj.Object as Microsoft.VisualStudio.ProjectSystem.Properties.IVsBrowseObjectContext;
+                        //    }
+                        //}
                     }
                 };
             }
@@ -361,8 +366,9 @@
         {
             try
             {
-                DoTryTypeLoadException();
-                return true;
+                //DoTryTypeLoadException();
+                throw new NotImplementedException();
+//                return true;
             }
             catch
             {
@@ -372,8 +378,9 @@
         }
 
         // Types get loaded before the method that uses them, so it can't be caught in the same method as the Catch: must be in a method below the Catch
-        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
-        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
+        //        [MethodImpl(MethodImplOptions.NoInlining)] // and not in-lined
+        //        private void DoTryTypeLoadException() => PerfGraphToolWindowPackage.ComponentModel.GetService<IMemoryLeakTrackerService>();
+        // A reference to 'C:\Program Files\Microsoft Visual Studio\2022\Preview\Common7\IDE\CommonExtensions\Microsoft\Editor\Microsoft.VisualStudio.CoreUtility.dll' could not be added. This component is already automatically referenced by the build system.
 
         // use a circular buffer to store samples. 
         // dictionary of sample # (int from 0 to NumDataPoints) =>( List (PerfCtrValues in order)
@@ -410,7 +417,7 @@
         {
             _ctsPcounter = new CancellationTokenSource();
             _tcsPcounter = new TaskCompletionSource<int>();
-            _tskDoPerfMonitoring = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _tskDoPerfMonitoring = MyPackage.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
@@ -443,7 +450,7 @@
                 try
                 {
                     res = await measurementHolder.TakeMeasurementAsync(descriptionOverride, DoForceGC, IsForInteractiveGraph: UpdateInterval != 0);
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
                     await AddDataPointsAsync(measurementHolder);
                     if (AutoDumpIsEnabled)
                     {
@@ -508,7 +515,7 @@
                     _bufferIndex = 0;
                 }
             }
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (DoFullGCPerSample)
             {
                 DoGC();// do a GC.Collect on main thread for every sample (the graphing uses memory)
@@ -629,7 +636,7 @@
 
         public void LogMessage(string msg, params object[] args)
         {
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = MyPackage.JoinableTaskFactory.RunAsync(async () =>
             {
                 await AddStatusMsgAsync(msg, args);
             });
@@ -664,7 +671,7 @@
             this.LastStatMsg = str;
             if (txtStatus != null)
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
                 // this action executes on main thread
                 var len = txtStatus.Text.Length;
 
@@ -682,9 +689,16 @@
         {
             btnClrObjExplorer.IsEnabled = false;
             ThreadHelper.ThrowIfNotOnUIThread();
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = MyPackage.JoinableTaskFactory.RunAsync(async () =>
                 {
-                    await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
+                    try
+                    {
+                        await CreateDumpFileAsync(MemoryAnalysisType.StartClrObjExplorer, "InteractiveUserDump", tspanDelayAfterGC: TimeSpan.FromSeconds(1));
+                    }
+                    catch (Exception ex)
+                    {
+                        _ =AddStatusMsgAsync(ex.ToString());
+                    }
                     btnClrObjExplorer.IsEnabled = true;
                 }
             );
@@ -693,10 +707,10 @@
         public async Task<string> CreateDumpFileAsync(MemoryAnalysisType memoryAnalysisType, string descDump, TimeSpan tspanDelayAfterGC)
         {
             var pathDumpFile = string.Empty;
-            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            await MyPackage.JoinableTaskFactory.RunAsync(async () =>
             {
                 await WaitForInitializationCompleteAsync();
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
                 DoGC(); //must be on main thread
                 await Task.Delay(tspanDelayAfterGC);
                 pathDumpFile = await measurementHolderInteractiveUser.CreateDumpAsync(
@@ -718,7 +732,7 @@
 
         public void BtnExecCode_Click(object sender, RoutedEventArgs e)
         {
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+            _ = MyPackage.JoinableTaskFactory.RunAsync(async () =>
             {
                 try
                 {
@@ -783,7 +797,7 @@
                 }
                 else
                 {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
                     var res = compileHelper.ExecuteTheCode();
                     if (res is Task task)
                     {
@@ -800,7 +814,7 @@
                     }
                 }
             }
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await MyPackage.JoinableTaskFactory.SwitchToMainThreadAsync();
             _ctsExecuteCode = null;
             this.btnExecCode.Content = "ExecCode";
             this.btnExecCode.IsEnabled = true;

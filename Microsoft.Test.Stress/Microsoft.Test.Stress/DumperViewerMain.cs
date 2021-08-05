@@ -256,7 +256,7 @@ namespace Microsoft.Test.Stress
             Process procChosen = null;
             var q = from proc in Process.GetProcesses()
                     orderby proc.ProcessName
-                    where fShow32BitOnly ? ProcessType(proc) == "32" : true
+                    where !fShow32BitOnly || ProcessType(proc) == "32"
                     select new
                     {
                         proc.Id,

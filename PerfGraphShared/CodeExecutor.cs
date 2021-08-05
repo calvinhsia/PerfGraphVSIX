@@ -10,7 +10,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Configuration;
 using System.Windows;
 
 namespace PerfGraphVSIX
@@ -51,9 +50,9 @@ namespace PerfGraphVSIX
             public const string DoMain = "DoMain"; // not domain
             public const string VSRootSubstitution = "%VSRoot%";
             public const string progfiles86 = @"C:\Program Files (x86)";
-            public string refPathPrefix => $"{CommentPrefix}Ref:";
-            public string includePathPrefix => $"{CommentPrefix}Include:";
-            public string pragmaPrefix => $"{CommentPrefix}Pragma:";
+            public string RefPathPrefix => $"{CommentPrefix}Ref";
+            public string IncludePathPrefix => $"{CommentPrefix}Include:";
+            public string PragmaPrefix => $"{CommentPrefix}Pragma:";
             public string CommentPrefix; // for vb "'". For C# "//"
             bool _fDidAddAssemblyResolver;
 
@@ -130,13 +129,13 @@ namespace PerfGraphVSIX
                             hashofCodeToExecute += strCodeToExecute.GetHashCode();
                             var srcLines = strCodeToExecute.Split("\r\n".ToArray());
                             foreach (var srcline in srcLines.Where(
-                                s => s.StartsWith(refPathPrefix) ||
-                                s.StartsWith(pragmaPrefix) ||
-                                s.StartsWith(includePathPrefix)))
+                                s => s.StartsWith(RefPathPrefix) ||
+                                s.StartsWith(PragmaPrefix) ||
+                                s.StartsWith(IncludePathPrefix)))
                             {
-                                if (srcline.StartsWith(pragmaPrefix)) ////Pragma: GenerateInMemory=false
+                                if (srcline.StartsWith(PragmaPrefix)) ////Pragma: GenerateInMemory=false
                                 {
-                                    var splitPragma = srcline.Substring(pragmaPrefix.Length).Split(new[] { '=', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                    var splitPragma = srcline.Substring(PragmaPrefix.Length).Split(new[] { '=', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                                     switch (splitPragma[0].ToLower())
                                     {
                                         case "generateinmemory":
@@ -167,65 +166,108 @@ namespace PerfGraphVSIX
                                             throw new InvalidOperationException($"Unknown Pragma {srcline}");
                                     }
                                 }
-                                else if (srcline.StartsWith(refPathPrefix))
+                                else if (srcline.StartsWith(RefPathPrefix))
                                 {
-                                    var refAsm = srcline.Replace(refPathPrefix, string.Empty).Trim();
-                                    if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
+                                    // see what kind of ref it is: 32, 64 or both ("Ref32:","Ref64","Ref:")
+                                    var refAsm = string.Empty;
+                                    if (srcline.StartsWith(RefPathPrefix + ":"))
                                     {
-                                        refAsm = refAsm.Replace("\"", string.Empty);
+                                        refAsm = srcline.Substring(RefPathPrefix.Length + 1).Trim(); ;
                                     }
-                                    if (refAsm.Contains(progfiles86))// C:\Program Files (x86)\
+                                    else if (srcline.StartsWith(RefPathPrefix + "32"))
                                     {
-                                        var pfiles = Environment.GetEnvironmentVariable("ProgramFiles(x86)");
-                                        refAsm = refAsm.Replace(progfiles86, pfiles);
-                                    }
-                                    if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
-                                    {
-                                        refAsm = this.GetType().Assembly.Location;
-                                        var dir = System.IO.Path.GetDirectoryName(refAsm);
-                                        if (!_lstRefDirs.Contains(dir))
+                                        if (IntPtr.Size == 4)
                                         {
-                                            _lstRefDirs.Add(dir);
+                                            refAsm = srcline.Substring(RefPathPrefix.Length + 3).Trim(); ;
                                         }
-                                        compParams.ReferencedAssemblies.Add(refAsm);
-                                        refAsm = typeof(ILogger).Assembly.Location;
+                                    }
+                                    else if (srcline.StartsWith(RefPathPrefix + "64"))
+                                    {
+                                        if (IntPtr.Size == 8)
+                                        {
+                                            refAsm = srcline.Substring(RefPathPrefix.Length + 3).Trim(); ;
+                                        }
                                     }
                                     else
                                     {
-                                        if (refAsm.Contains(VSRootSubstitution))
+                                        throw new InvalidOperationException($"Unknown reference type {srcline}");
+                                    }
+                                    if (!string.IsNullOrEmpty(refAsm))
+                                    {
+
+                                        if (refAsm.StartsWith("\"") && refAsm.EndsWith("\""))
                                         {
-                                            refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
+                                            refAsm = refAsm.Replace("\"", string.Empty);
                                         }
-                                        var dir = System.IO.Path.GetDirectoryName(refAsm);
-                                        if (string.IsNullOrEmpty(dir))
+                                        if (refAsm.Contains(progfiles86))// C:\Program Files (x86)\
                                         {
-                                            var temp = Path.Combine(Path.GetDirectoryName(pathFileToExecute), refAsm);
-                                            if (File.Exists(temp))
-                                            {
-                                                refAsm = temp;
-                                            }
+                                            var pfiles = Environment.GetEnvironmentVariable("ProgramFiles" + (IntPtr.Size == 8 ? "(x86)" : string.Empty));
+                                            refAsm = refAsm.Replace(progfiles86, pfiles);
                                         }
-                                        //                                _logger.LogMessage($"AddRef {refAsm}");
-                                        if (!string.IsNullOrEmpty(refAsm))
+                                        if (refAsm == $"%{nameof(PerfGraphVSIX)}%")
                                         {
-                                            if (!System.IO.File.Exists(refAsm))
+                                            refAsm = this.GetType().Assembly.Location;
+                                            var dir = System.IO.Path.GetDirectoryName(refAsm);
+                                            if (!_lstRefDirs.Contains(dir))
                                             {
-                                                throw new System.IO.FileNotFoundException($"Couldn't find {refAsm}");
+                                                _lstRefDirs.Add(dir);
                                             }
-                                            else
+                                            compParams.ReferencedAssemblies.Add(refAsm);
+                                            refAsm = typeof(ILogger).Assembly.Location; // definitions
+                                            compParams.ReferencedAssemblies.Add(refAsm);
+                                            refAsm = typeof(StressUtil).Assembly.Location;
+                                            compParams.ReferencedAssemblies.Add(refAsm);
+                                        }
+                                        else
+                                        {
+                                            if (refAsm.Contains(VSRootSubstitution))
                                             {
-                                                if (!_lstRefDirs.Contains(dir))
+                                                refAsm = refAsm.Replace(VSRootSubstitution, vsRoot);
+                                                var filename = Path.GetFileName(refAsm); //https://devdiv.visualstudio.com/DevDiv/_git/VS/pullrequest/336955?_a=files
+                                                if (filename.Contains("Microsoft.VisualStudio.Threading.dll")) // %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.16.0\Microsoft.VisualStudio.Threading.dll
                                                 {
-                                                    _lstRefDirs.Add(dir);
+                                                    if (!File.Exists(refAsm)) // // %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.17.x\Microsoft.VisualStudio.Threading.dll
+                                                    {
+                                                        var publicasms = Path.Combine(vsRoot, @"Common7\IDE\PublicAssemblies");
+                                                        var vstfolders = Directory.GetDirectories(publicasms, "Microsoft.VisualStudio.Threading.*");
+                                                        if (vstfolders.Length == 1)
+                                                        {
+                                                            refAsm = Path.Combine(vstfolders[0], filename);
+                                                        }
+                                                    }
                                                 }
                                             }
+                                            var dir = System.IO.Path.GetDirectoryName(refAsm);
+                                            if (string.IsNullOrEmpty(dir))
+                                            {
+                                                var temp = Path.Combine(Path.GetDirectoryName(pathFileToExecute), refAsm);
+                                                if (File.Exists(temp))
+                                                {
+                                                    refAsm = temp;
+                                                }
+                                            }
+                                            //                                _logger.LogMessage($"AddRef {refAsm}");
+                                            if (!string.IsNullOrEmpty(refAsm))
+                                            {
+                                                if (!System.IO.File.Exists(refAsm))
+                                                {
+                                                    throw new System.IO.FileNotFoundException($"Couldn't find {refAsm}");
+                                                }
+                                                else
+                                                {
+                                                    if (!_lstRefDirs.Contains(dir))
+                                                    {
+                                                        _lstRefDirs.Add(dir);
+                                                    }
+                                                }
+                                            }
+                                            compParams.ReferencedAssemblies.Add(refAsm);
                                         }
                                     }
-                                    compParams.ReferencedAssemblies.Add(refAsm);
                                 }
-                                else if (srcline.StartsWith(includePathPrefix))
+                                else if (srcline.StartsWith(IncludePathPrefix))
                                 {
-                                    var include = srcline.Replace(includePathPrefix, string.Empty).Trim();
+                                    var include = srcline.Replace(IncludePathPrefix, string.Empty).Trim();
                                     if (include.StartsWith("\"") && include.EndsWith("\""))
                                     {
                                         include = include.Replace("\"", string.Empty);
@@ -298,7 +340,7 @@ namespace PerfGraphVSIX
                                 {
                                     _logger.LogMessage($@"Compile line: ""{roslynExe}"" " + args);
                                 }
-                                using (var proc = VSHandler.CreateProcess(roslynExe, args, sb))
+                                using (var proc = Utility.CreateProcess(roslynExe, args, sb))
                                 {
                                     proc.Start();
                                     proc.BeginOutputReadLine();
@@ -428,7 +470,7 @@ namespace PerfGraphVSIX
                 {
                     result = strres;
                 }
-                if (res is System.Threading.Tasks.Task task)
+                if (res is System.Threading.Tasks.Task)
                 {
                     result = res;
                 }

@@ -1,5 +1,4 @@
 ﻿//using Microsoft.Diagnostics.Runtime;
-using EnvDTE;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
@@ -7,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Resources;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -39,6 +39,7 @@ namespace Microsoft.Test.Stress
         }
 
         private readonly ILogger logger;
+        public string ClrObjExplorerExe = string.Empty;
         public DumpAnalyzer(ILogger logger)
         {
             this.logger = logger;
@@ -273,26 +274,17 @@ namespace Microsoft.Test.Stress
 
         public string GetClrObjExplorerPath()
         {
-            var ClrObjExplorerExe = string.Empty;
             try
             {
-                var clrObjDir = Path.Combine(
-                    Path.GetDirectoryName(this.GetType().Assembly.Location),
-                    @"ClrObjExplorer");
-                //                logger.LogMessage($"Looking for ClrObjExplorer in {clrObjDir}");
-                ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
-                if (!File.Exists(ClrObjExplorerExe))
+                if (string.IsNullOrEmpty(ClrObjExplorerExe))
                 {
-                    logger.LogMessage($"Creating {clrObjDir}");
-                    Directory.CreateDirectory(clrObjDir);
-                    var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-                    //                        logger.LogMessage($"Unzip to {tempZipFile}");
-                    var zipArray = Properties.Resources.ClrObjExplorer;
-                    File.WriteAllBytes(tempZipFile, zipArray);
-                    //                        logger.LogMessage($"Extracting zip {tempZipFile}");
-                    ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
-                    logger.LogMessage($"Done Extracting zip {tempZipFile}");
-                    File.Delete(tempZipFile);
+                    var clrObjDir = Path.Combine(
+                        Path.GetDirectoryName(this.GetType().Assembly.Location),
+                        @"ClrObjExplorer");
+                    ZipUtil.UnzipResource("ClrObjExplorer.zip", clrObjDir);
+
+                    //                ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
+                    ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer" + (IntPtr.Size == 8 ? "64" : string.Empty) + ".exe");
                 }
             }
             catch (Exception ex)
