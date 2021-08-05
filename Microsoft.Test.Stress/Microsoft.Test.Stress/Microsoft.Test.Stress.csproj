@@ -100,6 +100,7 @@
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />
     <Compile Include="MessageFilter.cs" />
+    <Compile Include="MouseAutomationService.cs" />
     <Compile Include="NativeMethods.Input.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

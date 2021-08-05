@@ -83,6 +83,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSLeakTests", "VSLeakTests"
 		CodeSamples\VSLeakTests\OpenCloseOneFile.cs = CodeSamples\VSLeakTests\OpenCloseOneFile.cs
 		CodeSamples\VSLeakTests\OpenCloseSln.cs = CodeSamples\VSLeakTests\OpenCloseSln.cs
 		CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs = CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs
+		CodeSamples\VSLeakTests\Typing.cs = CodeSamples\VSLeakTests\Typing.cs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSDemos", "VSDemos", "{D2D59A02-AE6F-445B-B1D6-414456774540}"

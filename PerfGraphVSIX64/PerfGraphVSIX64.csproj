@@ -262,7 +262,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="..\CodeSamples\Fun\Cartoon.vb">
+	  <Content Include="..\CodeSamples\VSLeakTests\Typing.cs">
+		  <Link>CodeSamples\VSLeakTests\Typing.cs</Link>
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <IncludeInVSIX>true</IncludeInVSIX>
+	  </Content>
+	  <Content Include="..\CodeSamples\Fun\Cartoon.vb">
       <Link>CodeSamples\Fun\Cartoon.vb</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>

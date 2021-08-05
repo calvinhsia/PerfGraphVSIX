@@ -10,6 +10,97 @@ namespace Microsoft.Test.Stress
     using System.Runtime.InteropServices;
     using System.Linq;
 
+    //Native methods used by MouseInput class
+    public static partial class MouseInput
+    {
+        //ref bing:"GetSystemMetrics Function(Windows)"
+        //Virtual screen = bounding area of all monitors, or 'Desktop' area
+        const int SM_XVIRTUALSCREEN = 76; //X of 'virtual screen'
+        const int SM_YVIRTUALSCREEN = 77; //Y of 'virtual screen'
+        const int SM_CXVIRTUALSCREEN = 78; //Width of 'virtual screen'
+        const int SM_CYVIRTUALSCREEN = 79; //Height of 'virtual screen'
+
+        //ref bing:"INPUT Structure site:msdn.microsoft.com"
+        const int INPUT_MOUSE = 0;
+        const int INPUT_KEYBOARD = 1;
+
+        //ref bing:"INPUT Structure site:msdn.microsoft.com"
+        [StructLayout(LayoutKind.Sequential)]
+        struct INPUT
+        {
+            public int type; //INPUT_MOUSE or INPUT_KEYBOARD
+            public INPUTUNION union;
+        };
+
+        //ref bing:"INPUT Structure site:msdn.microsoft.com"
+        [StructLayout(LayoutKind.Explicit)]
+        struct INPUTUNION
+        {
+            [FieldOffset(0)]
+            public MOUSEINPUT mouseInput;
+            [FieldOffset(0)]
+            public KEYBDINPUT keyboardInput;
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        //ref bing:"KEYBDINPUT Structure site:msdn.microsoft.com"
+        struct KEYBDINPUT
+        {
+            public short wVk;
+            public short wScan;
+            public int dwFlags;
+            public int time;
+            public IntPtr dwExtraInfo;
+        };
+
+        [StructLayout(LayoutKind.Sequential)]
+        //ref bing:"MOUSEINPUT Structure site:msdn.microsoft.com"
+        struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public int mouseData;
+            public int dwFlags;
+            public int time;
+            public IntPtr dwExtraInfo;
+        };
+
+        //ref bing:"MOUSEINPUT Structure site:msdn.microsoft.com"
+        const int XBUTTON1 = 0x0001;
+        const int XBUTTON2 = 0x0002;
+        const int WHEEL_DELTA = 120;
+
+        [Flags]
+        //ref bing:"MOUSEINPUT Structure site:msdn.microsoft.com"
+        enum MOUSEEVENTF
+        {
+            MOVE = 0x0001,
+            LEFTDOWN = 0x0002,
+            LEFTUP = 0x0004,
+            RIGHTDOWN = 0x0008,
+            RIGHTUP = 0x0010,
+            MIDDLEDOWN = 0x0020,
+            MIDDLEUP = 0x0040,
+            XDOWN = 0x0080, ///Requires Win2k and up
+            XUP = 0x0100, ///Requires Win2k and up
+            WHEEL = 0x0800, ///Requires WinNT and up
+            HORIZONTALWHEEL = 0x1000, ///Requires Vista and up
+            MOVE_NOCOALESCE = 0x2000, ///Requires Vista and up
+            VIRTUALDESK = 0x4000, ///MUST be used in combination with Absolute
+            ABSOLUTE = 0x8000,
+        };
+
+        //ref bing:"GetSystemMetrics Function(Windows)"
+        [DllImport("user32.dll", ExactSpelling = true, CharSet = CharSet.Auto)]
+        static extern int GetSystemMetrics(int nIndex);
+
+        //ref bing:"SendInput Function(Windows)"
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern int SendInput(int nInputs, ref INPUT mi, int cbSize);
+    }
+
+
+
     #region Structures
     /// <summary>
     /// The type of the input event. 
