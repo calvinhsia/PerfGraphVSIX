@@ -16,7 +16,7 @@ namespace Microsoft.Test.Stress
     //[Export(typeof(IKeyboardAutomationService))]
     //[Export(typeof(IRemotableService))]
     //[ProvidesOperationsExtension]
-    internal class KeyboardAutomationService //: MarshallableApexService, IRemotableService, IKeyboardAutomationService
+    public class KeyboardAutomationService //: MarshallableApexService, IRemotableService, IKeyboardAutomationService
     {
         /// <summary>
         /// Maximum key strokes to dispatch per minute.

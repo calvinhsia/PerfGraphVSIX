@@ -3,7 +3,7 @@
 //  Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 //------------------------------------------------------------------------------
-namespace Microsoft.Test.Test
+namespace Microsoft.Test.Stress
 {
     using Microsoft.Test.Stress;
     using System;

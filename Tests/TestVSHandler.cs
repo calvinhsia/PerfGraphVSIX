@@ -131,7 +131,7 @@ namespace Tests
         }
 
         [TestMethod]
-        public void TestVSSendInput()
+        public void TestVSTyping()
         {
             AsyncPump.Run(async () =>
             {
