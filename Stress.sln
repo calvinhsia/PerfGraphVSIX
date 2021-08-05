@@ -72,26 +72,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Util", "Util", "{3C592334-F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSLeakTests", "VSLeakTests", "{E706397C-96F3-482D-9332-22C024066C98}"
 	ProjectSection(SolutionItems) = preProject
-		PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSln.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSln.cs
 		CodeSamples\VSLeakTests\BuildSln.cs = CodeSamples\VSLeakTests\BuildSln.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSlnCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSlnCpp.cs
 		CodeSamples\VSLeakTests\BuildSlnCpp.cs = CodeSamples\VSLeakTests\BuildSlnCpp.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\Debug.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\Debug.cs
 		CodeSamples\VSLeakTests\Debug.cs = CodeSamples\VSLeakTests\Debug.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\DebugCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\DebugCpp.cs
 		CodeSamples\VSLeakTests\DebugCpp.cs = CodeSamples\VSLeakTests\DebugCpp.cs
 		CodeSamples\VSLeakTests\NavOneFile.cs = CodeSamples\VSLeakTests\NavOneFile.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFiles.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFiles.cs
 		CodeSamples\VSLeakTests\NavTwoFiles.cs = CodeSamples\VSLeakTests\NavTwoFiles.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFilesCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFilesCpp.cs
 		CodeSamples\VSLeakTests\NavTwoFilesCpp.cs = CodeSamples\VSLeakTests\NavTwoFilesCpp.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseFolder.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseFolder.cs
 		CodeSamples\VSLeakTests\OpenCloseFolder.cs = CodeSamples\VSLeakTests\OpenCloseFolder.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseOneFile.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseOneFile.cs
 		CodeSamples\VSLeakTests\OpenCloseOneFile.cs = CodeSamples\VSLeakTests\OpenCloseOneFile.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseSln.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseSln.cs
 		CodeSamples\VSLeakTests\OpenCloseSln.cs = CodeSamples\VSLeakTests\OpenCloseSln.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs
 		CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs = CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs
 	EndProjectSection
 EndProject
