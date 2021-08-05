@@ -106,6 +106,7 @@ namespace Microsoft.Test.Stress
                     VsProcess = procDevenv;
                     _vsDTE = await GetDTEAsync(VsProcess.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
                     //                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(2)); // Can't use AsyncPump or OleMessageFilter easily here: sometimes get RPC_E_SERVERCALL_RETRYLATER when getting SolutionEvents
                     _solutionEvents = _vsDTE.Events.SolutionEvents;
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
