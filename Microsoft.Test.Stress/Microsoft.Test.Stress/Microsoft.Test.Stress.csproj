@@ -88,6 +88,7 @@
     <Compile Include="AsyncPump.cs" />
     <Compile Include="Browse.cs" />
     <Compile Include="DumpAnalyzer.cs" />
+    <Compile Include="KeyboardAutomationService.cs" />
     <Compile Include="MemoryDumpHelper.cs" />
     <Compile Include="DumperViewerMain.cs" />
     <Compile Include="GlobalSuppressions.cs" />
@@ -99,6 +100,7 @@
     <Compile Include="MeasurementHolder.cs" />
     <Compile Include="MemSpectAttribute.cs" />
     <Compile Include="MessageFilter.cs" />
+    <Compile Include="NativeMethods.Input.cs" />
     <Compile Include="PerfCounterData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">

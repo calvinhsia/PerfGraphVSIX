@@ -91,16 +91,21 @@ namespace Tests
                     dte = (EnvDTE._DTE)await vsHandler.EnsureGotDTE(timeout: TimeSpan.FromSeconds(10));
                     //tsk.Wait();
                     //dte = (EnvDTE._DTE)tsk.Result;
-
                     Assert.IsNotNull(dte);
+                    var tmpFile = @"c:\t.txt";// constant file that won't screw up my MRU too badly
+                    if (!File.Exists(tmpFile))
+                    {
+                        tmpFile = Path.GetTempFileName();
+                        File.WriteAllText(tmpFile, "test");
+                    }
                     // we loop faster than VS can respond causing IOleMessageFilter:RetryRejectedCall, where we say wait and try again
                     LogMessage("registering filter");
                     MessageFilter.RegisterMessageFilter(this); //System.InvalidOperationException: Failed to set the specified COM apartment state.
                     for (int i = 0; i < 10; i++)
                     {
                         LogMessage("Open file");
-                        dte.ItemOperations.OpenFile(@"c:\t.txt");
-                        //                            await Task.Yield(); // see if thread switch breaks filter
+                        dte.ItemOperations.OpenFile(tmpFile);
+                        await Task.Yield(); // see if await breaks filter (should continue on same thread)
                         LogMessage("close file");
                         dte.ActiveWindow.Close();
                     }
@@ -123,6 +128,94 @@ namespace Tests
                 }
                 await Task.Yield();
             }
+        }
+
+        [TestMethod]
+        public void TestVSSendInput()
+        {
+            AsyncPump.Run(async () =>
+            {
+                var tcs = new TaskCompletionSource<int>(0);
+                Thread thd = null;
+                thd = new Thread(() =>
+                {
+                    try
+                    {
+                        AsyncPump.Run(async () =>
+                        {
+                            MessageFilter.RegisterMessageFilter(this); //System.InvalidOperationException: Failed to set the specified COM apartment state.
+                            var vsHandler = new VSHandlerCreator().CreateVSHandler(this);
+                            await vsHandler.StartVSAsync();
+                            var dte = (EnvDTE._DTE)await vsHandler.EnsureGotDTE(timeout: TimeSpan.FromSeconds(10));
+
+                            var filename = @"c:\t.cs"; // constant file that won't screw up my MRU too badly
+                            if (!File.Exists(filename))
+                            {
+                                filename = Path.GetTempPath() + ".cs";
+                            }
+                            await Task.Delay(TimeSpan.FromMilliseconds(5000)); // let VS idle a bit so startup tasks complete
+                            File.WriteAllText(filename,
+                                @"
+using System;
+public class myclass
+{
+    public void Main()
+    {
+
+
+    }
+}
+");
+
+                            dte.ItemOperations.OpenFile(filename);
+                            var kb = new KeyboardAutomationService();
+                            kb.TypeKey(KeyboardKey.Down);
+                            kb.TypeKey(KeyboardKey.Down);
+                            kb.TypeKey(KeyboardKey.Down);
+                            kb.TypeKey(KeyboardKey.Down);
+                            kb.TypeKey(KeyboardKey.Down);
+                            kb.TypeKey(KeyboardKey.Down);
+                            for (int i = 0; i < 10; i++)
+                            {
+                                kb.TypeText($"\"{i}\"."); //  "1".ToString();
+                                await Task.Delay(TimeSpan.FromMilliseconds(500)); // for intellisense to 
+                                kb.TypeKey('t');
+                                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                                kb.TypeKey('o');
+                                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                                kb.TypeKey('s');
+                                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                                kb.TypeKey(KeyboardKey.Tab);
+                                kb.TypeText("();");
+                                kb.TypeKey(KeyboardKey.Enter);
+                                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                            }
+
+                            //kb.TypeKey(KeyboardModifier.Alt, new[] { 't', 'o' }); // ToolsOptions
+                            //await Task.Delay(TimeSpan.FromMilliseconds(1500));
+                            //kb.TypeKey(KeyboardKey.Escape);
+
+                            dte.ActiveWindow.Close(EnvDTE.vsSaveChanges.vsSaveChangesNo);
+                            dte.Quit();
+                            MessageFilter.RevokeMessageFilter();
+                            tcs.SetResult(0);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessage(ex.ToString());
+                        tcs.SetException(ex);
+                    }
+                })
+                {
+                    Name = "MyThread"
+                };
+                thd.SetApartmentState(ApartmentState.STA);
+                thd.Start();
+                await tcs.Task;
+
+            });
+
         }
 
     }

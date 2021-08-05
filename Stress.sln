@@ -80,7 +80,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSLeakTests", "VSLeakTests"
 		CodeSamples\VSLeakTests\Debug.cs = CodeSamples\VSLeakTests\Debug.cs
 		PerfGraphVSIX\CodeSamples\VSLeakTests\DebugCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\DebugCpp.cs
 		CodeSamples\VSLeakTests\DebugCpp.cs = CodeSamples\VSLeakTests\DebugCpp.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\NavOneFile.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavOneFile.cs
 		CodeSamples\VSLeakTests\NavOneFile.cs = CodeSamples\VSLeakTests\NavOneFile.cs
 		PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFiles.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFiles.cs
 		CodeSamples\VSLeakTests\NavTwoFiles.cs = CodeSamples\VSLeakTests\NavTwoFiles.cs
