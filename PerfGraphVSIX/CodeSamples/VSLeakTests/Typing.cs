@@ -52,7 +52,7 @@ namespace MyCodeToExecute
             kb.TypeKey(KeyboardKey.Up);
             for (int i = 0; i < 10; i++)
             {
-                kb.TypeText($"\"{iteration}\{i}\"."); //  "1".ToString();
+                kb.TypeText($"\"{iteration}/{i}\"."); //  "1".ToString();
                 await Task.Delay(TimeSpan.FromMilliseconds(500)); // for intellisense to 
                 kb.TypeKey('t');
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
