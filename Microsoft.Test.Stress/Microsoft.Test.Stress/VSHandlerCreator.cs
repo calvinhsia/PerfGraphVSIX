@@ -33,40 +33,17 @@ namespace Microsoft.Test.Stress
             var dirVSHandler = Path.Combine(
                 Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                 Path.GetFileNameWithoutExtension(vsHandlerFileName));
-            Directory.CreateDirectory(dirVSHandler); //succeeds if it exists already
+
             vsHandlerFileName = Path.Combine(dirVSHandler, vsHandlerFileName); //now full path
-            var resName = Path.GetFileNameWithoutExtension(vsHandlerFileName) + ".zip";
-            var zipFile = Path.Combine(dirVSHandler, resName);
-            if (!File.Exists(vsHandlerFileName) || 
-                !File.Exists(zipFile) || 
+            var resourceName = Path.GetFileNameWithoutExtension(vsHandlerFileName) + ".zip";
+
+            var zipFile = Path.Combine(dirVSHandler, resourceName);
+            if (!Directory.Exists(dirVSHandler) ||
+                !File.Exists(vsHandlerFileName) ||
+                !File.Exists(zipFile) ||
                 (new FileInfo(vsHandlerFileName).LastWriteTime != new FileInfo(zipFile).LastWriteTime))
             {
-                //                var zipVSHandlerRes = IntPtr.Size == 8 ? Properties.Resources.VSHandler64 : Properties.Resources.VSHandler32;
-                var zipVSHandlerRes = StressUtil.GetResource(resName);
-                File.WriteAllBytes(zipFile, zipVSHandlerRes); // overwrites
-                logger?.LogMessage($"Extracting zip {zipFile}");
-                using (var archive = ZipFile.Open(zipFile, ZipArchiveMode.Read))
-                {
-                    foreach (var entry in archive.Entries)
-                    {
-                        var ndx = entry.FullName.IndexOf('/'); // subdir separator == '/'
-                        string destfilename;
-                        if (ndx > 0)
-                        {
-                            var subfolder = entry.FullName.Substring(0, ndx);
-                            Directory.CreateDirectory(Path.Combine(dirVSHandler, subfolder));
-                            destfilename = Path.Combine(dirVSHandler, subfolder, entry.Name);
-                        }
-                        else
-                        {
-                            destfilename = Path.Combine(dirVSHandler, entry.Name);
-                        }
-                        if (!File.Exists(destfilename) || new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
-                        {
-                            entry.ExtractToFile(destfilename, overwrite: true);
-                        }
-                    }
-                }
+                ZipUtil.UnzipResource(resourceName, dirVSHandler);
             }
             logger?.LogMessage($"Found VSHandler at {vsHandlerFileName}");
             Assembly asm = Assembly.LoadFrom(vsHandlerFileName);

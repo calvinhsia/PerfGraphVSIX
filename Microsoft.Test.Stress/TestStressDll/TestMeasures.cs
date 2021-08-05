@@ -46,28 +46,39 @@ namespace TestStressDll
 
 
     [TestClass]
+    [Ignore]
     public class TestMeasures : BaseTestClass
     {
         [TestMethod]
-//        [Ignore]
+        //        [Ignore]
         public void TestZip()
         {
-            var clrObjDir = Path.Combine(Environment.CurrentDirectory, "clrotest");
+            var destFolder = Path.Combine(Environment.CurrentDirectory, "outputTest");
+            var zipFile = @"C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources\ClrObjExplorer.zip";
+            //            var ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
+            LogMessage($"Creating {destFolder}");
+            Directory.CreateDirectory(destFolder); // succeeds even if dir exists
 
-//            var ClrObjExplorerExe = Path.Combine(clrObjDir, "ClrObjExplorer.exe");
-            LogMessage($"Creating {clrObjDir}");
-            Directory.CreateDirectory(clrObjDir); // succeeds even if dir exists
-            var tempZipFile = Path.Combine(clrObjDir, "clrobj.zip");
-            File.Delete(tempZipFile); //If the file to be deleted does not exist, no exception is thrown.
-            //                        logger.LogMessage($"Unzip to {tempZipFile}");
-            var zipArray = StressUtil.GetResource("ClrObjExplorer.zip");
-            File.WriteAllBytes(tempZipFile, zipArray);
             //                        logger.LogMessage($"Extracting zip {tempZipFile}");
-            using (var archive = ZipFile.Open(tempZipFile, ZipArchiveMode.Read))
+            using (var archive = ZipFile.Open(zipFile, ZipArchiveMode.Read))
             {
                 foreach (var entry in archive.Entries)
                 {
-                    var destfilename = Path.Combine(clrObjDir, entry.Name);
+                    string destfilename = destFolder;
+                    string restName = entry.FullName;
+                    while (true)
+                    {
+                        var ndx = restName.IndexOf('/'); // subdir separator == '/'
+                        if (ndx < 0)
+                        {
+                            destfilename = Path.Combine(destfilename, entry.Name);
+                            break;
+                        }
+                        var subfolder = restName.Substring(0, ndx);
+                        restName = restName.Substring(ndx + 1);
+                        Directory.CreateDirectory(Path.Combine(destfilename, subfolder));
+                        destfilename = Path.Combine(destfilename, subfolder);
+                    }
                     if (!File.Exists(destfilename) || new FileInfo(destfilename).LastWriteTime != entry.LastWriteTime)
                     {
                         entry.ExtractToFile(destfilename, overwrite: true);
@@ -75,8 +86,7 @@ namespace TestStressDll
                 }
             }
             //                ZipFile.ExtractToDirectory(tempZipFile, clrObjDir);
-            LogMessage($"Done Extracting zip {tempZipFile}");
-            File.Delete(tempZipFile);
+            LogMessage($"Done Extracting zip {zipFile}");
         }
 
         [TestMethod]

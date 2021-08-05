@@ -83,6 +83,11 @@
                 {
                     return dirDev;
                 }
+                dirDev = @"C:\Users\calvinh\Source\Repos\Stress\PerfGraphVSIX\CodeSamples";
+                if (Directory.Exists(dirDev))
+                {
+                    return dirDev;
+                }
                 return Path.Combine(Path.GetDirectoryName(this.GetType().Assembly.Location), "CodeSamples"); // runtime as a vsix: C:\Users\calvinh\AppData\Local\Microsoft\VisualStudio\16.0_7f0e2dbcExp\Extensions\Calvin Hsia\PerfGraphVSIX\1.0\CodeSamples
             }
         }

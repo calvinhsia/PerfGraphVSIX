@@ -36,85 +36,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestStress64", "TestStress6
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Test.Stress.Definitions", "Microsoft.Test.Stress\Definitions\Microsoft.Test.Stress.Definitions.csproj", "{EA339A28-09A1-4635-987E-B044D4600D79}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeSamples", "CodeSamples", "{CDF99097-ABDF-46CF-BB11-5E272D74C925}"
-	ProjectSection(SolutionItems) = preProject
-		CodeSamples\AutoExec.txt = CodeSamples\AutoExec.txt
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Fun", "Fun", "{09AA7F89-3BF1-4855-A67A-1D5C9AE8D4DC}"
-	ProjectSection(SolutionItems) = preProject
-		CodeSamples\Fun\Cartoon.vb = CodeSamples\Fun\Cartoon.vb
-		CodeSamples\Fun\Fish.cs = CodeSamples\Fun\Fish.cs
-		CodeSamples\Fun\hwndHost.dll = CodeSamples\Fun\hwndHost.dll
-		CodeSamples\Fun\HWndHost.vb = CodeSamples\Fun\HWndHost.vb
-		CodeSamples\Fun\Life.cs = CodeSamples\Fun\Life.cs
-		CodeSamples\Fun\LogoTurtle.cs = CodeSamples\Fun\LogoTurtle.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LeakDemos", "LeakDemos", "{4C9EC498-D975-40A8-AE48-4A37F714A8BA}"
-	ProjectSection(SolutionItems) = preProject
-		CodeSamples\LeakDemos\CancellationTokenSource.cs = CodeSamples\LeakDemos\CancellationTokenSource.cs
-		CodeSamples\LeakDemos\LeakWpfEventHandler.cs = CodeSamples\LeakDemos\LeakWpfEventHandler.cs
-		CodeSamples\LeakDemos\Leaky.cs = CodeSamples\LeakDemos\Leaky.cs
-		CodeSamples\LeakDemos\LeakyEvent.cs = CodeSamples\LeakDemos\LeakyEvent.cs
-		CodeSamples\LeakDemos\LeakyHandle.cs = CodeSamples\LeakDemos\LeakyHandle.cs
-		CodeSamples\LeakDemos\LeakyNative.cs = CodeSamples\LeakDemos\LeakyNative.cs
-		CodeSamples\LeakDemos\ThreadPoolLeak.cs = CodeSamples\LeakDemos\ThreadPoolLeak.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Util", "Util", "{3C592334-F6AC-4D43-A076-3197CA9AD554}"
-	ProjectSection(SolutionItems) = preProject
-		CodeSamples\Util\AssemblyCreator.cs = CodeSamples\Util\AssemblyCreator.cs
-		CodeSamples\Util\CloseableTabItem.cs = CodeSamples\Util\CloseableTabItem.cs
-		CodeSamples\Util\LeakBaseClass.cs = CodeSamples\Util\LeakBaseClass.cs
-		CodeSamples\Util\MyCodeBaseClass.cs = CodeSamples\Util\MyCodeBaseClass.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSLeakTests", "VSLeakTests", "{E706397C-96F3-482D-9332-22C024066C98}"
-	ProjectSection(SolutionItems) = preProject
-		PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSln.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSln.cs
-		CodeSamples\VSLeakTests\BuildSln.cs = CodeSamples\VSLeakTests\BuildSln.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSlnCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\BuildSlnCpp.cs
-		CodeSamples\VSLeakTests\BuildSlnCpp.cs = CodeSamples\VSLeakTests\BuildSlnCpp.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\Debug.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\Debug.cs
-		CodeSamples\VSLeakTests\Debug.cs = CodeSamples\VSLeakTests\Debug.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\DebugCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\DebugCpp.cs
-		CodeSamples\VSLeakTests\DebugCpp.cs = CodeSamples\VSLeakTests\DebugCpp.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\NavOneFile.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavOneFile.cs
-		CodeSamples\VSLeakTests\NavOneFile.cs = CodeSamples\VSLeakTests\NavOneFile.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFiles.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFiles.cs
-		CodeSamples\VSLeakTests\NavTwoFiles.cs = CodeSamples\VSLeakTests\NavTwoFiles.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFilesCpp.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\NavTwoFilesCpp.cs
-		CodeSamples\VSLeakTests\NavTwoFilesCpp.cs = CodeSamples\VSLeakTests\NavTwoFilesCpp.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseFolder.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseFolder.cs
-		CodeSamples\VSLeakTests\OpenCloseFolder.cs = CodeSamples\VSLeakTests\OpenCloseFolder.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseOneFile.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseOneFile.cs
-		CodeSamples\VSLeakTests\OpenCloseOneFile.cs = CodeSamples\VSLeakTests\OpenCloseOneFile.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseSln.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseSln.cs
-		CodeSamples\VSLeakTests\OpenCloseSln.cs = CodeSamples\VSLeakTests\OpenCloseSln.cs
-		PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs = PerfGraphVSIX\CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs
-		CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs = CodeSamples\VSLeakTests\OpenCloseTwoFiles.cs
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "VSDemos", "VSDemos", "{D2D59A02-AE6F-445B-B1D6-414456774540}"
-	ProjectSection(SolutionItems) = preProject
-		CodeSamples\VSDemos\AArnottThreadDemo.cs = CodeSamples\VSDemos\AArnottThreadDemo.cs
-		CodeSamples\VSDemos\ChildProc.cs = CodeSamples\VSDemos\ChildProc.cs
-		CodeSamples\VSDemos\CodeMarkers.cs = CodeSamples\VSDemos\CodeMarkers.cs
-		CodeSamples\VSDemos\GetServices.cs = CodeSamples\VSDemos\GetServices.cs
-		CodeSamples\VSDemos\MapFileDict.dll = CodeSamples\VSDemos\MapFileDict.dll
-		CodeSamples\VSDemos\MapFileDict.pdb = CodeSamples\VSDemos\MapFileDict.pdb
-		CodeSamples\VSDemos\MapFileDictSample.cs = CodeSamples\VSDemos\MapFileDictSample.cs
-		CodeSamples\VSDemos\MEF.cs = CodeSamples\VSDemos\MEF.cs
-		CodeSamples\VSDemos\RunCodeIn64Bit.cs = CodeSamples\VSDemos\RunCodeIn64Bit.cs
-		CodeSamples\VSDemos\Simple.cs = CodeSamples\VSDemos\Simple.cs
-		CodeSamples\VSDemos\STAThread.cs = CodeSamples\VSDemos\STAThread.cs
-		CodeSamples\VSDemos\TargetedTrace.cs = CodeSamples\VSDemos\TargetedTrace.cs
-		CodeSamples\VSDemos\TelemetryMonitor.cs = CodeSamples\VSDemos\TelemetryMonitor.cs
-		CodeSamples\VSDemos\TelemetrySendEvent.cs = CodeSamples\VSDemos\TelemetrySendEvent.cs
-		CodeSamples\VSDemos\ThreadPoolStarve.cs = CodeSamples\VSDemos\ThreadPoolStarve.cs
-	EndProjectSection
-EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PerfGraphShared", "PerfGraphShared\PerfGraphShared.shproj", "{8405B4BC-03FC-48C1-932B-EBC9E6A590A3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfGraphVSIX64", "PerfGraphVSIX64\PerfGraphVSIX64.csproj", "{05E220C5-E539-4EE6-AFA2-6309E2003740}"
@@ -288,11 +209,6 @@ Global
 		{027B9CC4-1B41-4BCE-8FDF-52D34CA9D4C0} = {FD6CF5F3-C88C-43E6-A35A-B81C5282D1D2}
 		{0A981692-0D1D-4412-B03E-55906667D702} = {FD6CF5F3-C88C-43E6-A35A-B81C5282D1D2}
 		{EA339A28-09A1-4635-987E-B044D4600D79} = {FD6CF5F3-C88C-43E6-A35A-B81C5282D1D2}
-		{09AA7F89-3BF1-4855-A67A-1D5C9AE8D4DC} = {CDF99097-ABDF-46CF-BB11-5E272D74C925}
-		{4C9EC498-D975-40A8-AE48-4A37F714A8BA} = {CDF99097-ABDF-46CF-BB11-5E272D74C925}
-		{3C592334-F6AC-4D43-A076-3197CA9AD554} = {CDF99097-ABDF-46CF-BB11-5E272D74C925}
-		{E706397C-96F3-482D-9332-22C024066C98} = {CDF99097-ABDF-46CF-BB11-5E272D74C925}
-		{D2D59A02-AE6F-445B-B1D6-414456774540} = {CDF99097-ABDF-46CF-BB11-5E272D74C925}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7C4E56B0-37BB-450B-8F96-CC065C34FE28}
