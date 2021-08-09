@@ -42,7 +42,7 @@ namespace Tests
             while (true)
             {
                 upone = Path.GetDirectoryName(upone);
-                pathtosamples = Path.Combine(upone, "CodeSamples");
+                pathtosamples = Path.Combine(upone, @"PerfGraphVSIX", "CodeSamples");
                 if (Directory.Exists(pathtosamples))
                 {
                     break;

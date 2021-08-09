@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,6 +11,33 @@ namespace Microsoft.Test.Stress
 {
     public class Utility
     {
+
+        public static async Task RetryOperationAsync<T>(int nRetries, ILogger logger, Func<bool> action, TimeSpan? retrySpan = null) where T : Exception
+        {
+            retrySpan = retrySpan ?? TimeSpan.FromSeconds(1);
+            while (true)
+            {
+                T exception = null;
+                try
+                {
+                    if (action()) // success? we don't need to retry any more
+                    {
+                        break;
+                    }
+                }
+                catch (T ex)
+                {
+                    logger?.LogMessage($"Got {typeof(T)}: {exception.Message} RetryCount = {nRetries}");
+                    exception = ex;
+                }
+                if (nRetries-- == 0)
+                {
+                    throw new AggregateException($"All {nRetries} Retry attempts of {typeof(T)} failed", exception);
+                }
+                await Task.Delay(retrySpan.Value);
+            }
+        }
+
         /// <summary>
         /// Execute the given process
         /// </summary>
