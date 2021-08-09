@@ -105,9 +105,14 @@ namespace Microsoft.Test.Stress
                     }
                     VsProcess = procDevenv;
                     _vsDTE = await GetDTEAsync(VsProcess.Id, TimeSpan.FromSeconds(30 * DelayMultiplier));
-                    //                    await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(2)); // Can't use AsyncPump or OleMessageFilter easily here: sometimes get RPC_E_SERVERCALL_RETRYLATER when getting SolutionEvents
-                    _solutionEvents = _vsDTE.Events.SolutionEvents;
+                    // Can't use AsyncPump or OleMessageFilter easily here: sometimes get RPC_E_SERVERCALL_RETRYLATER when getting SolutionEvents. Using AsyncPump: sometimes get message Com wrapper disconnected
+
+                    await Utility.RetryOperationAsync<COMException>(nRetries: 100, logger: logger, () =>
+                        {
+                            //Test method ProjectStressTest.ProjectStressTest.Project_BuildSolution_Managed threw exception: System.Runtime.InteropServices.COMException: The message filter indicated that the application is busy. (Exception from HRESULT: 0x8001010A (RPC_E_SERVERCALL_RETRYLATER))
+                            _solutionEvents = _vsDTE.Events.SolutionEvents;
+                            return true;
+                        });
 
                     _solutionEvents.Opened += SolutionEvents_Opened; // can't get OnAfterBackgroundSolutionLoadComplete?
                     _solutionEvents.AfterClosing += SolutionEvents_AfterClosing;
