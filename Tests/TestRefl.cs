@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Microsoft.Test.Stress;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PerfGraphVSIX;
@@ -11,6 +13,51 @@ namespace Tests
     [TestClass]
     public class TestRefl : BaseTestClass
     {
+
+        [TestMethod]
+        [Ignore]
+        public void TestImportRegFile()
+        {
+            var regFileData = @"Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\VisualStudio\RemoteSettings\LocalTest]
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\VisualStudio\RemoteSettings\LocalTest\HeapAllocs]
+""HeapAllocStacksEnabled""=dword:00000001
+""StackFrames""=dword:00000010
+""HeapAllocMinValue""=dword:00100000
+""HeapAllocSizes""=""48:0""
+""HeapAllocStackMaxSize""=dword:00080000
+
+";
+            var regfileAdminData = @"Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes]
+
+";
+
+            var tmpRegFileName = System.IO.Path.ChangeExtension( System.IO.Path.GetTempFileName(),".reg");
+            System.IO.File.WriteAllText(tmpRegFileName, regFileData);
+
+            var sb = new StringBuilder();
+            Trace.WriteLine(System.IO.File.ReadAllText(tmpRegFileName));
+            using (var proc = Utility.CreateProcess(@"reg", $"import {tmpRegFileName}", sb))
+            {
+                proc.Start();
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+                proc.WaitForExit();
+            }
+            Trace.WriteLine(sb.ToString());
+            Assert.IsTrue(sb.ToString().Contains("The operation completed successfully."));
+        }
+
 
 
 
@@ -62,7 +109,7 @@ namespace Tests
             void AddMemsOfObject(object obj, int nLevel = 1)
             {
                 var objTyp = obj.GetType();
-                if (obj != null && objTyp.IsClass && objTyp.FullName != "System.String" )
+                if (obj != null && objTyp.IsClass && objTyp.FullName != "System.String")
                 {
                     if (objTyp.IsArray)
                     {
@@ -79,7 +126,7 @@ namespace Tests
                     if (TryAddObjectVisited(obj) && nLevel < 1000)
                     {
                         var members = objTyp.GetMembers(bFlags);
-                        foreach (var mem in members.Where(m=>m.MemberType == MemberTypes.Field || m.MemberType== MemberTypes.Property))
+                        foreach (var mem in members.Where(m => m.MemberType == MemberTypes.Field || m.MemberType == MemberTypes.Property))
                         {
                             if (mem is FieldInfo fldInfo)
                             {
@@ -90,7 +137,7 @@ namespace Tests
                                     if (valFld.GetType().IsClass) // delegate or class (not value type or interfacer
                                     {
                                         var name = objTyp.FullName;
-                                        switch(name)
+                                        switch (name)
                                         {
                                             case "System.Reflection.Pointer":
                                             case "System.String":
