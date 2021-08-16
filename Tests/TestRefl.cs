@@ -14,6 +14,72 @@ namespace Tests
     public class TestRefl : BaseTestClass
     {
 
+         bool IsRunningAsAdmin()
+        {
+            var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var principal = new System.Security.Principal.WindowsPrincipal(id);
+            var IsAdmin = principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            return IsAdmin;
+        }
+        void startNotePadAsAdmin()
+        {
+            var p = new Process();
+            p.StartInfo.FileName = @"c:\windows\system32\notepad.exe";
+            p.StartInfo.Verb = "runas";
+            p.StartInfo.UseShellExecute = true;
+            //p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            //p.StartInfo.CreateNoWindow = true;
+            p.Start();
+        }
+        [TestMethod]
+        [Ignore]
+        public void TestImportRegFileAsAdmin()
+        {
+            Assert.IsFalse(IsRunningAsAdmin(),"This test requires non-admin");
+
+//            startNotePadAsAdmin();
+
+
+            // must run test from non-admin VS
+            var regfileAdminData = @"Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio]
+""HeapAllocStacksEnabled""=dword:00000004
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes]
+
+";
+
+            var tmpRegFileName = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".reg");
+            System.IO.File.WriteAllText(tmpRegFileName, regfileAdminData);
+
+            var sb = new StringBuilder();
+            Trace.WriteLine(System.IO.File.ReadAllText(tmpRegFileName));
+            var exeName = "reg";
+  //          exeName = @"c:\windows\system32\reg.exe";
+            var arguments = $"import {tmpRegFileName} /reg:64";
+            // looks like there's no way to avoid the UAC dialog Yes/No, even by Keyboarding a 'Y' : it's a security breach.
+            Process process = new Process();
+            ProcessStartInfo info = new ProcessStartInfo(exeName, arguments)
+            {
+                UseShellExecute = true,
+//                CreateNoWindow = true,
+//                WindowStyle = ProcessWindowStyle.Hidden,
+//                WorkingDirectory = Environment.CurrentDirectory,
+                Verb = "runas"
+            };
+            process.StartInfo = info;
+            process.Start();
+            process.WaitForExit();
+            //Trace.WriteLine(sb.ToString());
+            //Assert.IsTrue(sb.ToString().Contains("The operation completed successfully."));
+        }
+
+
         [TestMethod]
         [Ignore]
         public void TestImportRegFile()
@@ -30,19 +96,7 @@ namespace Tests
 ""HeapAllocStackMaxSize""=dword:00080000
 
 ";
-            var regfileAdminData = @"Windows Registry Editor Version 5.00
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio]
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0]
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC]
-
-[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes]
-
-";
-
-            var tmpRegFileName = System.IO.Path.ChangeExtension( System.IO.Path.GetTempFileName(),".reg");
+            var tmpRegFileName = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".reg");
             System.IO.File.WriteAllText(tmpRegFileName, regFileData);
 
             var sb = new StringBuilder();

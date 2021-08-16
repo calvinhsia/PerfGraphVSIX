@@ -298,7 +298,11 @@ namespace Microsoft.Test.Stress
 
         public void StartClrObjExplorer(string _DumpFileName)
         {
-            var args = $"/m \"{_DumpFileName}\"";
+            var args = string.Empty;
+            if (!string.IsNullOrEmpty(_DumpFileName))
+            {
+                args = $"/m \"{_DumpFileName}\"";
+            }
             System.Diagnostics.Process.Start(GetClrObjExplorerPath(), args);
         }
 

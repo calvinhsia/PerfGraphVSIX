@@ -213,7 +213,7 @@ To get another dump, re-enable
                         ToolTip="Execute the code file selected in the Options Tab Code samples. This code typically iterates a scenario. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
                          />
                 <Button x:Name="btnClrObjExplorer" Content="ClrObjExplorer" Height="20" VerticalAlignment="Top" 
-                        ToolTip="Create a dump of the current VS process and start the ClrObjExplorer process to examine it" Click="BtnClrObjExplorer_Click" Margin="10,0,0,0"
+                        ToolTip="Create a dump of the current VS process and start the ClrObjExplorer process to examine it (RtClick to open ClrObjExplorer)" MouseRightButtonUp="BtnClrObjExplorer_MouseRightButtonUp" Click="BtnClrObjExplorer_Click" Margin="10,0,0,0"
                          />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>
