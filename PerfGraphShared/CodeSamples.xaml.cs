@@ -32,7 +32,7 @@ namespace PerfGraphVSIX.UserControls
             //The selection changes to be the most recent edited when the directory changes content.
             //Ctrl-Enter on highlighted item will execute it too.
             //";
-            MaxHeight = 200;
+            MaxHeight = 400;
             MaxWidth = 200;
             HorizontalAlignment = HorizontalAlignment.Left;
             AddItems(this, new DirectoryInfo(codeSampleDirectory));
