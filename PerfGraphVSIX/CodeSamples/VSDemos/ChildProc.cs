@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.Settings;
 
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Threading;
@@ -46,9 +47,12 @@ namespace MyCodeToExecute
         public bool EatMem { get; set; } = false;
         public int AmountToEat { get; set; } = 1024;
 
-        public double RefreshRate { get; set; } = 1000;
+        public int RefreshRate { get; set; } = 1000;
         public bool Monitor { get; set; } = true;
         public bool ShowMemChangestoo { get; set; } = true;
+        string  settingspath = "PerfGraph";
+        string  settingsTestProperty = "ChildProcRefreshRate";
+        IVsWritableSettingsStore userStore;
 
         MyClass(object[] args) : base(args) { }
         async Task InitializeAsync()
@@ -101,11 +105,11 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 ToolTip=""Eat Mem""/>
             <TextBox Text=""{{Binding AmountToEat}}"" Width=""100"" Height=""20"" ToolTip=""AmountToEat in MBytes"" />
 
-<!--            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
+            <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
             <CheckBox Margin=""15,0,0,10"" Content=""Show Memory Changes too""  IsChecked=""{{Binding ShowMemChangestoo}}"" 
                 ToolTip=""Update the tree for memory changes. The bouncing ball will be jerky on UI updates""/>
--->
+
         </StackPanel>
         <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
     </Grid>
@@ -120,6 +124,27 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
             var chkEatMem = (CheckBox)grid.FindName("chkBoxEatMem");
             var addrAllocated = IntPtr.Zero;
+
+
+            var SettingsManager = await _asyncServiceProvider.GetServiceAsync(typeof(SVsSettingsManager)) as IVsSettingsManager;
+            SettingsManager.GetWritableSettingsStore((uint)SettingsScope.UserSettings, out userStore);
+            if (userStore.CollectionExists(settingspath, out int exists) != 0 || exists == 0)
+            {
+                _logger.LogMessage("Coll doesn't exist");
+            }
+            if (exists == 0)
+            {
+                _logger.LogMessage("create Coll ");
+                userStore.CreateCollection(settingspath);
+            }
+            if (userStore.GetIntOrDefault(settingspath, settingsTestProperty, 1000, out var val) != 0)
+            {
+                _logger.LogMessage("err get settings");
+
+            }
+            RefreshRate = val;
+
+
             void EatMemHandler(object sender, RoutedEventArgs e)
             {
                 if (chkEatMem.IsChecked == true)
@@ -145,6 +170,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 }
                 ctsCancelMonitor.Cancel();
                 _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
+                userStore.SetInt(settingspath, settingsTestProperty, RefreshRate);
             };
 
             _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>

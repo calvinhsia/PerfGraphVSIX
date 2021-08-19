@@ -217,7 +217,7 @@ To get another dump, re-enable
                          />
                 <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
             </StackPanel>
-            <TextBox Name="txtStatus" Height="200" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 
+            <TextBox Name="txtStatus" Height="400" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 
             HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" VerticalAlignment="Top" HorizontalContentAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
         </StackPanel>
     </Grid>
