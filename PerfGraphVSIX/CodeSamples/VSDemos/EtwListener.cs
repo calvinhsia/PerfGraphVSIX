@@ -2,6 +2,7 @@
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Include: ..\Util\CloseableTabItem.cs
+//Include: ..\Util\AssemblyCreator.cs
 
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.Diagnostics.Tracing.TraceEvent.dll
 
@@ -23,7 +24,7 @@ using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-
+using Microsoft.Performance.ResponseTime;
 using System.Xml;
 using System.Windows.Markup;
 using System.Windows;
@@ -50,8 +51,38 @@ namespace MyCodeToExecute
             try
             {
                 await Task.Yield();
-                CloseableTabItem tabItemTabProc = GetTabItem();
-                tabItemTabProc.Content = new MyUserControl(this, tabItemTabProc);
+                // run it inproc as a tab on PerfGraph toolwindow
+                //CloseableTabItem tabItemTabProc = GetTabItem();
+                //            var desiredpid = Process.GetProcessesByName("devenv")[0].Id;
+                //tabItemTabProc.Content = new MyUserControl(tabItemTabProc, desiredpid);
+                // run it out of proc so our memory use doesn't affect the numbers
+                // Or we can generate a 64 bit exe and run it
+                var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+                var addDir = Path.Combine(vsRoot, "PublicAssemblies") + ";" + Path.Combine(vsRoot, "PrivateAssemblies");
+                // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
+                var asmEtwListener = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
+
+                var type = new AssemblyCreator().CreateAssembly
+                    (
+                        asmEtwListener,
+                        PortableExecutableKinds.PE32Plus,
+                        ImageFileMachine.AMD64,
+                        AdditionalAssemblyPaths: addDir, // Microsoft.VisualStudio.Shell.Interop
+                        logOutput: false // for diagnostics
+                    );
+                var pidToMonitor = Process.GetCurrentProcess().Id;
+                var outputLogFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyTestAsm.log");
+                File.Delete(outputLogFile);
+                var args = $@"""{Assembly.GetExecutingAssembly().Location
+                    }"" {nameof(MyEtwMainWindow)} {
+                        nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDir}"" ""{pidToMonitor}"" true";
+                var pListener = Process.Start(
+                    asmEtwListener,
+                    args);
+                //pListener.WaitForExit(30 * 1000);
+                //File.Delete(asmEtwListener);
+                //var result = File.ReadAllText(outputLogFile);
+                _logger.LogMessage($"Launched EtwListener {pListener.Id}");
 
             }
             catch (OperationCanceledException) { }
@@ -61,6 +92,67 @@ namespace MyCodeToExecute
             }
         }
     }
+
+    internal class MyEtwMainWindow
+    {
+        // arg1 is a file to write our results, arg2 and arg3 show we can pass simple types. e.g. Pass the name of a named pipe.
+        [STAThread]
+        internal static async Task MyMainMethod(string outLogFile, string addDirs, int pidToMonitor, bool boolarg)
+        {
+            _additionalDirs = addDirs;
+            File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}");
+
+            var tcs = new TaskCompletionSource<int>();
+            var thread = new Thread((s) =>
+            {
+                try
+                {
+                    AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+                    var procTitle = Process.GetProcessById(pidToMonitor).MainWindowTitle;
+                    var oWindow = new Window()
+                    {
+                        Title = $"MyEtwMonitorWindow monitoriing {pidToMonitor} {procTitle}"
+                    };
+                    File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id} createed window");
+
+                    oWindow.Content = new MyUserControl(null, pidToMonitor);
+
+                    //var traceevent = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\PrivateAssemblies\Microsoft.Diagnostics.Tracing.TraceEvent.dll";
+                    //var asm = Assembly.LoadFrom(traceevent);
+                    oWindow.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    File.AppendAllText(outLogFile, $"Exception {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}   {ex.ToString()}");
+                }
+                tcs.SetResult(0);
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start(0);
+            await tcs.Task;
+        }
+        static string _additionalDirs;// = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\PublicAssemblies;C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\PrivateAssemblies";
+        static private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            Assembly asm = null;
+            var requestName = args.Name.Substring(0, args.Name.IndexOf(",")) + ".dll"; // Microsoft.VisualStudio.Telemetry, Version=16.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a
+            var split = _additionalDirs.Split(new[] { ';' });
+            foreach (var dir in split)
+            {
+                var trypath = Path.Combine(dir, requestName);
+                if (File.Exists(trypath))
+                {
+                    asm = Assembly.LoadFrom(trypath);
+                    if (asm != null)
+                    {
+                        break;
+                    }
+                }
+            }
+            return asm;
+        }
+    }
+
     class MyUserControl : UserControl, INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -71,6 +163,7 @@ namespace MyCodeToExecute
                 PropertyChanged(this, new PropertyChangedEventArgs(propName));
             }
         }
+        int _pidToMonitor;
         string _TypeName;
         public string TypeName { get { return _TypeName; } set { _TypeName = value; RaisePropChanged(); } }
         int _AllocationAmount;
@@ -84,12 +177,16 @@ namespace MyCodeToExecute
         private TraceEventSession _kernelsession;
         private TraceEventSession _userSession;
 
-        public MyUserControl(MyClass myClass, CloseableTabItem tabItemTabProc)
+        public MyUserControl(CloseableTabItem tabItemTabProc, int pidToMonitor)
         {
-            tabItemTabProc.TabItemClosed += (o, e) =>
-             {
-                 CleanUp();
-             };
+            this._pidToMonitor = pidToMonitor;
+            if (tabItemTabProc != null)
+            {
+                tabItemTabProc.TabItemClosed += (o, e) =>
+                 {
+                     CleanUp();
+                 };
+            }
             // xmlns:l="clr-namespace:WpfApp1;assembly=WpfApp1"
             // the C# string requires quotes to be doubled
             var strxaml =
@@ -171,17 +268,17 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 {
                     _cts = new CancellationTokenSource();
                     _isTracing = true;
-                    AddStatusMsg($"Listening");
                     _btnGo.Content = "Stop";
+                    AddStatusMsg($"Listening");
                     await DoTracingAsync();
                 }
                 else
                 {
                     _isTracing = false;
+                    _btnGo.Content = "Go";
                     AddStatusMsg($"not Listening");
                     _cts.Cancel();
                     CleanUp();
-                    _btnGo.Content = "Go";
                 }
             }
             catch (Exception ex)
@@ -232,10 +329,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
             _userSession.EnableProvider(ClrTraceEventParser.ProviderGuid, TraceEventLevel.Verbose, (ulong)(ClrTraceEventParser.Keywords.Default));
             var gcAllocStream = _userSession.Source.Clr.Observe<GCAllocationTickTraceData>();
-            var desiredpid = Process.GetProcessesByName("devenv")[0].Id;
             gcAllocStream.Subscribe(new MyObserver<GCAllocationTickTraceData>((d) =>
             {
-                if (d.ProcessID == desiredpid)
+                if (d.ProcessID == _pidToMonitor)
                 {
                     TypeName = d.TypeName;
                     AllocationAmount = d.AllocationAmount;
@@ -244,14 +340,14 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             var gcHeapStatsStream = _userSession.Source.Clr.Observe<GCHeapStatsTraceData>();
             gcHeapStatsStream.Subscribe(new MyObserver<GCHeapStatsTraceData>((d) =>
             {
-                if (d.ProcessID == desiredpid)
+                if (d.ProcessID == _pidToMonitor)
                 {
                     //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
                 }
             })); ;
             _userSession.Source.AllEvents += (e) =>
             {
-                if (e.ProcessID == desiredpid)
+                if (e.ProcessID == _pidToMonitor)
                 {
                     //                     AddStatusMsg($"{e.EventName}");
                 }
