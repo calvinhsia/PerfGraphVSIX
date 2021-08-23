@@ -111,14 +111,11 @@ namespace MyCodeToExecute
                     var procTitle = Process.GetProcessById(pidToMonitor).MainWindowTitle;
                     var oWindow = new Window()
                     {
-                        Title = $"MyEtwMonitorWindow monitoriing {pidToMonitor} {procTitle}"
+                        Title = $"MyEtwListenerWindow monitoring {pidToMonitor} {procTitle}"
                     };
-                    File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id} createed window");
 
                     oWindow.Content = new MyUserControl(null, pidToMonitor);
 
-                    //var traceevent = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\PrivateAssemblies\Microsoft.Diagnostics.Tracing.TraceEvent.dll";
-                    //var asm = Assembly.LoadFrom(traceevent);
                     oWindow.ShowDialog();
                 }
                 catch (Exception ex)
@@ -169,6 +166,14 @@ namespace MyCodeToExecute
         int _AllocationAmount;
         public int AllocationAmount { get { return _AllocationAmount; } set { _AllocationAmount = value; RaisePropChanged(); } }
 
+        int _GCCount;
+        public int GCCount { get { return _GCCount; } set { _GCCount = value;RaisePropChanged(); } }
+
+        GCType _GCType;
+        public GCType GCType { get { return _GCType; } set { _GCType = value; RaisePropChanged(); } }
+
+        GCReason _GCReason;
+        public GCReason GCReason { get { return _GCReason; } set { _GCReason = value; RaisePropChanged(); } }
 
         private TextBox _txtStatus;
         private Button _btnGo;
@@ -209,6 +214,18 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""AllocationAmount""/>
                 <TextBox Text = ""{{Binding AllocationAmount}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""GCCount""/>
+                <TextBox Text = ""{{Binding GCCount}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""GCType""/>
+                <TextBox Text = ""{{Binding GCType}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""GCReason""/>
+                <TextBox Text = ""{{Binding GCReason}}"" Width = ""400""/>
             </StackPanel>
 
         </StackPanel>
@@ -314,7 +331,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             {
                 throw new InvalidOperationException("Must run as admin");
             }
-            _userSession = new TraceEventSession($"PerfGraphEtwListener");
+            _userSession = new TraceEventSession($"PerfGraphEtwListener"); // only 1 at a time can exist with this name in entire machine
 
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common", matchAnyKeywords: 0xFFFFFFDF);
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common");
@@ -344,14 +361,33 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 {
                     //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
                 }
-            })); ;
-            _userSession.Source.AllEvents += (e) =>
+            }));
+            var gcStartStream = _userSession.Source.Clr.Observe<GCStartTraceData>();
+            gcStartStream.Subscribe(new MyObserver<GCStartTraceData>((d) =>
             {
-                if (e.ProcessID == _pidToMonitor)
+                if (d.ProcessID == _pidToMonitor)
                 {
-                    //                     AddStatusMsg($"{e.EventName}");
+                    GCReason = d.Reason;
+                    GCType = d.Type;
+                    GCCount = d.Count;
+                    //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
                 }
-            };
+            }));
+            var gcEndStream = _userSession.Source.Clr.Observe<GCEndTraceData>();
+            gcEndStream.Subscribe(new MyObserver<GCEndTraceData>((d) =>
+            {
+                if (d.ProcessID == _pidToMonitor)
+                {
+                    //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                }
+            }));
+            //_userSession.Source.AllEvents += (e) =>
+            //{
+            //    if (e.ProcessID == _pidToMonitor)
+            //    {
+            //        //                     AddStatusMsg($"{e.EventName}");
+            //    }
+            //};
             _kernelsession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
             _kernelsession.EnableKernelProvider(
                 KernelTraceEventParser.Keywords.ImageLoad |
