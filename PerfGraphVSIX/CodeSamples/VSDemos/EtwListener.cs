@@ -26,8 +26,9 @@ using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using Microsoft.Performance.ResponseTime;
 using System.Xml;
-using System.Windows.Markup;
 using System.Windows;
+using System.Windows.Markup;
+using System.Windows.Interop;
 using System.Windows.Controls;
 using System.ComponentModel;
 using System.Reflection;
@@ -45,14 +46,31 @@ namespace MyCodeToExecute
         }
         MyClass(object[] args) : base(args) { }
 
-
+        const int WM_MOVE = 3;
+        const int WM_Size = 5;
+        IntPtr hwndClient= IntPtr.Zero;
+        IntPtr hwndOOP = IntPtr.Zero;
+        string oopProcName="";
         async Task DoItAsync()
         {
             try
             {
                 await Task.Yield();
                 // run it inproc as a tab on PerfGraph toolwindow
+                var wtoolwindow = MyStatics.GetAncestor<Window>(_perfGraphToolWindowControl);
+                var interop = new WindowInteropHelper(wtoolwindow);
+                interop.EnsureHandle();
+
                 //CloseableTabItem tabItemTabProc = GetTabItem();
+                //tabItemTabProc.Content = "asdf";
+                //tabItemTabProc.TabItemClosed += (o, e) =>
+                //{
+                //    wtoolwindow.LocationChanged -= UpdateOOPWindow;
+                //    tabItemTabProc.LayoutUpdated -= UpdateOOPWindow;
+                //};
+                //wtoolwindow.LocationChanged += UpdateOOPWindow;
+                //tabItemTabProc.LayoutUpdated += UpdateOOPWindow;
+
                 //            var desiredpid = Process.GetProcessesByName("devenv")[0].Id;
                 //tabItemTabProc.Content = new MyUserControl(tabItemTabProc, desiredpid);
                 // run it out of proc so our memory use doesn't affect the numbers
@@ -61,7 +79,7 @@ namespace MyCodeToExecute
                 var addDir = Path.Combine(vsRoot, "PublicAssemblies") + ";" + Path.Combine(vsRoot, "PrivateAssemblies");
                 // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
                 var asmEtwListener = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
-
+                oopProcName = Path.GetFileNameWithoutExtension(asmEtwListener);
                 var type = new AssemblyCreator().CreateAssembly
                     (
                         asmEtwListener,
@@ -91,12 +109,47 @@ namespace MyCodeToExecute
                 _logger.LogMessage($"Exception {ex.ToString()}");
             }
         }
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
+
+        void UpdateOOPWindow(object sender, EventArgs e)
+        {
+            try
+            {
+                if (hwndOOP == IntPtr.Zero && !string.IsNullOrEmpty(oopProcName))
+                {
+                    var oopProcs = Process.GetProcessesByName(oopProcName);
+                    if (oopProcs.Length == 1)
+                    {
+                        hwndOOP = oopProcs[0].MainWindowHandle;
+                    }
+                }
+                if (hwndOOP != IntPtr.Zero)
+                {
+                    SetWindowPos(hwndOOP,
+                        hWndInsertAfter: IntPtr.Zero,
+                        X: 0,
+                        Y: 0,
+                        cx: 1000,
+                        cy: 500,
+                        uFlags: 0
+                        );
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+        }
     }
 
     internal class MyEtwMainWindow
     {
         // arg1 is a file to write our results, arg2 and arg3 show we can pass simple types. e.g. Pass the name of a named pipe.
-        [STAThread]
+        //        [STAThread]
         internal static async Task MyMainMethod(string outLogFile, string addDirs, int pidToMonitor, bool boolarg)
         {
             _additionalDirs = addDirs;
@@ -167,7 +220,7 @@ namespace MyCodeToExecute
         public int AllocationAmount { get { return _AllocationAmount; } set { _AllocationAmount = value; RaisePropChanged(); } }
 
         int _GCCount;
-        public int GCCount { get { return _GCCount; } set { _GCCount = value;RaisePropChanged(); } }
+        public int GCCount { get { return _GCCount; } set { _GCCount = value; RaisePropChanged(); } }
 
         GCType _GCType;
         public GCType GCType { get { return _GCType; } set { _GCType = value; RaisePropChanged(); } }
