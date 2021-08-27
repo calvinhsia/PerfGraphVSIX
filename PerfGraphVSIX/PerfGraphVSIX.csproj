@@ -315,8 +315,15 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="CodeSamples\VSDemos\EtwListener.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="CodeSamples\VSDemos\GetCallstack.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
   </ItemGroup>
   <Import Project="..\PerfGraphShared\PerfGraphShared.projitems" Label="Shared" />
