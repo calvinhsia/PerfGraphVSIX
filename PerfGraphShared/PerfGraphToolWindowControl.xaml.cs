@@ -703,6 +703,12 @@
                 }
             );
         }
+        void BtnClrObjExplorer_MouseRightButtonUp(object sender, RoutedEventArgs e)
+        {
+            LogMessage($"Launching ClrObjExplorer");
+            var oanal = new DumpAnalyzer(this);
+            oanal.StartClrObjExplorer(_DumpFileName: null);
+        }
 
         public async Task<string> CreateDumpFileAsync(MemoryAnalysisType memoryAnalysisType, string descDump, TimeSpan tspanDelayAfterGC)
         {

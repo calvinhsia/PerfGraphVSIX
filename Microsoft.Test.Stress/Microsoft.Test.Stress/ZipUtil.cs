@@ -10,7 +10,6 @@ namespace Microsoft.Test.Stress
 {
     public class ZipUtil
     {
-        // one level deep
         public static void UnzipResource(string resourceName, string destFolder)
         {
             Directory.CreateDirectory(destFolder); //succeeds if it exists already
