@@ -46,12 +46,13 @@ namespace MyCodeToExecute
         }
         public bool EatMem { get; set; } = false;
         public int AmountToEat { get; set; } = 1024;
+        public int NumToEat { get; set; } = 1;
 
         public int RefreshRate { get; set; } = 1000;
         public bool Monitor { get; set; } = true;
         public bool ShowMemChangestoo { get; set; } = true;
-        string  settingspath = "PerfGraph";
-        string  settingsTestProperty = "ChildProcRefreshRate";
+        string settingspath = "PerfGraph";
+        string settingsTestProperty = "ChildProcRefreshRate";
         IVsWritableSettingsStore userStore;
 
         MyClass(object[] args) : base(args) { }
@@ -103,7 +104,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child process. UI won't update UI if tree is same. 0 means don't refresh"" />
             <CheckBox Margin=""15,2,0,10"" Content=""EatMem""  IsChecked=""{{Binding EatMem}}"" Name=""chkBoxEatMem"" 
                 ToolTip=""Eat Mem""/>
-            <TextBox Text=""{{Binding AmountToEat}}"" Width=""100"" Height=""20"" ToolTip=""AmountToEat in MBytes"" />
+            <Label Content=""AmtToEat""/>
+            <TextBox Text=""{{Binding AmountToEat}}"" Width=""40"" Height=""20"" ToolTip=""AmountToEat in MBytes"" />
+            <Label Content=""NumToEat""/>
+            <TextBox Text=""{{Binding NumToEat}}"" Width=""30"" Height=""20"" ToolTip=""Num of times to eat AmtToEat"" />
 
             <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
@@ -123,7 +127,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             var gridUser = (Grid)grid.FindName("gridUser");
 
             var chkEatMem = (CheckBox)grid.FindName("chkBoxEatMem");
-            var addrAllocated = IntPtr.Zero;
+            var arrAddrAllocated = new IntPtr[NumToEat];
 
 
             var SettingsManager = await _asyncServiceProvider.GetServiceAsync(typeof(SVsSettingsManager)) as IVsSettingsManager;
@@ -147,16 +151,38 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
 
             void EatMemHandler(object sender, RoutedEventArgs e)
             {
-                if (chkEatMem.IsChecked == true)
+                try
                 {
-                    addrAllocated = VirtualAlloc(IntPtr.Zero, AmountToEat * 1024 * 1024, AllocationType.Commit, MemoryProtection.ReadWrite);
-                    _logger.LogMessage($"Alloc {AmountToEat:n0} {addrAllocated.ToInt32():x8}");
+                    if (chkEatMem.IsChecked == true)
+                    {
+                        arrAddrAllocated = new IntPtr[NumToEat];
+                        for (int i = 0; i < NumToEat; i++)
+                        {
+                            arrAddrAllocated[i] = VirtualAlloc(IntPtr.Zero, AmountToEat * 1024 * 1024, AllocationType.Commit, MemoryProtection.ReadWrite);
+                            _logger.LogMessage($"Alloc {AmountToEat:n0} {arrAddrAllocated[i].ToInt64():x}");
+                        }
+                    }
+                    else
+                    {
+                        DoFree();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    var res = VirtualFree(addrAllocated, 0, FreeType.Release);
-                    _logger.LogMessage($"Freed {res}");
+                    _logger.LogMessage(ex.ToString());
                 }
+            }
+            void DoFree()
+            {
+                for (int i = 0; i < arrAddrAllocated.Length; i++)
+                {
+                    if (arrAddrAllocated[i] != IntPtr.Zero)
+                    {
+                        var res = VirtualFree(arrAddrAllocated[i], 0, FreeType.Release);
+                        _logger.LogMessage($"{i,3} Freed {res}");
+                    }
+                }
+
             }
             chkEatMem.Checked += EatMemHandler;
             chkEatMem.Unchecked += EatMemHandler;
@@ -164,72 +190,69 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             tabItemTabProc.TabItemClosed += (o, e) =>
             {
                 //_logger.LogMessage("close event");
-                if (addrAllocated != IntPtr.Zero)
-                {
-                    VirtualFree(addrAllocated, 0, FreeType.Release);
-                }
+                DoFree();
                 ctsCancelMonitor.Cancel();
                 _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
                 userStore.SetInt(settingspath, settingsTestProperty, RefreshRate);
             };
 
             _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-              {
-                  ChildProcTree childProcTree = new ChildProcTree();
-                  try
-                  {
-                      gridUser.Children.Clear();
-                      gridUser.Children.Add(childProcTree);
-                      int hashLastTree = 0;
-                      DateTime dtlastTree;
-                      while (!ctsCancelMonitor.IsCancellationRequested)
-                      {
-                          await TaskScheduler.Default;
-                          if (Monitor && RefreshRate > 0)
-                          {
-                              var processEx = new ProcessEx();
-                              var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
-                              var curHash = 0;
-                              processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
-                              {
-                                  curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
-                                  return true;
-                              });
-                              if (curHash != hashLastTree)
-                              {
-                                  // get the mem measurements on background thread
-                                  processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
-                                     {
-                                         _ = node.MemSize.Value; // instantiate lazy
-                                         return true;
-                                     });
-                                  dtlastTree = DateTime.Now;
-                                  await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                                  childProcTree.Items.Clear();
-                                  childProcTree.AddNodes(childProcTree, devenvTree);
-                                  childProcTree.ToolTip = $"Refreshed {dtlastTree}";
-                                  await TaskScheduler.Default;
-                                  if (!ShowMemChangestoo)
-                                  {
-                                      hashLastTree = curHash;
-                                  }
-                              }
-                          }
-                          //_logger.LogMessage("in loop");
-                          await Task.Delay(TimeSpan.FromMilliseconds(RefreshRate), ctsCancelMonitor.Token);
-                      }
-                  }
-                  catch (OperationCanceledException)
-                  {
-                  }
-                  catch (Exception ex)
-                  {
-                      _logger.LogMessage(ex.ToString());
-                  }
-                  //_logger.LogMessage("Monitor done");
-                  //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                  //childProcTree.Background = Brushes.Cornsilk;
-              });
+            {
+                ChildProcTree childProcTree = new ChildProcTree();
+                try
+                {
+                    gridUser.Children.Clear();
+                    gridUser.Children.Add(childProcTree);
+                    int hashLastTree = 0;
+                    DateTime dtlastTree;
+                    while (!ctsCancelMonitor.IsCancellationRequested)
+                    {
+                        await TaskScheduler.Default;
+                        if (Monitor && RefreshRate > 0)
+                        {
+                            var processEx = new ProcessEx();
+                            var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                            var curHash = 0;
+                            processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                            {
+                                curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
+                                return true;
+                            });
+                            if (curHash != hashLastTree)
+                            {
+                                // get the mem measurements on background thread
+                                processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                                {
+                                    _ = node.MemSize.Value; // instantiate lazy
+                                    return true;
+                                });
+                                dtlastTree = DateTime.Now;
+                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                childProcTree.Items.Clear();
+                                childProcTree.AddNodes(childProcTree, devenvTree);
+                                childProcTree.ToolTip = $"Refreshed {dtlastTree}";
+                                await TaskScheduler.Default;
+                                if (!ShowMemChangestoo)
+                                {
+                                    hashLastTree = curHash;
+                                }
+                            }
+                        }
+                        //_logger.LogMessage("in loop");
+                        await Task.Delay(TimeSpan.FromMilliseconds(RefreshRate), ctsCancelMonitor.Token);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogMessage(ex.ToString());
+                }
+                //_logger.LogMessage("Monitor done");
+                //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                //childProcTree.Background = Brushes.Cornsilk;
+            });
         }
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         static extern IntPtr VirtualAlloc(
