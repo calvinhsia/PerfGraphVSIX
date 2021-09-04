@@ -146,8 +146,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 _logger.LogMessage("err get settings");
 
             }
-            RefreshRate = val;
-
 
             void EatMemHandler(object sender, RoutedEventArgs e)
             {
