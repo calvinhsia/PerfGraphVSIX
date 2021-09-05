@@ -58,7 +58,27 @@ namespace MyCodeToExecute
         MyClass(object[] args) : base(args) { }
         async Task InitializeAsync()
         {
-            await Task.Yield();
+            var SettingsManager = await _asyncServiceProvider.GetServiceAsync(typeof(SVsSettingsManager)) as IVsSettingsManager;
+            SettingsManager.GetWritableSettingsStore((uint)SettingsScope.UserSettings, out userStore);
+            if (userStore.CollectionExists(settingspath, out int exists) != 0 || exists == 0)
+            {
+                _logger.LogMessage("Coll doesn't exist");
+            }
+            if (exists == 0)
+            {
+                _logger.LogMessage("create Coll ");
+                userStore.CreateCollection(settingspath);
+            }
+            if (userStore.GetIntOrDefault(settingspath, settingsTestProperty, 1000, out var val) != 0)
+            {
+                _logger.LogMessage("err get settings");
+            }
+            else
+            {
+                RefreshRate = val;
+                _logger.LogMessage($"Rettrieved setting ref = {RefreshRate}");
+            }
+
             CloseableTabItem tabItemTabProc = GetTabItem();
 
             var strxaml =
@@ -130,22 +150,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             var arrAddrAllocated = new IntPtr[NumToEat];
 
 
-            var SettingsManager = await _asyncServiceProvider.GetServiceAsync(typeof(SVsSettingsManager)) as IVsSettingsManager;
-            SettingsManager.GetWritableSettingsStore((uint)SettingsScope.UserSettings, out userStore);
-            if (userStore.CollectionExists(settingspath, out int exists) != 0 || exists == 0)
-            {
-                _logger.LogMessage("Coll doesn't exist");
-            }
-            if (exists == 0)
-            {
-                _logger.LogMessage("create Coll ");
-                userStore.CreateCollection(settingspath);
-            }
-            if (userStore.GetIntOrDefault(settingspath, settingsTestProperty, 1000, out var val) != 0)
-            {
-                _logger.LogMessage("err get settings");
-
-            }
 
             void EatMemHandler(object sender, RoutedEventArgs e)
             {
@@ -187,10 +191,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             var ctsCancelMonitor = new CancellationTokenSource();
             tabItemTabProc.TabItemClosed += (o, e) =>
             {
-                //_logger.LogMessage("close event");
                 DoFree();
                 ctsCancelMonitor.Cancel();
                 _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
+                _logger.LogMessage($"close event Rerfr={RefreshRate}");
                 userStore.SetInt(settingspath, settingsTestProperty, RefreshRate);
             };
 
