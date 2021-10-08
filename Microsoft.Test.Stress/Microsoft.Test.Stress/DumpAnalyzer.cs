@@ -121,7 +121,7 @@ namespace Microsoft.Test.Stress
                         CalculateTypeStatisticsPhase2(runtime.Heap, typesToReportStatisticsOnRegex, markedObjects, typeStatistics);
                     }
 
-                    logger.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dictTypes.Count} {dumpFile}");
+                    logger?.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dictTypes.Count} {dumpFile}");
                     var maxLength = 1024;
                     var strValue = string.Empty;
                     foreach (var str in lstStrings)
@@ -179,7 +179,7 @@ namespace Microsoft.Test.Stress
             }
             catch (Exception ex)
             {
-                logger.LogMessage($"Exception analyzing dump {ex}");
+                logger?.LogMessage($"Exception analyzing dump {ex}");
             }
         }
         /// <summary>

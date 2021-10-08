@@ -48,9 +48,9 @@ namespace MyCodeToExecute
 
         const int WM_MOVE = 3;
         const int WM_Size = 5;
-        IntPtr hwndClient= IntPtr.Zero;
+        IntPtr hwndClient = IntPtr.Zero;
         IntPtr hwndOOP = IntPtr.Zero;
-        string oopProcName="";
+        string oopProcName = "";
         async Task DoItAsync()
         {
             try
@@ -241,9 +241,9 @@ namespace MyCodeToExecute
             if (tabItemTabProc != null)
             {
                 tabItemTabProc.TabItemClosed += (o, e) =>
-                 {
-                     CleanUp();
-                 };
+                {
+                    CleanUp();
+                };
             }
             // xmlns:l="clr-namespace:WpfApp1;assembly=WpfApp1"
             // the C# string requires quotes to be doubled
