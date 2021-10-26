@@ -84,8 +84,6 @@ namespace MyCodeToExecute
             _itakeSample = args[3] as ITakeSample;
             _dte = args[4] as EnvDTE.DTE;
             _package = args[5] as object;// IAsyncPackage;
-            //logger.LogMessage("Registering events ");
-
             _perfGraphToolWindowControl = _itakeSample as PerfGraphToolWindowControl;
         }
 
