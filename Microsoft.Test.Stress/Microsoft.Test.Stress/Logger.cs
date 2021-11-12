@@ -13,7 +13,7 @@ namespace Microsoft.Test.Stress
     {
         public List<string> _lstLoggedStrings = new List<string>();
         private readonly TestContextWrapper testContext;
-        private string logFilePath;
+        public string logFilePath;
         public bool LogOutputToDesktopFile = false;
 
         /// <summary>
