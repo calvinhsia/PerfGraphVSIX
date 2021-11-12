@@ -16,60 +16,59 @@ using System.Linq;
 
 namespace MyCodeToExecute
 {
+    class EditorClass
+    {
+        byte[] arr = new byte[1024 * 1024 * 20]; // big array to make class size bigger and leak more noticeable
+        public EditorClass(MyClass myClass)
+        {   //Subscribing to event means adding self to event's invocationlist. Can be a lambda or method (leaks differently)
+            /* 
+            myClass.OptionsChanged += OnOptionsChanged; // leaks entire class
+            /*/
+            myClass.OptionsChanged += (o, e) =>
+            {
+                myClass._logger.LogMessage($"In OptionsChanged"); // without a ref to a class member, the closure has no class ref so leak is smaller
+                //var y = arr; // ref the arr so the closure has a ref to the class, so will leak the entire class
+            };
+            //*/
+        }
+        void OnOptionsChanged(object sender, EventArgs e)
+        {
+        }
+    }
     public class MyClass : LeakBaseClass
     {
-        public event EventHandler Myevent;
-        class BigStuffWithLongNameSoICanSeeItBetter
-        {
-            byte[] arr = new byte[1024 * 1024 * 20];
-            public BigStuffWithLongNameSoICanSeeItBetter(MyClass obj)
-            {
-                //                obj.Myevent += Obj_Myevent;
-                //var x = 2;
-                obj.Myevent += (o, e) =>
-                  {
-//                      var y = arr;
-//                      obj._logger.LogMessage($"in event {arr.Length}");
-                  };
-            }
-
-            private void Obj_Myevent(object sender, EventArgs e)
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public event EventHandler OptionsChanged; // MyClass publishes OptionsChanged
         public static async Task DoMain(object[] args)
         {
             using (var oMyClass = new MyClass(args))
             {
-                await oMyClass.DoTheTest(numIterations: 77, delayBetweenIterationsMsec: 0);
+                await oMyClass.DoTheTest(numIterations: 17, delayBetweenIterationsMsec: 0);
             }
         }
-        public MyClass(object[] args) : base(args)
-        {
-            //ShowUI = false;
-            //NumIterationsBeforeTotalToTakeBaselineSnapshot = 0;
-            SecsBetweenIterations = 0;
-        }
+        public MyClass(object[] args) : base(args) { }
 
-        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts)
+        public override async Task DoIterationBodyAsync(int iteration, CancellationToken cts) // GC is done between each iteration
         {
-            await Task.Yield();
-            // to test if your code leaks, put it here. Repeat a lot to magnify the effect
-            for (int i = 0; i < 1; i++)
+            await ThreadHelper.JoinableTaskFactory.RunAsync(async () => // use TP thread so UI thread free
             {
-                var x = new BigStuffWithLongNameSoICanSeeItBetter(this);
-            }
+                await Task.Yield();
+                for (int i = 0; i < 1; i++)    // to test if your code leaks, repeat a lot to magnify the effect
+                {
+                    var x = new EditorClass(this);
+                    OptionsChanged?.Invoke(this, null); // when raising event, all leaked event handlers get fired too!
+                }
+            });
         }
         public override async Task DoCleanupAsync()
         {
             await Task.Yield();
-            var eventHandlerList = GetEventHandlerList<MyClass, EventArgs>(this, "Myevent");
-            _logger.LogMessage(string.Format("Leaked: # Event Handlers =  {0} ", eventHandlerList.Length));
+            // get the list of subscribers and show them
+            var eventHandlerList = GetEventHandlerList<MyClass, EventArgs>(this, "OptionsChanged");
             foreach (var evHandler in eventHandlerList)
             {
-                _logger.LogMessage(string.Format("   {0} {1}", evHandler.Target, evHandler.Method));
+                _logger.LogMessage($"   {evHandler.Target} {evHandler.Method}");
             }
+            _logger.LogMessage($"Cleanup:  # Event Handlers Leaked =  {eventHandlerList.Length} ");
         }
 
         /// <summary>

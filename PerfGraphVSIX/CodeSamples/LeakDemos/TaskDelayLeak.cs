@@ -50,7 +50,8 @@ namespace MyCodeToExecute
         }
         public override async Task DoIterationBodyAsync(int iteration, CancellationToken token)
         {
-            var leaktype = 1;
+            // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/0ba7625050f975f8a7df1df57c80ad08da250541/AsyncGuidance.md#using-a-timeout
+            var leaktype = 2;
             switch(leaktype)
             {
                 case 1:
