@@ -59,6 +59,8 @@ The next step is finding ways to automate this process in a way that can be capt
 
 Thanks!
 -Lee
+
+Bug 1374567: Handle leak in CSolution::GetGuidProperty VSSlnpst.cpp VSRegOpenOptionRoot
  */
 namespace MyCodeToExecute
 {
