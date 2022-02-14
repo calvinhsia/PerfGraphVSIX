@@ -38,6 +38,20 @@ namespace Microsoft.Test.Stress
             public Stopwatch MemoryProfilingStopwatch = new Stopwatch();
         }
 
+
+        public class DumpDataAnalysisResult
+        {
+            public DumpDataAnalysisResult()
+            {
+                dictTypes = new Dictionary<string, int>();
+                dictStrings = new Dictionary<string, int>();
+                typeStatistics = null;
+            }
+            public Dictionary<string, int> dictTypes; // typename, count
+            public Dictionary<string, int> dictStrings; // clr string, count
+            public TypeStatistics typeStatistics;
+        }
+
         private readonly ILogger logger;
         public string ClrObjExplorerExe = string.Empty;
         public DumpAnalyzer(ILogger logger)
@@ -53,27 +67,22 @@ namespace Microsoft.Test.Stress
         /// </summary>
         /// <param name="dumpFile"></param>
         /// <param name="typesToReportStatisticsOn"></param>
-        /// <param name="dictTypes"></param>
-        /// <param name="dictStrings"></param>
-        /// <param name="typeStatistics"></param>
-        public void AnalyzeDump(string dumpFile, string typesToReportStatisticsOn, out Dictionary<string, int> dictTypes,
-            out Dictionary<string, int> dictStrings, out TypeStatistics typeStatistics)
+        public DumpDataAnalysisResult AnalyzeDump(string dumpFile, string typesToReportStatisticsOn)
         {
             //  "C:\Users\calvinh\AppData\Local\Temp\VSDbg\ClrObjExplorer\ClrObjExplorer.exe" 
             //  /s \\calvinhw8\c$\Users\calvinh\Documents;srv*C:\Users\calvinh\AppData\Local\Temp\Symbols*;\\ddelementary\public\CalvinH\VsDbgTestDumps\VSHeapAllocDetourDump;\\ddrps\symbols;http://symweb/ m "\\calvinhw8\c$\Users\calvinh\Documents\devenvNav2files700.dmp"
             //            var symPath = @"http://symweb";
-            dictTypes = new Dictionary<string, int>();
-            dictStrings = new Dictionary<string, int>();
+            var dumpDataAnalysisResult = new DumpDataAnalysisResult();
 
             Regex typesToReportStatisticsOnRegex = null;
             if (typesToReportStatisticsOn != null)
             {
                 typesToReportStatisticsOnRegex = new Regex(typesToReportStatisticsOn, RegexOptions.Compiled);
-                typeStatistics = new TypeStatistics();
+                dumpDataAnalysisResult.typeStatistics = new TypeStatistics();
             }
             else
             {
-                typeStatistics = null;
+                dumpDataAnalysisResult.typeStatistics = null;
             }
 
             try
@@ -99,29 +108,29 @@ namespace Microsoft.Test.Stress
                         {
                             lstStrings.Add(obj);
                         }
-                        if (!dictTypes.ContainsKey(typ))
+                        if (!dumpDataAnalysisResult.dictTypes.ContainsKey(typ))
                         {
-                            dictTypes[typ] = 1;
+                            dumpDataAnalysisResult.dictTypes[typ] = 1;
                         }
                         else
                         {
-                            dictTypes[typ]++;
+                            dumpDataAnalysisResult.dictTypes[typ]++;
                         }
                         nObjCount++;
 
                         if (typesToReportStatisticsOnRegex?.IsMatch(typ) == true)
                         {
-                            CalculateTypeStatisticsPhase1(obj, typesToReportStatisticsOnRegex, markedObjects, typeStatistics);
+                            CalculateTypeStatisticsPhase1(obj, typesToReportStatisticsOnRegex, markedObjects, dumpDataAnalysisResult.typeStatistics);
                         }
                     }
                     if (typesToReportStatisticsOnRegex != null)
                     {
                         // Phase 1 calculated the total retained bytes. Now figure out which of the marked objects are rooted by
                         // objects of other types as well to calculate the exclusive retained bytes.
-                        CalculateTypeStatisticsPhase2(runtime.Heap, typesToReportStatisticsOnRegex, markedObjects, typeStatistics);
+                        CalculateTypeStatisticsPhase2(runtime.Heap, typesToReportStatisticsOnRegex, markedObjects, dumpDataAnalysisResult.typeStatistics);
                     }
 
-                    logger?.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dictTypes.Count} {dumpFile}");
+                    logger?.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dumpDataAnalysisResult.dictTypes.Count} {dumpFile}");
                     var maxLength = 1024;
                     var strValue = string.Empty;
                     foreach (var str in lstStrings)
@@ -152,13 +161,13 @@ namespace Microsoft.Test.Stress
                                 {
                                     var enc = new UnicodeEncoding();
                                     strValue = enc.GetString(buff, 0, buff.Length);
-                                    if (!dictStrings.ContainsKey(strValue))
+                                    if (!dumpDataAnalysisResult.dictStrings.ContainsKey(strValue))
                                     {
-                                        dictStrings[strValue] = 1;
+                                        dumpDataAnalysisResult.dictStrings[strValue] = 1;
                                     }
                                     else
                                     {
-                                        dictStrings[strValue]++;
+                                        dumpDataAnalysisResult.dictStrings[strValue]++;
                                     }
                                 }
                             }
@@ -181,6 +190,7 @@ namespace Microsoft.Test.Stress
             {
                 logger?.LogMessage($"Exception analyzing dump {ex}");
             }
+            return dumpDataAnalysisResult;
         }
         /// <summary>
         /// given 2 dumps and a stringbuilder, add to the stringbuilder the diffs in both the ClrTypes and the Strings
@@ -205,23 +215,27 @@ namespace Microsoft.Test.Stress
         {
             _dictTypeDiffs = new Dictionary<string, Tuple<int, int>>();
             _dictStringDiffs = new Dictionary<string, Tuple<int, int>>();
-
-            AnalyzeDump(pathDumpBase, typesToReportStatisticsOn, out var dictTypesBaseline, out var dictStringsBaseline, out baselineTypeStatistics);
-            AnalyzeDump(pathDumpCurrent, typesToReportStatisticsOn, out var dictTypesCurrent, out var dictStringsCurrent, out currentTypeStatistics);
+            baselineTypeStatistics = null;
+            currentTypeStatistics = null;
+            var baselineResult = AnalyzeDump(pathDumpBase, typesToReportStatisticsOn);
+            var currentResult = AnalyzeDump(pathDumpCurrent, typesToReportStatisticsOn);
             sb.AppendLine($"2 dumps were made: 1 at iteration # {TotNumIterations - NumIterationsBeforeTotalToTakeBaselineSnapshot}, the other after iteration {TotNumIterations}");
-            if (baselineTypeStatistics != null && currentTypeStatistics != null)
+            if (baselineResult.typeStatistics != null && currentResult.typeStatistics != null)
             {
+                baselineTypeStatistics = baselineResult.typeStatistics;
+                currentTypeStatistics = currentResult.typeStatistics;
                 sb.AppendLine($"Statistics on types matching '{ typesToReportStatisticsOn }'");
-                sb.AppendLine($"Inclusive retained bytes 1st/2nd dump: { baselineTypeStatistics.InclusiveRetainedBytes }/{ currentTypeStatistics.InclusiveRetainedBytes }");
-                sb.AppendLine($"Exclusive retained bytes 1st/2nd dump: { baselineTypeStatistics.ExclusiveRetainedBytes }/{ currentTypeStatistics.ExclusiveRetainedBytes }");
-                sb.AppendLine($"Retained bytes took { baselineTypeStatistics.MemoryProfilingStopwatch.Elapsed.Seconds } seconds to calculate in 1st dump, { currentTypeStatistics.MemoryProfilingStopwatch.Elapsed.Seconds } seconds in 2nd dump");
+                sb.AppendLine($"Inclusive retained bytes 1st/2nd dump: { baselineResult.typeStatistics.InclusiveRetainedBytes }/{ currentResult.typeStatistics.InclusiveRetainedBytes }");
+                sb.AppendLine($"Exclusive retained bytes 1st/2nd dump: { baselineResult.typeStatistics.ExclusiveRetainedBytes }/{ currentResult.typeStatistics.ExclusiveRetainedBytes }");
+                sb.AppendLine($"Retained bytes took { baselineResult.typeStatistics.MemoryProfilingStopwatch.Elapsed.Seconds } seconds to calculate in 1st dump, { currentResult.typeStatistics.MemoryProfilingStopwatch.Elapsed.Seconds } seconds in 2nd dump");
             }
             sb.AppendLine($"Below are 2 lists: the counts of Types and Strings in each dump. The 1st column is the number in the 1st dump, the 2nd is the number found in the 2nd dump and the 3rd column is the Type or String");
             sb.AppendLine($"For example if # iterations  = 11, 2 dumps are taken after iterations 7 and 11., '17  56  System.Guid' means there were 17 instances of System.Guid in the 1st dump and 56 in the 2nd");
             sb.AppendLine($"TypesAndStrings { Path.GetFileName(pathDumpBase)} {Path.GetFileName(pathDumpCurrent)}  {nameof(NumIterationsBeforeTotalToTakeBaselineSnapshot)}= {NumIterationsBeforeTotalToTakeBaselineSnapshot}");
             sb.AppendLine();
+
             sb.AppendLine("Types:");
-            AnalyzeDiff(dictTypesBaseline, dictTypesCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot,
+            AnalyzeDiffInDicts(baselineResult.dictTypes, currentResult.dictTypes, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot,
                 (key, baseCnt, currentCnt) =>
                 {
                     _dictTypeDiffs[key] = Tuple.Create(baseCnt, currentCnt);
@@ -230,7 +244,7 @@ namespace Microsoft.Test.Stress
                 });
             sb.AppendLine();
             sb.AppendLine("Strings:");
-            AnalyzeDiff(dictStringsBaseline, dictStringsCurrent, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot,
+            AnalyzeDiffInDicts(baselineResult.dictStrings, currentResult.dictStrings, TotNumIterations, NumIterationsBeforeTotalToTakeBaselineSnapshot,
                 (key, baseCnt, currentCnt) =>
                 {
                     _dictStringDiffs[key] = Tuple.Create(baseCnt, currentCnt);
@@ -245,7 +259,7 @@ namespace Microsoft.Test.Stress
         /// Given a stringbuilder and 2 dictionaries of the same type(e.g. 2 string->count dicts, or 2 ClrType->count dicts), but from 2 different iterations (base and current), 
         /// add to the stringbuilder the growth in the Type (or string)
         /// </summary>
-        public void AnalyzeDiff(
+        public void AnalyzeDiffInDicts(
             Dictionary<string, int> dictBase,
             Dictionary<string, int> dictCurrent,
             int TotNumIterations,
@@ -269,6 +283,7 @@ namespace Microsoft.Test.Stress
             }
         }
 
+        public Dictionary<string, Tuple<int, int>> _dictEventHandlerDiffs;
         public Dictionary<string, Tuple<int, int>> _dictTypeDiffs;
         public Dictionary<string, Tuple<int, int>> _dictStringDiffs;
 
