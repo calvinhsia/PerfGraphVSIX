@@ -75,7 +75,7 @@ namespace Microsoft.Test.Stress
             var dumpDataAnalysisResult = new DumpDataAnalysisResult();
 
             Regex typesToReportStatisticsOnRegex = null;
-            if (typesToReportStatisticsOn != null)
+            if (!string.IsNullOrEmpty( typesToReportStatisticsOn))
             {
                 typesToReportStatisticsOnRegex = new Regex(typesToReportStatisticsOn, RegexOptions.Compiled);
                 dumpDataAnalysisResult.typeStatistics = new TypeStatistics();
@@ -95,15 +95,15 @@ namespace Microsoft.Test.Stress
                         throw new InvalidOperationException($"Expected 1 ClrVersion in process. Found {dataTarget.ClrVersions.Count} ");
                     }
                     var dacLocation = dataTarget.ClrVersions[0].LocalMatchingDac;
-                    //                    logger.LogMessage($"Got Dac {dacLocation}");
+                    logger?.LogMessage($"Got Dac {dacLocation}");
                     var runtime = dataTarget.ClrVersions[0].CreateRuntime();
-                    //                  logger.LogMessage($"Got runtime {runtime}");
+                    logger?.LogMessage($"Got runtime {runtime}");
                     var nObjCount = 0;
                     var lstStrings = new List<ClrObject>();
                     var markedObjects = new HashSet<ulong>();
                     foreach (var obj in EnumerateRootedObjects(runtime.Heap))
                     {
-                        var typ = obj.Type.Name;
+                        var typ = obj.Type?.Name;
                         if (typ == "System.String")
                         {
                             lstStrings.Add(obj);
