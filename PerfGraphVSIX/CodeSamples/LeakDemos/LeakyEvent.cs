@@ -18,7 +18,7 @@ namespace MyCodeToExecute
 {
     class EditorClass
     {
-        byte[] arr = new byte[1024 * 1024 * 20]; // big array to make class size bigger and leak more noticeable
+        byte[] arr = new byte[1024 * 1024 * 10]; // big array to make class size bigger and leak more noticeable
         public EditorClass(MyClass myClass)
         {   //Subscribing to event means adding self to event's invocationlist. Can be a lambda or method (leaks differently)
             /* 
@@ -27,13 +27,13 @@ namespace MyCodeToExecute
             myClass.OptionsChanged += (o, e) =>
             {
                 myClass._logger.LogMessage($"In OptionsChanged"); // without a ref to a class member, the closure has no class ref so leak is smaller
-                //var y = arr; // ref the arr so the closure has a ref to the class, so will leak the entire class
+                var y = arr; // ref the arr so the closure has a ref to the class, so will leak the entire class
             };
             //*/
         }
-        void OnOptionsChanged(object sender, EventArgs e)
-        {
-        }
+        //void OnOptionsChanged(object sender, EventArgs e)
+        //{
+        //}
     }
     public class MyClass : LeakBaseClass
     {
@@ -52,9 +52,9 @@ namespace MyCodeToExecute
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () => // use TP thread so UI thread free
             {
                 await Task.Yield();
-                for (int i = 0; i < 1; i++)    // to test if your code leaks, repeat a lot to magnify the effect
+                for (int i = 0; i < 1; i++)    // Another way to magnify the leak
                 {
-                    var x = new EditorClass(this);
+                    var x = new EditorClass(this); // life time is very short.
                     OptionsChanged?.Invoke(this, null); // when raising event, all leaked event handlers get fired too!
                 }
             });
@@ -62,7 +62,7 @@ namespace MyCodeToExecute
         public override async Task DoCleanupAsync()
         {
             await Task.Yield();
-            // get the list of subscribers and show them
+            // get the current list of leaked subscribers and show them
             var eventHandlerList = GetEventHandlerList<MyClass, EventArgs>(this, "OptionsChanged");
             foreach (var evHandler in eventHandlerList)
             {
