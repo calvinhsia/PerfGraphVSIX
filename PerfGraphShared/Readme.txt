@@ -34,7 +34,9 @@ To update ClrObjExplorer:
 xcopy /fsdy C:\Users\calvinh\source\repos\VSDbg\out\Release\ClrObjExplorer64\bin\*.* C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources\
 xcopy /fsdy C:\Users\calvinh\source\repos\VSDbg\out\Release\ClrObjExplorer\bin\*.* C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources\
 
-then zip them into "C:\Users\calvinh\Source\repos\PerfGraphVSIX\Microsoft.Test.Stress\Microsoft.Test.Stress\ClrObjExplorer\ClrObjExplorer.zip"
+then open "C:\Users\calvinh\source\repos\Stress\Microsoft.Test.Stress\Microsoft.Test.Stress\Resources\ClrObjExplorer.zip", delete all contents,
+then move the files into the zip. That resources folder should have 3 zips: VSHandler32/64 and ClrobjExplorer.zip
+		
 
 
 //deploy VSIX: Bump version of source.extension.vsixmanifest so end user clicks, and it updates 1.1.1.425
