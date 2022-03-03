@@ -828,20 +828,21 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
             }
             if (stressUtilOptions.SendTelemetry)
             {
-                PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
-                if (Process.GetCurrentProcess().ProcessName != "devenv") // if we're running as a VSIX
+                try
                 {
-                    if (telemetrySession != null)
+                    PostTelemetryEvent("devdivstress/stresslib/leakresult", dictTelemetryProperties);
+                    if (Process.GetCurrentProcess().ProcessName != "devenv") // if we're not running as a VSIX
                     {
-                        try
+                        if (telemetrySession != null)
                         {
                             telemetrySession.Dispose(); // System.IO.FileNotFoundException: Could not load file or assembly 'Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed' or one of its dependencies. The system cannot find the file specified.
+                            telemetrySession = null;
                         }
-                        catch (Exception)
-                        {
-                        }
-                        telemetrySession = null;
                     }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogMessage($"Exception sending telemetry\n{ex}");
                 }
             }
         }
