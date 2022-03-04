@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.IO;
+using System.Text;
 
 namespace Tests
 {
@@ -35,5 +37,33 @@ namespace Tests
             }
             _lstLoggedStrings.Add(msgstr);
         }
+        void AddLstLoggedStringToDesktopLog(List<string> lstLoggedStrings)
+        {
+            var sb = new StringBuilder();
+            foreach (var logline in lstLoggedStrings)
+            {
+                sb.AppendLine(logline);
+            }
+            var desktoplogFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TestStressDataCollector.log"); //can't use the Test deployment folder because it gets cleaned up
+
+            File.WriteAllText(desktoplogFilePath, sb.ToString());
+
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            var logger = TestContext.Properties[StressUtil.PropNameLogger] as Logger;
+            if (logger != null)
+            {
+                AddLstLoggedStringToDesktopLog(logger._lstLoggedStrings);
+            }
+            else
+            {
+                AddLstLoggedStringToDesktopLog(_lstLoggedStrings);
+            }
+        }
+
+
     }
 }

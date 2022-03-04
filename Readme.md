@@ -16,15 +16,16 @@ To use to show a graph of the current instance memory use:
 
 You can:
 Develop and run code in the VS instance from within the same VS process with:
-1.	No cloning, no enlistment, no Init.cmd, no command line build, no MSBuild, no Nuget
+1.	No cloning, no enlistment, no Init.cmd, no command line build, no MSBuild, no Nuget, no solution, no project
 2.	No patching of VS install with built binaries
-3.	No solution, no project required
+3.	Can edit/run extension code without shutting down application
 4.	Full VS Editor, rename, some Intellisense
-5.	Supports async programming, JoinableTaskFactory, multiple files
+5.	Supports async programming, multiple files
 6.	Access VS services, JoinableTaskFactory
 7.	Monitor memory use in a graph for leak detection
 8.	Can launch ClrObjectExplorer with a push of a button to see how many instances of MyType are in memory
 9.	Allows rapid prototyping, exploration of VS services, threading
+10. Allows strongly typed access to object model 
 
 Stress Testing for leak detection is also supported:
 1. Create automatic tests that are run from the Test Window or from within the current instance of VS

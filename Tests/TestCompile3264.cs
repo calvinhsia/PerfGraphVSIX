@@ -104,6 +104,7 @@ namespace Tests
 ////Ref64: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Threading.dll
 //Ref64: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Shell.Framework.dll
 //Ref64: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.Threading.dll
+//Ref64: %VSRoot%\Common7\IDE\Microsoft.VisualStudio.Utilities.dll
 
 //Ref: %PerfGraphVSIX%
 

@@ -48,7 +48,10 @@ namespace PerfGraphVSIX
         {
             if (obj != null)
             {
-                _queue.Enqueue(new ObjWeakRefData(obj, objSource, description));
+                if (_perfGraph.UpdateInterval != 0)
+                {
+                    _queue.Enqueue(new ObjWeakRefData(obj, objSource, description));
+                }
             }
         }
 

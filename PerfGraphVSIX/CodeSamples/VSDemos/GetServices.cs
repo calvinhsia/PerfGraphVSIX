@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System.ComponentModel.Design;
 using Microsoft.VisualStudio.Threading;
+using Microsoft.VisualStudio.Settings;
 using Task = System.Threading.Tasks.Task;
 
 /* This sample allows you to edit/compile/run code inside the VS process from within the same instance of VS
@@ -77,20 +78,39 @@ Output to Debug OutputPane or LogStatus
             _OutputPane.Clear();
             uint cookieSelectionEvents = 0;
             uint cookieRdt = 0;
+            var settingspath = "PerfGraph";
+            var settingsTestProperty = "testSetting";
             await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
-                LogMessage("Here in MySimpleSample " + DateTime.Now.ToString("MM/dd/yy hh:mm:ss"));
+                _ = LogMessage("Here in MySimpleSample " + DateTime.Now.ToString("MM/dd/yy hh:mm:ss"));
                 await TaskScheduler.Default; // switch to background thread
-                LogMessage("Logger message from MySimpleSample");
+                _ = LogMessage("Logger message from MySimpleSample");
+
+                var SettingsManager = await _asyncServiceProvider.GetServiceAsync(typeof(SVsSettingsManager)) as IVsSettingsManager;
+                _ = LogMessage($"{nameof(SettingsManager)} {SettingsManager}");
+                SettingsManager.GetWritableSettingsStore((uint)SettingsScope.UserSettings, out IVsWritableSettingsStore userStore);
+                _ = LogMessage($"{nameof(SettingsManager)} {SettingsManager}  UserStore {userStore}");
+                userStore.CollectionExists(settingspath, out int exists);
+                if (exists == 0)
+                {
+                    _ = LogMessage($"Settings: creating collection '{settingspath}'");
+                    userStore.CreateCollection(settingspath);
+                }
+                userStore.GetStringOrDefault(settingspath, settingsTestProperty, "defaultVal", out var val);
+                _ = LogMessage($"Prior setting {settingspath} {settingsTestProperty} = {val}");
+                userStore.SetString(settingspath, settingsTestProperty, $"{DateTime.Now.ToString()}  setting");
+
+                userStore.GetStringOrDefault(settingspath, settingsTestProperty, "defaultVal", out var newval);
+                _ = LogMessage($"New Setting {settingspath}  {settingsTestProperty} = {newval}");
 
                 var SolutionService = await _asyncServiceProvider.GetServiceAsync(typeof(SVsSolution)) as IVsSolution;
-                LogMessage($"{nameof(SolutionService)} {SolutionService}");
+                _ = LogMessage($"{nameof(SolutionService)} {SolutionService}");
 
                 var oleMenuCommandService = await _asyncServiceProvider.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
-                LogMessage($"{nameof(oleMenuCommandService)} = {oleMenuCommandService}");
+                _ = LogMessage($"{nameof(oleMenuCommandService)} = {oleMenuCommandService}");
 
                 var VsShellMonitorSelection = await _asyncServiceProvider.GetServiceAsync(typeof(SVsShellMonitorSelection)) as IVsMonitorSelection;
-                LogMessage($"{nameof(VsShellMonitorSelection)} = {VsShellMonitorSelection}");
+                _ = LogMessage($"{nameof(VsShellMonitorSelection)} = {VsShellMonitorSelection}");
                 VsShellMonitorSelection.AdviseSelectionEvents(this, out cookieSelectionEvents);
 
                 IVsRunningDocumentTable vsRunningDocumentTable = await _asyncServiceProvider.GetServiceAsync(typeof(IVsRunningDocumentTable)) as IVsRunningDocumentTable;
@@ -122,54 +142,54 @@ Output to Debug OutputPane or LogStatus
         }
         int IVsRunningDocTableEvents.OnAfterFirstDocumentLock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining)
         {
-            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterFirstDocumentLock)}");
+            _ = LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterFirstDocumentLock)}");
             return VSConstants.S_OK;
         }
 
         int IVsRunningDocTableEvents.OnBeforeLastDocumentUnlock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining)
         {
-            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnBeforeLastDocumentUnlock)}");
+            _ = LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnBeforeLastDocumentUnlock)}");
             return VSConstants.S_OK;
         }
 
         int IVsRunningDocTableEvents.OnAfterSave(uint docCookie)
         {
-            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterSave)}");
+            _ = LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterSave)}");
             return VSConstants.S_OK;
         }
 
         int IVsRunningDocTableEvents.OnAfterAttributeChange(uint docCookie, uint grfAttribs)
         {
-            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterAttributeChange)}");
+            _ = LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterAttributeChange)}");
             return VSConstants.S_OK;
         }
 
         int IVsRunningDocTableEvents.OnBeforeDocumentWindowShow(uint docCookie, int fFirstShow, IVsWindowFrame pFrame)
         {
-            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnBeforeDocumentWindowShow)}");
+            _ = LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnBeforeDocumentWindowShow)}");
             return VSConstants.S_OK;
         }
 
         int IVsRunningDocTableEvents.OnAfterDocumentWindowHide(uint docCookie, IVsWindowFrame pFrame)
         {
-            LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterDocumentWindowHide)}");
+            _ = LogMessage($"Entering {nameof(IVsRunningDocTableEvents.OnAfterDocumentWindowHide)}");
             return VSConstants.S_OK;
         }
 
 
         public int OnCmdUIContextChanged(uint dwCmdUICookie, int fActive)
         {
-            LogMessage($"{nameof(OnCmdUIContextChanged)} UICtxCookie={dwCmdUICookie} fActive= {fActive}");
+            _ = LogMessage($"{nameof(OnCmdUIContextChanged)} UICtxCookie={dwCmdUICookie} fActive= {fActive}");
             return VSConstants.S_OK;
         }
         public int OnElementValueChanged(uint elementid, object varValueOld, object varValueNew)
         {
-            LogMessage($"{nameof(OnElementValueChanged)} ElementId={elementid}  ValOld={varValueOld} ValNew={varValueNew}");
+            _ = LogMessage($"{nameof(OnElementValueChanged)} ElementId={elementid}  ValOld={varValueOld} ValNew={varValueNew}");
             return VSConstants.S_OK;
         }
         public int OnSelectionChanged(IVsHierarchy pHierOld, uint itemidOld, IVsMultiItemSelect pMISOld, ISelectionContainer pSCOld, IVsHierarchy pHierNew, uint itemidNew, IVsMultiItemSelect pMISNew, ISelectionContainer pSCNew)
         {
-            LogMessage($"{nameof(OnSelectionChanged)}");
+            _ = LogMessage($"{nameof(OnSelectionChanged)}");
             return VSConstants.S_OK;
         }
     }

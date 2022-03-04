@@ -16,7 +16,45 @@ using Task = System.Threading.Tasks.Task;
 using HANDLE = System.IntPtr;
 
 // https://blogs.msdn.microsoft.com/calvin_hsia/2010/05/30/managed-code-using-unmanaged-memory-heapcreate-peek-and-poke/
+/*
+https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/24637/Diagnose-native-heap-memory-leaks
+        bool DoRegImport(string regFileData)
+        {
+            var tmpRegFileName = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".reg");
+            System.IO.File.WriteAllText(tmpRegFileName, regFileData);
 
+            var sb = new StringBuilder();
+            logger.LogMessage(System.IO.File.ReadAllText(tmpRegFileName));
+            using (var proc = Utility.CreateProcess(@"reg", $"import {tmpRegFileName}", sb))
+            {
+                proc.Start();
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+                proc.WaitForExit();
+            }
+            logger.LogMessage(sb.ToString());
+            var result = (sb.ToString().Contains("The operation completed successfully."));
+            return result;
+        }
+        void DoTestRegImports()
+        {
+            logger.LogMessage(" Temporary: We want to track 48 byte allocation call stacks");
+            var regFileData = @"Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\VisualStudio\RemoteSettings\LocalTest]
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\VisualStudio\RemoteSettings\LocalTest\HeapAllocs]
+""HeapAllocStacksEnabled""=dword:00000001
+""StackFrames""=dword:00000020
+""HeapAllocMinValue""=dword:00100000
+""HeapAllocSizes""=""48:1000000""
+""HeapAllocStackMaxSize""=dword:00800000
+
+";
+            DoRegImport(regFileData);
+
+        }
+ */
 namespace MyCodeToExecute
 {
 
