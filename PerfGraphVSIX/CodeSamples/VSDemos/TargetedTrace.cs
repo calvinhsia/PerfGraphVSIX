@@ -2,7 +2,7 @@
 
 //Include: ..\Util\MyCodeBaseClass.cs
 
-//Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Newtonsoft.Json.dll
+//Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Newtonsoft.Json.13.0.1.0\Newtonsoft.Json.dll
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Telemetry.dll
 
 
