@@ -120,6 +120,13 @@
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         }
+
+        internal bool QueryClose()
+        {
+            _ctsPcounter?.Cancel();
+            return true;
+        }
+
         AsyncPackage MyPackage => PerfGraphToolWindowCommand.Instance.package;
 
         public class LeakedObject

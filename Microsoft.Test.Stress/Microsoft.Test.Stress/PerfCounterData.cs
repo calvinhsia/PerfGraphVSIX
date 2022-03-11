@@ -96,6 +96,29 @@ namespace Microsoft.Test.Stress
         /// The number of threads currently active in this process. An instruction is the basic unit of execution in a processor, and a thread is the object that executes instructions. Every running process has at least one thread.
         /// </summary>
         ThreadCount = 0x10000,
+        /// <summary>
+        /// Pool Nonpaged Bytes is the size, in bytes, of the nonpaged pool, an area of the system virtual memory that is used for objects that cannot be written to disk, 
+        /// but must remain in physical memory as long as they are allocated.  
+        /// Memory\\Pool Nonpaged Bytes is calculated differently than Process\\Pool Nonpaged Bytes, so it might not equal Process(_Total)\\Pool Nonpaged Bytes.  
+        /// This counter displays the last observed value only; it is not an average.
+        /// </summary>
+        PoolNonPagedBytes = 0x20000,
+        /// <summary>
+        /// Pool Paged Bytes is the size, in bytes, of the paged pool, an area of the system virtual memory that is used for objects that can be written to disk 
+        /// when they are not being used.  
+        /// Memory\\Pool Paged Bytes is calculated differently than Process\\Pool Paged Bytes, so it might not equal Process(_Total)\\Pool Paged Bytes. 
+        /// This counter displays the last observed value only; it is not an average.
+        /// </summary>
+        PoolPagedBytes = 0x40000,
+        /// <summary>
+        /// Not a Perf Counter. Process.PagedMemorySize64
+        /// </summary>
+        CommitSize = 0x80000,
+        /// <summary>
+        /// Not a Perf Counter. Call WinAPI GetProcessMemoryInfo, PagefileUsage
+        /// </summary>
+        PageFileUsage = 0x100000,
+
     }
 
     /// <summary>
@@ -131,6 +154,10 @@ namespace Microsoft.Test.Stress
             {new PerfCounterData(PerfCounterType.KernelHandleCount, "Process","Handle Count","ID Process")  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
             {new PerfCounterData(PerfCounterType.GDIHandleCount, "GetGuiResources","GDIHandles",string.Empty)  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
             {new PerfCounterData(PerfCounterType.UserHandleCount, "GetGuiResources","UserHandles",string.Empty)  { IsEnabledForMeasurement=true, thresholdRegression=.5f} },
+            {new PerfCounterData(PerfCounterType.PoolNonPagedBytes, "Process","Pool Nonpaged Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.PoolPagedBytes, "Process","Pool Paged Bytes","ID Process") },
+            {new PerfCounterData(PerfCounterType.CommitSize, String.Empty,"CommitSize",String.Empty) },
+            {new PerfCounterData(PerfCounterType.PageFileUsage, String.Empty,"PageFileUsage",String.Empty) },
         };
 
         public PerfCounterType perfCounterType;
@@ -175,6 +202,14 @@ namespace Microsoft.Test.Stress
                     break;
                 case PerfCounterType.UserHandleCount:
                     retVal = GetGuiResourcesUserCount();
+                    break;
+                case PerfCounterType.CommitSize:
+                    retVal = ProcToMonitor.PagedMemorySize64;
+                    break;
+                case PerfCounterType.PageFileUsage:
+                    {
+                        retVal = GetPageFileUsage();
+                    }
                     break;
                 default:
                     if (lazyPerformanceCounter.Value != null)
@@ -248,6 +283,65 @@ namespace Microsoft.Test.Stress
         {
             return $"{perfCounterType} {PerfCounterCategory} {PerfCounterName} {PerfCounterInstanceName} {thresholdRegression:n1} EnabledForMeasure = {IsEnabledForMeasurement}";
         }
+        static ulong GetPageFileUsage()
+        {
+            var retVal = 0ul;
+            if (IntPtr.Size == 8)
+            {
+                var ctrs = default(PROCESS_MEMORY_COUNTERS_64);
+                if (GetProcessMemoryInfo64(Process.GetCurrentProcess().Handle, out ctrs, Marshal.SizeOf(ctrs)) == 0)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                }
+                retVal = ctrs.PagefileUsage;
+            }
+            else
+            {
+                var ctrs = default(PROCESS_MEMORY_COUNTERS);
+                if (GetProcessMemoryInfo(Process.GetCurrentProcess().Handle, out ctrs, Marshal.SizeOf(ctrs)) == 0)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                }
+                retVal = ctrs.PagefileUsage;
+            }
+            return retVal;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Size = 40)]
+        internal struct PROCESS_MEMORY_COUNTERS
+        {
+            public uint cb;
+            public uint PageFaultCount;
+            public uint PeakWorkingSetSize;
+            public uint WorkingSetSize;
+            public uint QuotaPeakPagedPoolUsage;
+            public uint QuotaPagedPoolUsage;
+            public uint QuotaPeakNonPagedPoolUsage;
+            public uint QuotaNonPagedPoolUsage;
+            public uint PagefileUsage;
+            public uint PeakPagefileUsage;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct PROCESS_MEMORY_COUNTERS_64
+        {
+            public uint cb;
+            public uint PageFaultCount;
+            public ulong PeakWorkingSetSize;
+            public ulong WorkingSetSize;
+            public ulong QuotaPeakPagedPoolUsage;
+            public ulong QuotaPagedPoolUsage;
+            public ulong QuotaPeakNonPagedPoolUsage;
+            public ulong QuotaNonPagedPoolUsage;
+            public ulong PagefileUsage;
+            public ulong PeakPagefileUsage;
+        }
+
+        [DllImport("psapi.dll", SetLastError = true, EntryPoint = "GetProcessMemoryInfo")]
+        internal static extern int GetProcessMemoryInfo(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS counters, int size);
+
+        [DllImport("psapi.dll", SetLastError = true, EntryPoint = "GetProcessMemoryInfo")]
+        internal static extern int GetProcessMemoryInfo64(IntPtr hProcess, out PROCESS_MEMORY_COUNTERS_64 counters, int size);
+
         /// uiFlags: 0 - Count of GDI objects
         /// uiFlags: 1 - Count of USER objects
         /// - Win32 GDI objects (pens, brushes, fonts, palettes, regions, device contexts, bitmap headers)
@@ -257,7 +351,6 @@ namespace Microsoft.Test.Stress
         ///
         [DllImport("User32")]
         extern public static int GetGuiResources(IntPtr hProcess, int uiFlags);
-
         public int GetGuiResourcesGDICount()
         {
             return GetGuiResources(ProcToMonitor.Handle, uiFlags: 0);

@@ -60,9 +60,11 @@ Ensure the version is a public release: the # does not have a hyphenated git com
 
 https://github.com/dotnet/Nerdbank.GitVersioning/blob/master/doc/public_vs_stable.md
 
-To change VS repo: change .corext\Configs\default.config
+To change VS repo to update stress lib: change .corext\Configs\default.config
 
     <package id="Microsoft.Test.Stress" version="1.1.30" link="src\ExternalAPIs\Microsoft.Test.Stress" tags="exapis" />
+	similarly /src/ConfigData/Packages/TestSupport.props
+	see https://devdiv.visualstudio.com/DevDiv/_git/VS/pullrequest/384299
 
 
 

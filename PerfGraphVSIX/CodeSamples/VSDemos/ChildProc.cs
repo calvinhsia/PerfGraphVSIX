@@ -45,7 +45,8 @@ namespace MyCodeToExecute
             }
         }
         public bool EatMem { get; set; } = false;
-        public int AmountToEat { get; set; } = 1024;
+        public bool ManagedEatMem { get; set; } = false;
+        public int AmountToEat { get; set; } = 1024 * 1024;
         public int NumToEat { get; set; } = 1;
 
         public int RefreshRate { get; set; } = 1000;
@@ -123,11 +124,13 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             <Label Content=""Refresh Rate""/>
             <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child process. UI won't update UI if tree is same. 0 means don't refresh"" />
             <CheckBox Margin=""15,2,0,10"" Content=""EatMem""  IsChecked=""{{Binding EatMem}}"" Name=""chkBoxEatMem"" 
-                ToolTip=""Eat Mem""/>
+                ToolTip=""Eat Memory""/>
+            <CheckBox Margin=""15,2,0,10"" Content=""Managed""  IsChecked=""{{Binding ManagedEatMem}}"" 
+                ToolTip=""Eat Managed memory or Native memory (via VirtualAlloc)""/>
             <Label Content=""AmtToEat""/>
-            <TextBox Text=""{{Binding AmountToEat}}"" Width=""40"" Height=""20"" ToolTip=""AmountToEat in MBytes"" />
+            <TextBox Text=""{{Binding AmountToEat}}"" Width=""140"" Height=""20"" ToolTip=""AmountToEat in Bytes"" />
             <Label Content=""NumToEat""/>
-            <TextBox Text=""{{Binding NumToEat}}"" Width=""30"" Height=""20"" ToolTip=""Num of times to eat AmtToEat"" />
+            <TextBox Text=""{{Binding NumToEat}}"" Width=""50"" Height=""20"" ToolTip=""Num of times to eat AmtToEat"" />
 
             <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
@@ -147,9 +150,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             var gridUser = (Grid)grid.FindName("gridUser");
 
             var chkEatMem = (CheckBox)grid.FindName("chkBoxEatMem");
-            var arrAddrAllocated = new IntPtr[NumToEat];
-
-
+            var lstAllocations = new List<MemEater>();
 
             void EatMemHandler(object sender, RoutedEventArgs e)
             {
@@ -157,11 +158,11 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 {
                     if (chkEatMem.IsChecked == true)
                     {
-                        arrAddrAllocated = new IntPtr[NumToEat];
                         for (int i = 0; i < NumToEat; i++)
                         {
-                            arrAddrAllocated[i] = VirtualAlloc(IntPtr.Zero, AmountToEat * 1024 * 1024, AllocationType.Commit, MemoryProtection.ReadWrite);
-                            _logger.LogMessage($"Alloc {AmountToEat:n0} {arrAddrAllocated[i].ToInt64():x}");
+                            var itm = new MemEater(AmountToEat, ManagedEatMem);
+                            lstAllocations.Add(itm);
+                            _logger.LogMessage($"{i} Alloc {AmountToEat:n0} {ManagedEatMem} {itm._addrAllocated.ToInt64():x}");
                         }
                     }
                     else
@@ -176,15 +177,12 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             }
             void DoFree()
             {
-                for (int i = 0; i < arrAddrAllocated.Length; i++)
+                foreach (var itm in lstAllocations)
                 {
-                    if (arrAddrAllocated[i] != IntPtr.Zero)
-                    {
-                        var res = VirtualFree(arrAddrAllocated[i], 0, FreeType.Release);
-                        _logger.LogMessage($"{i,3} Freed {res}");
-                    }
+                    _logger.LogMessage($"Free {itm._addrAllocated.ToInt64():x}");
+                    itm.Dispose();
                 }
-
+                lstAllocations.Clear();
             }
             chkEatMem.Checked += EatMemHandler;
             chkEatMem.Unchecked += EatMemHandler;
@@ -256,6 +254,34 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 //childProcTree.Background = Brushes.Cornsilk;
             });
         }
+        class MemEater : IDisposable
+        {
+            bool _fManaged;
+            public IntPtr _addrAllocated;
+            byte[] _data;
+            public MemEater(int nSizeToEat, bool fManaged)
+            {
+                _fManaged = fManaged;
+                if (fManaged)
+                {
+                    _data=new byte[nSizeToEat];
+                }
+                else
+                {
+                    _addrAllocated = VirtualAlloc(IntPtr.Zero, nSizeToEat, AllocationType.Commit, MemoryProtection.ReadWrite);
+                }
+            }
+            public void Dispose()
+            {
+                if (_fManaged)
+                {
+                }
+                else
+                {
+                    var res = VirtualFree(_addrAllocated, 0, FreeType.Release);
+                }
+            }
+        }
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         static extern IntPtr VirtualAlloc(
                               IntPtr lpAddress,
@@ -312,7 +338,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 foreach (var node in lstNodes)
                 {
                     // each has a Conhost.exe child proc https://www.howtogeek.com/howto/4996/what-is-conhost.exe-and-why-is-it-running/
-//                    if (node.ProcEntry.szExeFile != "conhost.exe") // https://devdiv.visualstudio.com/DevDiv/_workitems/edit/1141094
+                    //                    if (node.ProcEntry.szExeFile != "conhost.exe") // https://devdiv.visualstudio.com/DevDiv/_workitems/edit/1141094
                     {
                         var spData = new StackPanel() { Orientation = Orientation.Horizontal };
                         var tbThrds = new TextBlock()
@@ -347,7 +373,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             }
         }
     }
-
 
     class ProcessEx
     {
