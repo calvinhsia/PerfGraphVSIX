@@ -337,42 +337,62 @@ namespace Microsoft.Test.Stress
                         var currentDumpFile = await DoCreateDumpAsync($"Taking final snapshot dump at iteration {nSamplesTaken}");
                         if (!string.IsNullOrEmpty(baseDumpFileName))
                         {
-                            _oDumpAnalyzer = new DumpAnalyzer(Logger);
-                            var sb = new StringBuilder();
-                            sb.AppendLine($"'{TestName}' Leaks Found");
-                            foreach (var leak in lstLeakResults)
+                            try
                             {
-                                sb.AppendLine($"Leak Detected: {leak}");
-                            }
-                            sb.AppendLine();
-                            _oDumpAnalyzer.GetDiff(sb,
-                                            baseDumpFileName,
-                                            currentDumpFile,
-                                            stressUtilOptions.NumIterations,
-                                            stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot,
-                                            stressUtilOptions.TypesToReportStatisticsOn,
-                                            out DumpAnalyzer.TypeStatistics baselineTypeStatistics,
-                                            out DumpAnalyzer.TypeStatistics currentTypeStatistics);
+                                _oDumpAnalyzer = new DumpAnalyzer(Logger);
+                                var sb = new StringBuilder();
+                                sb.AppendLine($"'{TestName}' Leaks Found");
+                                foreach (var leak in lstLeakResults)
+                                {
+                                    sb.AppendLine($"Leak Detected: {leak}");
+                                }
+                                sb.AppendLine();
+                                _oDumpAnalyzer.GetDiff(sb,
+                                                baseDumpFileName,
+                                                currentDumpFile,
+                                                stressUtilOptions.NumIterations,
+                                                stressUtilOptions.NumIterationsBeforeTotalToTakeBaselineSnapshot,
+                                                stressUtilOptions.TypesToReportStatisticsOn,
+                                                out DumpAnalyzer.TypeStatistics baselineTypeStatistics,
+                                                out DumpAnalyzer.TypeStatistics currentTypeStatistics);
 
-                            if (baselineTypeStatistics != null)
-                            {
-                                dictTelemetryProperties["TypeStatsExclusiveRetainedBytes_Base"] = baselineTypeStatistics.ExclusiveRetainedBytes;
-                                dictTelemetryProperties["TypeStatsInclusiveRetainedBytes_Base"] = baselineTypeStatistics.InclusiveRetainedBytes;
-                            }
-                            if (currentTypeStatistics != null)
-                            {
-                                dictTelemetryProperties["TypeStatsExclusiveRetainedBytes_Final"] = currentTypeStatistics.ExclusiveRetainedBytes;
-                                dictTelemetryProperties["TypeStatsInclusiveRetainedBytes_Final"] = currentTypeStatistics.InclusiveRetainedBytes;
-                            }
+                                if (baselineTypeStatistics != null)
+                                {
+                                    dictTelemetryProperties["TypeStatsExclusiveRetainedBytes_Base"] = baselineTypeStatistics.ExclusiveRetainedBytes;
+                                    dictTelemetryProperties["TypeStatsInclusiveRetainedBytes_Base"] = baselineTypeStatistics.InclusiveRetainedBytes;
+                                }
+                                if (currentTypeStatistics != null)
+                                {
+                                    dictTelemetryProperties["TypeStatsExclusiveRetainedBytes_Final"] = currentTypeStatistics.ExclusiveRetainedBytes;
+                                    dictTelemetryProperties["TypeStatsInclusiveRetainedBytes_Final"] = currentTypeStatistics.InclusiveRetainedBytes;
+                                }
 
-                            var fname = Path.Combine(ResultsFolder, $"{DiffFileName}_{nSamplesTaken}.txt");
-                            File.WriteAllText(fname, sb.ToString());
-                            if (stressUtilOptions.ShowUI)
-                            {
-                                Process.Start(fname);
+                                var fname = Path.Combine(ResultsFolder, $"{DiffFileName}_{nSamplesTaken}.txt");
+                                File.WriteAllText(fname, sb.ToString());
+                                if (stressUtilOptions.ShowUI)
+                                {
+                                    Process.Start(fname);
+                                }
+                                lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {nSamplesTaken}" });
+                                Logger.LogMessage("DumpDiff Analysis " + fname);
                             }
-                            lstFileResults.Add(new FileResultsData() { filename = fname, description = $"Differences for Type and String counts at iter {nSamplesTaken}" });
-                            Logger.LogMessage("DumpDiff Analysis " + fname);
+                            catch (FileNotFoundException ex)
+                            {
+                                Logger.LogMessage($"{ex}");
+                                void DumpDir(string dir)
+                                {
+                                    Logger.LogMessage($"   Dumping folder contents {dir}");
+                                    foreach (var file in Directory.EnumerateFiles(dir, "*.*",SearchOption.AllDirectories))
+                                    {
+                                        Logger.LogMessage($"       {file}");
+                                    }
+                                }
+                                DumpDir(Environment.CurrentDirectory);
+                                DumpDir(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                                DumpDir(System.Reflection.Assembly.GetEntryAssembly().Location);
+
+                                throw;
+                            }
                         }
                         else
                         {
