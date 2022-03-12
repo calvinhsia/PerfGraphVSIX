@@ -354,6 +354,18 @@ namespace Microsoft.Test.Stress
                                         TestResultsDirectory='{testContext.TestResultsDirectory}' 
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
+            void DumpDir(string dir)
+            {
+                logger.LogMessage($"   Dumping folder contents {dir}");
+                foreach (var file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                {
+                    logger.LogMessage($"       {file}");
+                }
+            }
+            DumpDir(Environment.CurrentDirectory);
+            DumpDir(testContext.TestRunDirectory);
+            DumpDir(testContext.TestResultsDirectory);
+            DumpDir(testContext.TestRunResultsDirectory);
 
             if ((PerfCounterOverrideSettings != null) && (PerfCounterOverrideSettings.Count > 0))
             {

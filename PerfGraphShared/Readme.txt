@@ -49,6 +49,7 @@ When PR build succeeds, wait for rolling build,
 The build def: https://dev.azure.com/devdiv/Engineering/_build?definitionId=12376
 
 Verify the new stress version:
+	https://devdiv.visualstudio.com/DevDiv/_artifacts/feed/VS
 	https://devdiv.visualstudio.com/DevDiv/_packaging?_a=feed&feed=Engineering%40Local   the "VS"" feed, filter to "Stress"
 
 Or create a new Wpf sln, use Sln->Manage NugetPackages for solution, choose the VS feed, the new version should show up)
