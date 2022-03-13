@@ -384,7 +384,9 @@ namespace Microsoft.Test.Stress
                                     Logger.LogMessage($"   Dumping folder contents {dir}");
                                     foreach (var file in Directory.EnumerateFiles(dir, "*.*",SearchOption.AllDirectories))
                                     {
-                                        Logger.LogMessage($"       {file}");
+                                        var finfo = new FileInfo(file);
+                                        var verinfo = FileVersionInfo.GetVersionInfo(file);
+                                        Logger.LogMessage($"  {finfo.Length,20:n0} {verinfo.FileVersion,30}    {file} ");
                                     }
                                 }
                                 DumpDir(Environment.CurrentDirectory);
