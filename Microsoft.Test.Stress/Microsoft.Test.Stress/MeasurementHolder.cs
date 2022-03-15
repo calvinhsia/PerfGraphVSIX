@@ -382,7 +382,7 @@ namespace Microsoft.Test.Stress
                                 void DumpDir(string dir)
                                 {
                                     Logger.LogMessage($"   Dumping folder contents {dir}");
-                                    foreach (var file in Directory.EnumerateFiles(dir, "*.*",SearchOption.AllDirectories))
+                                    foreach (var file in Directory.EnumerateFiles(dir, "Microsoft.Diagnostics.Runtime.*", SearchOption.AllDirectories))
                                     {
                                         var finfo = new FileInfo(file);
                                         var verinfo = FileVersionInfo.GetVersionInfo(file);
@@ -390,9 +390,6 @@ namespace Microsoft.Test.Stress
                                     }
                                 }
                                 DumpDir(Environment.CurrentDirectory);
-                                DumpDir(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                                DumpDir(System.Reflection.Assembly.GetEntryAssembly().Location);
-
                                 throw;
                             }
                         }
