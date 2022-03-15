@@ -88,25 +88,67 @@ namespace Microsoft.Test.Stress
             try
             {
                 //                logger.LogMessage($"in {nameof(AnalyzeDump)} {dumpFile}");
-                using (var dataTarget = DataTarget.LoadCrashDump(dumpFile))
+                using (var dataTarget = DataTarget.LoadDump(dumpFile))
                 {
-                    if (dataTarget.ClrVersions.Count != 1)
+                    if (dataTarget.ClrVersions.Length != 1)
                     {
-                        throw new InvalidOperationException($"Expected 1 ClrVersion in process. Found {dataTarget.ClrVersions.Count} ");
+                        throw new InvalidOperationException($"Expected 1 ClrVersion in process. Found {dataTarget.ClrVersions.Length} ");
                     }
-                    var dacLocation = dataTarget.ClrVersions[0].LocalMatchingDac;
-                    logger?.LogMessage($"Got Dac {dacLocation}");
+                    var clrver = dataTarget.ClrVersions[0];
+                    var dacFileName = string.Empty;
+                    try
+                    {
+                        dacFileName = dataTarget.BinaryLocator.FindBinary(clrver.DacInfo.PlatformSpecificFileName, clrver.DacInfo.IndexTimeStamp, clrver.DacInfo.IndexFileSize);
+                        if (string.IsNullOrEmpty(dacFileName))
+                        {
+                            dacFileName = clrver.DacInfo.LocalDacPath;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IOException ioException = null;
+                        if (ex is AggregateException aggregateException)
+                        {
+                            if (ex.InnerException is IOException exception)
+                            {
+                                ioException = exception;
+                            }
+                        }
+                        if (ex is IOException ioexception)
+                        {
+                            ioException = ioexception;
+                        }
+                        if (ioException == null)
+                        {
+                            throw;
+                        }
+                        // System.IO.IOException: The process cannot access the file 'C:\Users\calvinh\AppData\Local\Temp\symbols\mscordacwks_x86_x86_4.6.26.00.dll\54c2e0d969b000\mscordacwks_x86_x86_4.6.26.00.dll' because it is being used by another process.
+                        var m = Regex.Match(ioException.Message, @".*'(.*)'.*");
+                        if (m.Success)
+                        {
+                            dacFileName = m.Groups[1].Value;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                    if (string.IsNullOrEmpty(dacFileName))
+                    {
+                        throw new InvalidOperationException($"Could not create or find dacFile");
+                    }
+                    logger?.LogMessage($"Got Dac {dacFileName}");
                     var runtime = dataTarget.ClrVersions[0].CreateRuntime();
                     logger?.LogMessage($"Got runtime {runtime}");
                     var nObjCount = 0;
-                    var lstStrings = new List<ClrObject>();
+                    var lstStrings = new List<string>();
                     var markedObjects = new HashSet<ulong>();
                     foreach (var obj in EnumerateRootedObjects(runtime.Heap))
                     {
                         var typ = obj.Type?.Name;
                         if (typ == "System.String")
                         {
-                            lstStrings.Add(obj);
+                            lstStrings.Add(obj.AsString());
                         }
                         if (!dumpDataAnalysisResult.dictTypes.ContainsKey(typ))
                         {
@@ -131,46 +173,15 @@ namespace Microsoft.Test.Stress
                     }
 
                     logger?.LogMessage($"Total Object Count = {nObjCount:n0} TypeCnt = {dumpDataAnalysisResult.dictTypes.Count} {dumpFile}");
-                    var maxLength = 1024;
-                    var strValue = string.Empty;
-                    foreach (var str in lstStrings)
+                    foreach (var strValue in lstStrings)
                     {
-                        if (str.Type.IsString)
+                        if (!dumpDataAnalysisResult.dictStrings.ContainsKey(strValue))
                         {
-                            var addrToUse = str.Address + (uint)IntPtr.Size; // skip clsid
-                            byte[] buff = new byte[IntPtr.Size];
-                            if (runtime.ReadMemory(
-                                addrToUse,
-                                buff,
-                                IntPtr.Size,
-                                out var bytesRead
-                                ))
-                            {
-                                var len = BitConverter.ToUInt32(buff, 0);
-                                if (maxLength > 0)
-                                {
-                                    len = Math.Min(len, (uint)maxLength);
-                                }
-                                buff = new byte[len * 2];
-                                if (runtime.ReadMemory(
-                                    addrToUse + (uint)IntPtr.Size, // skip clsid, len
-                                    buff,
-                                    buff.Length,
-                                    out bytesRead
-                                    ))
-                                {
-                                    var enc = new UnicodeEncoding();
-                                    strValue = enc.GetString(buff, 0, buff.Length);
-                                    if (!dumpDataAnalysisResult.dictStrings.ContainsKey(strValue))
-                                    {
-                                        dumpDataAnalysisResult.dictStrings[strValue] = 1;
-                                    }
-                                    else
-                                    {
-                                        dumpDataAnalysisResult.dictStrings[strValue]++;
-                                    }
-                                }
-                            }
+                            dumpDataAnalysisResult.dictStrings[strValue] = 1;
+                        }
+                        else
+                        {
+                            dumpDataAnalysisResult.dictStrings[strValue]++;
                         }
                         //                        logger.LogMessage($"STR {strValue}");
                     }
@@ -329,7 +340,7 @@ namespace Microsoft.Test.Stress
             HashSet<ulong> visitedObjects = new HashSet<ulong>();
             Queue<ClrObject> objectQueue = new Queue<ClrObject>();
 
-            foreach (ClrRoot root in heap.EnumerateRoots())
+            foreach (IClrRoot root in heap.EnumerateRoots())
             {
                 if (!visitedObjects.Contains(root.Object))
                 {
@@ -349,7 +360,7 @@ namespace Microsoft.Test.Stress
                             continue;
                         }
                         // Follow all references.
-                        foreach (var reference in obj.EnumerateObjectReferences())
+                        foreach (var reference in obj.EnumerateReferences())
                         {
                             if (!reference.IsNull && !visitedObjects.Contains(reference.Address))
                             {
@@ -380,7 +391,7 @@ namespace Microsoft.Test.Stress
                     ClrObject obj = objectQueue.Dequeue();
                     typeStatistics.InclusiveRetainedBytes += obj.Size;
 
-                    foreach (var reference in obj.EnumerateObjectReferences())
+                    foreach (var reference in obj.EnumerateReferences())
                     {
                         if (!reference.IsNull && !markedObjects.Contains(reference.Address))
                         {
@@ -411,7 +422,7 @@ namespace Microsoft.Test.Stress
             // Start with exclusive = inclusive and walk the heap from roots looking for objects to subtract from this number.
             typeStatistics.ExclusiveRetainedBytes = typeStatistics.InclusiveRetainedBytes;
 
-            foreach (ClrRoot root in heap.EnumerateRoots())
+            foreach (IClrRoot root in heap.EnumerateRoots())
             {
                 // Interested only in roots outside of our marked inclusive graph.
                 if (!markedObjects.Contains(root.Object))
@@ -440,7 +451,7 @@ namespace Microsoft.Test.Stress
                             }
 
                             // Follow all references.
-                            foreach (var reference in obj.EnumerateObjectReferences())
+                            foreach (var reference in obj.EnumerateReferences())
                             {
                                 if (!reference.IsNull && !visitedObjects.Contains(reference.Address))
                                 {
