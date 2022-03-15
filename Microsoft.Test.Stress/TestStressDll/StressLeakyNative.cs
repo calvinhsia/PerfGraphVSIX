@@ -58,6 +58,10 @@ namespace TestStressDll
         [ExpectedException(typeof(LeakException))]
         public async Task TestLeakyDetectNativeVerySmallLeakAsync()
         {
+            if (Environment.GetEnvironmentVariable("USERNAME") != "calvinh")
+            {
+                throw new LeakException("not run on buildmachine", lstRegResults: null);
+            }
             var thresh = 1e3f;
             var lstperfCounterOverrideDataSettings = new List<PerfCounterOverrideThreshold>
             {
