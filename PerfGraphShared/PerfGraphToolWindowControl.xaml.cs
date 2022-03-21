@@ -3,7 +3,7 @@
     using EnvDTE;
     using Microsoft;
     using Microsoft.VisualStudio.PlatformUI;
-//    using Microsoft.VisualStudio.ProjectSystem.Properties;
+    //    using Microsoft.VisualStudio.ProjectSystem.Properties;
     using Microsoft.VisualStudio.Shell;
     using Microsoft.VisualStudio.Shell.Events;
     using Microsoft.VisualStudio.Shell.Interop;
@@ -61,12 +61,12 @@
         private string _CntLeakedObjs;
         public string CntLeakedObjs { get { return _CntLeakedObjs; } set { _CntLeakedObjs = value; RaisePropChanged(); } }
 
-        private int _UpdateInterval = 0;
+        private int _UpdateInterval = 0; //initially 0
         /// <summary>
         /// PerfCounters updated periodically. Safe to change without stopping the monitoring
         /// </summary>
         public int UpdateInterval { get { return _UpdateInterval; } set { _UpdateInterval = value; RaisePropChanged(); } }
-
+        public bool ShowMeasurementsInStatusWindow { get; set; } = false;
         public bool DoFullGCPerSample { get; set; } = false;
         public int NumDataPoints { get; set; } = 100;
 
@@ -182,8 +182,8 @@
                         }
                     }
                     _codeSampleControl = new CodeSamples(CodeSampleDirectory, mostRecentFileInfo?.Name);
-                    this.spCodeSamples.Children.Clear();
-                    this.spCodeSamples.Children.Add(_codeSampleControl);
+                    this.dpCodeSamples.Children.Clear();
+                    this.dpCodeSamples.Children.Add(_codeSampleControl);
                 }
                 _ = Task.Run(() =>
                 {
@@ -222,7 +222,7 @@
                     if (this.IsLeakTrackerServiceSupported())
                     {
                         this.inProcLeakTracerTabItem.Visibility = Visibility.Visible;
-//                        this.inProcLeakTracker.Content = new InProcLeakTracker();
+                        //                        this.inProcLeakTracker.Content = new InProcLeakTracker();
                     }
                     await TaskScheduler.Default;
                     var telEvent = new TelemetryEvent(TelemetryEventBaseName + "Start");
@@ -306,6 +306,7 @@
                     //await AddStatusMsgAsync("Waiting 15 seconds to initialize graph");
                     //await Task.Delay(TimeSpan.FromSeconds(15));// delay samples til VS started
                     await ResetPerfCounterMonitorAsync();
+                    UpdateInterval = 1000; // enable graphing at 1sec/sample
                 });
 #if DEBUG
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
@@ -375,7 +376,7 @@
             {
                 //DoTryTypeLoadException();
                 throw new NotImplementedException();
-//                return true;
+                //                return true;
             }
             catch
             {
@@ -478,7 +479,10 @@
                 {
                     res = ex.ToString();
                 }
-                AddStatusMsgAsync($"{res}").Forget();
+                if (ShowMeasurementsInStatusWindow)
+                {
+                    AddStatusMsgAsync($"{res}").Forget();
+                }
             }
             catch (InvalidOperationException ex)
             {
@@ -566,7 +570,11 @@
                 ndxSeries++;
             }
             _chart.Legends.Clear();
-            _chart.Legends.Add(new Legend());
+            var legend = new Legend();
+            legend.IsDockedInsideChartArea = true;
+            legend.DockedToChartArea = chartArea.Name;
+            legend.Docking = Docking.Left;
+            _chart.Legends.Add(legend);
             _chart.DataBind();
 
             if (_editorTracker != null)
@@ -704,7 +712,7 @@
                     }
                     catch (Exception ex)
                     {
-                        _ =AddStatusMsgAsync(ex.ToString());
+                        _ = AddStatusMsgAsync(ex.ToString());
                     }
                     btnClrObjExplorer.IsEnabled = true;
                 }

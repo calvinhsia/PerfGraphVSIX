@@ -54,11 +54,42 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height = "*"/>
-            <RowDefinition Height = "5"/>
+            <RowDefinition Height = "400"/>
+            <RowDefinition Height = "4"/>
+            <RowDefinition Height = "20"/>
             <RowDefinition Height = "*"/>
         </Grid.RowDefinitions>
         <TabControl Name="tabControl" Grid.Row="0">
+            <TabItem Header="Graph">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="20"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="Update Interval" Margin="0,-4,0,0"/>
+                        <local:MyTextBox x:Name ="txtUpdateInterval" Height="20" Width="50" 
+                                         ToolTip="Update graph in MilliSeconds. Commits on lostfocus. Set to 0 for manual sample only. Choose counters to graph in Options tab" 
+                                         Text="{Binding UpdateInterval}"/>
+                        <CheckBox Content="Do Full GC Per Sample" IsChecked="{Binding DoFullGCPerSample}" Margin="10,0"
+                                      ToolTip="When taking a measurement sample, do a complete GC. This is should be set only for leak tests. Full GC causes UI Delays"/>
+                        <CheckBox Content="Show Measurements in status window" IsChecked="{Binding ShowMeasurementsInStatusWindow}" Margin="10,0,0,0"
+                                      ToolTip="When taking a measurement sample, output the measurements to the status window"/>
+                    </StackPanel>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="3"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ListBox Name="lbPCounters" SelectionMode="Extended" VerticalAlignment="Top" VerticalContentAlignment="Top" ToolTip="Multiselect various Performance Counters to graph" />
+                        <GridSplitter Grid.Column="1" Width="3" VerticalAlignment="Stretch" HorizontalAlignment="Center" Background="LightBlue"/>
+                        <DockPanel Grid.Column="2">
+                            <WindowsFormsHost Name="wfhost"/>
+                        </DockPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
             <TabItem Header="Code Samples">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -66,9 +97,9 @@
                         <ColumnDefinition Width="5"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel x:Name="spCodeSamples" Grid.Column="0">
-                    </StackPanel>
-                    <GridSplitter Grid.Column="1" Width="5" VerticalAlignment="Stretch"/>
+                    <DockPanel x:Name="dpCodeSamples" Grid.Column="0">
+                    </DockPanel>
+                    <GridSplitter Grid.Column="1" Width="5" VerticalAlignment="Stretch" HorizontalAlignment="Center" Background="LightBlue"/>
                     <Grid Grid.Column = "2">
                         <TextBox Height="20" VerticalAlignment="Top" ToolTipService.ShowDuration="40000">
                             https://devdiv.visualstudio.com/DevDiv/_wiki/wikis/DevDiv.wiki/3829/Show-VS-memory-use-in-a-graph-PerfGraphVSIX
@@ -95,11 +126,6 @@ To learn how to add your own, see VSDemos/Simple.cs
                         </TextBox>
                     </Grid>
                 </Grid>
-            </TabItem>
-            <TabItem Header="Graph">
-                <StackPanel Orientation="Vertical" Name = "spGraph">
-                    <WindowsFormsHost Name="wfhost"/>
-                </StackPanel>
             </TabItem>
             <TabItem Header = "TextViewTracker" ToolTip="Track Editor TextView instances via ITextViewCreationListener">
                 <StackPanel Orientation="Vertical">
@@ -139,16 +165,8 @@ To learn how to add your own, see VSDemos/Simple.cs
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation = "Vertical" Grid.Column="0">
                         <StackPanel Orientation="Horizontal">
-                            <Label Content="Update Interval"/>
-                            <local:MyTextBox x:Name ="txtUpdateInterval" Width="90" ToolTip="Update graph in MilliSeconds. Every sample does a Tools.ForceGC. Set to 0 for manual sample only" Text="{Binding UpdateInterval}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
                             <Label Content="# Data Points in graph"/>
                             <local:MyTextBox Text="{Binding NumDataPoints}" Width="90" ToolTip="Number of Data points (x axis). Will change on next Reset"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <CheckBox Content="DoFullGC Per Sample" IsChecked="{Binding DoFullGCPerSample}" 
-                                      ToolTip="When taking a measurement sample, do a complete GC. This is should be set only for leak tests. Full GC causes UI Delays"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <CheckBox Content="TrackTextViews" IsChecked="{Binding TrackTextViews}" ToolTip="Listen for TextView Creation Events and track them"/>
@@ -163,22 +181,6 @@ To learn how to add your own, see VSDemos/Simple.cs
                             <CheckBox Content="Track Contained Objects" IsChecked="{Binding TrackContainedObjects}" 
                         ToolTip="For Textviews, delve into propertybag to find subscribers to EditOptions and track those. For Projects, delve..."/>
                         </StackPanel>
-                        <!--<StackPanel Orientation="Horizontal">
-                            <Label Content="Number of Iterations"/>
-                            <local:MyTextBox Width="90" ToolTip="# of iterations" Text="{Binding NumberOfIterations}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Delay Multiplier"/>
-                            <local:MyTextBox Width="90" ToolTip="defaults to 1." Text="{Binding DelayMultiplier}"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <Label Content="Solution To Load"/>
-                            <local:MyTextBox ToolTip="Solution to load" Text="{Binding SolutionToLoad}"/>
-                        </StackPanel>-->
-                    </StackPanel>
-                    <StackPanel Grid.Column="1">
-                        <Label Content="Counters to track:"/>
-                        <ListBox Name="lbPCounters" SelectionMode="Extended" Width="160" MaxHeight = "200" VerticalAlignment="Top" ToolTip="Multiselect various Performance Counters to graph" />
                     </StackPanel>
                     <StackPanel Grid.Column="2">
                         <Label Content="AutoDumpCollection">
@@ -203,24 +205,20 @@ To get another dump, re-enable
                 </Grid>
             </TabItem>
         </TabControl>
-        <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"/>
-        <StackPanel Grid.Row="2" Orientation="Vertical">
-            <StackPanel Orientation="Horizontal">
-                <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" 
+        <GridSplitter Grid.Row="1" Height="3" HorizontalAlignment="Stretch" VerticalAlignment="Center" Background="LightBlue"/>
+        <StackPanel Orientation="Horizontal" Grid.Row="2">
+            <Button Name="btnDoSample" Content="TakeSample" Height="20" VerticalAlignment="Top" 
                         ToolTip="Take a Measurement to graph, which also does a Tools.ForceGC (Ctrl-Alt-Shift-F12 twice) (automatic on every sample, so click this if your sample time is very long)&#x0a;Also updates trackers on other tabs"  
                          />
-                <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
+            <Button x:Name="btnExecCode" Content="ExecCode" Height="20" VerticalAlignment="Top" 
                         ToolTip="Execute the code file selected in the Options Tab Code samples. This code typically iterates a scenario. (If running, cancel the execution)" Click="BtnExecCode_Click" Margin="10,0,0,0"
                          />
-                <Button x:Name="btnClrObjExplorer" Content="ClrObjExplorer" Height="20" VerticalAlignment="Top" 
+            <Button x:Name="btnClrObjExplorer" Content="ClrObjExplorer" Height="20" VerticalAlignment="Top" 
                         ToolTip="Create a dump of the current VS process and start the ClrObjExplorer process to examine it (RtClick to open ClrObjExplorer)" MouseRightButtonUp="BtnClrObjExplorer_MouseRightButtonUp" Click="BtnClrObjExplorer_Click" Margin="10,0,0,0"
                          />
-                <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
-            </StackPanel>
-            <TextBox Name="txtStatus" Height="400" MaxHeight="200" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" 
-            HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" VerticalAlignment="Top" HorizontalContentAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
+            <TextBox Name="txtLastStatMsg" Text="{Binding LastStatMsg}" Width="500" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
         </StackPanel>
+        <TextBox Name="txtStatus" IsReadOnly="true" IsUndoEnabled="false" FontSize="10" Grid.Row="3"
+            HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" VerticalAlignment="Top" HorizontalContentAlignment="Left" FontFamily="{Binding FontFamilyMono}"/>
     </Grid>
-
-
 </UserControl>
