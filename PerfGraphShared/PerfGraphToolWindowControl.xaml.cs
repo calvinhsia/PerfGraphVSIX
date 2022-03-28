@@ -305,8 +305,8 @@
                 {
                     //await AddStatusMsgAsync("Waiting 15 seconds to initialize graph");
                     //await Task.Delay(TimeSpan.FromSeconds(15));// delay samples til VS started
-                    await ResetPerfCounterMonitorAsync();
                     UpdateInterval = 1000; // enable graphing at 1sec/sample
+                    await ResetPerfCounterMonitorAsync();
                 });
 #if DEBUG
                 var tsk = AddStatusMsgAsync($"PerfGraphVsix curdir= {Environment.CurrentDirectory}");
