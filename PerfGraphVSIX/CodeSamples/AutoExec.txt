@@ -1,4 +1,4 @@
 ﻿// These specify automatically run extensions to the VSIX extension
 // Each line is 2 comma separated values: user name, filename (relative to CodeSampleDirectory)
 calvinh, VSDemos\TelemetryMonitor.cs
-calvinh, VSDemos\ChildProc.cs
+//calvinh, VSDemos\ChildProc.cs
