@@ -75,7 +75,7 @@ namespace Microsoft.Test.Stress
             var dumpDataAnalysisResult = new DumpDataAnalysisResult();
 
             Regex typesToReportStatisticsOnRegex = null;
-            if (!string.IsNullOrEmpty( typesToReportStatisticsOn))
+            if (!string.IsNullOrEmpty(typesToReportStatisticsOn))
             {
                 typesToReportStatisticsOnRegex = new Regex(typesToReportStatisticsOn, RegexOptions.Compiled);
                 dumpDataAnalysisResult.typeStatistics = new TypeStatistics();
@@ -145,24 +145,30 @@ namespace Microsoft.Test.Stress
                     var markedObjects = new HashSet<ulong>();
                     foreach (var obj in EnumerateRootedObjects(runtime.Heap))
                     {
-                        var typ = obj.Type?.Name;
-                        if (typ == "System.String")
+                        if (obj.Type != null)
                         {
-                            lstStrings.Add(obj.AsString());
-                        }
-                        if (!dumpDataAnalysisResult.dictTypes.ContainsKey(typ))
-                        {
-                            dumpDataAnalysisResult.dictTypes[typ] = 1;
-                        }
-                        else
-                        {
-                            dumpDataAnalysisResult.dictTypes[typ]++;
-                        }
-                        nObjCount++;
+                            var typ = obj.Type?.Name;
+                            if (typ == "System.String")
+                            {
+                                if (!string.IsNullOrEmpty(obj.AsString()))
+                                {
+                                    lstStrings.Add(obj.AsString());
+                                }
+                            }
+                            if (!dumpDataAnalysisResult.dictTypes.ContainsKey(typ))
+                            {
+                                dumpDataAnalysisResult.dictTypes[typ] = 1;
+                            }
+                            else
+                            {
+                                dumpDataAnalysisResult.dictTypes[typ]++;
+                            }
+                            nObjCount++;
 
-                        if (typesToReportStatisticsOnRegex?.IsMatch(typ) == true)
-                        {
-                            CalculateTypeStatisticsPhase1(obj, typesToReportStatisticsOnRegex, markedObjects, dumpDataAnalysisResult.typeStatistics);
+                            if (typesToReportStatisticsOnRegex?.IsMatch(typ) == true)
+                            {
+                                CalculateTypeStatisticsPhase1(obj, typesToReportStatisticsOnRegex, markedObjects, dumpDataAnalysisResult.typeStatistics);
+                            }
                         }
                     }
                     if (typesToReportStatisticsOnRegex != null)
