@@ -65,6 +65,7 @@ namespace Microsoft.Test.Stress
     {
         public string filename;
         public string description;
+        public override string ToString() => $"{filename} {description}";
     }
     public class MeasurementHolder : IDisposable
     {
@@ -831,6 +832,10 @@ For you, I’d recommend #2. Add a script that runs after the tests complete. To
             {
                 if (Logger is Logger myLogger)
                 {
+                    lstFileResults.ForEach(f =>
+                    {
+                        myLogger.LogMessage($"Attaching Test Result {f}");
+                    });
                     var sb = new StringBuilder();
                     foreach (var str in myLogger._lstLoggedStrings)
                     {
