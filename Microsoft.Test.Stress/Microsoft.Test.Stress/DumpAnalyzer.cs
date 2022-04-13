@@ -206,6 +206,7 @@ namespace Microsoft.Test.Stress
             catch (Exception ex)
             {
                 logger?.LogMessage($"Exception analyzing dump {ex}");
+                throw; // we want the test to fail if didn't get analysis
             }
             return dumpDataAnalysisResult;
         }

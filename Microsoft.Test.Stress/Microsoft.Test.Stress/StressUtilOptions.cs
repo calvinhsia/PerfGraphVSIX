@@ -281,6 +281,7 @@ namespace Microsoft.Test.Stress
             }
             var val = methGetContext.Invoke(test, null);
             testContext = new TestContextWrapper(val);
+            testContext = new TestContextWrapper(val);
 
             if (testContext.Properties[StressUtil.PropNameRecursionPrevention] != null)
             {
@@ -357,7 +358,7 @@ namespace Microsoft.Test.Stress
             void DumpDir(string dir)
             {
                 logger.LogMessage($"   Dumping folder contents {dir}");
-                foreach (var file in Directory.EnumerateFiles(dir, "Microsoft.Test.Stress.Definitions.*", SearchOption.AllDirectories))
+                foreach (var file in Directory.EnumerateFiles(dir, "System.Runtime.CompilerServices.Unsafe.*", SearchOption.AllDirectories))
                 {
                     var finfo = new FileInfo(file);
                     var verinfo = FileVersionInfo.GetVersionInfo(file);
