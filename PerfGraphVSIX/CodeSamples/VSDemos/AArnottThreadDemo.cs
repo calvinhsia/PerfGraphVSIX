@@ -1,7 +1,7 @@
 ﻿//Desc: Andrew Arnott's sample Async Thread demo
 //Desc: https://github.com/AArnott/AsyncAndThreadingDemo.Wpf
 //Include: ..\Util\MyCodeBaseClass.cs
-//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.ComponentModel.Composition.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.ComponentModel.Composition.dll
 //Ref: %VSRoot%\Common7\IDE\PublicAssemblies\Microsoft.VisualStudio.ComponentModelHost.dll
 
 
