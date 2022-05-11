@@ -23,6 +23,23 @@ namespace Tests
             LogMessage(vsHandler.DoVSRegEdit("read local HKCU General MaxNavigationHistoryDepth dword"));
 
         }
+        [TestMethod]
+        public async Task TestVSHandlerGetVSPath()
+        {
+            /*
+                CurDir = 'C:\Test\Results\Deploy_TestUser 2022-05-11 06_25_47\Out'
+                C:\Test\VisualStudio\Common7\IDE\devenv.exe             
+            */
+            await Task.Run(() =>
+            {
+                var vsHandler = new VSHandlerCreator().CreateVSHandler(this);
+                LogMessage($"Got VSHandler {vsHandler}  Curdir= {Environment.CurrentDirectory}");
+                LogMessage($"Curdir= {Environment.CurrentDirectory}");
+                var vspath = vsHandler.GetVSFullPath();
+
+                LogMessage($"DevenvPath= {vspath}");
+            });
+        }
 
         [TestMethod]
         public async Task TestVSHandlerGetDTEObj()

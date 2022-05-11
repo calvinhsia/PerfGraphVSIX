@@ -44,6 +44,7 @@ namespace Microsoft.Test.Stress
                 (new FileInfo(vsHandlerFileName).LastWriteTime != new FileInfo(zipFile).LastWriteTime))
             {
                 ZipUtil.UnzipResource(resourceName, dirVSHandler);
+                logger?.LogMessage($"Unzipping VSHandler from resource");
             }
             logger?.LogMessage($"Found VSHandler at {vsHandlerFileName}");
             Assembly asm = Assembly.LoadFrom(vsHandlerFileName);
