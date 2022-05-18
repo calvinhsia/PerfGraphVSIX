@@ -26,6 +26,7 @@ using System.Windows.Markup;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.IO;
+using System.ComponentModel;
 
 namespace MyCodeToExecute
 {
@@ -52,6 +53,10 @@ namespace MyCodeToExecute
         public int RefreshRate { get; set; } = 1000;
         public bool Monitor { get; set; } = true;
         public bool ShowMemChangestoo { get; set; } = true;
+
+        public Dictionary<int, ProcessEx.ProcNode> _dictprocNodesById = new Dictionary<int, ProcessEx.ProcNode>(); // index ProcId
+
+        public ProcessEx _processEx;
         string settingspath = "PerfGraph";
         string settingsTestProperty = "ChildProcRefreshRate";
         IVsWritableSettingsStore userStore;
@@ -86,8 +91,7 @@ namespace MyCodeToExecute
 $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
-    System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
+xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         >
         <Grid.RowDefinitions>
             <RowDefinition Height=""auto""/>
@@ -205,27 +209,40 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                     gridUser.Children.Add(childProcTree);
                     int hashLastTree = 0;
                     DateTime dtlastTree;
+                    _processEx = new ProcessEx(this);
                     while (!ctsCancelMonitor.IsCancellationRequested)
                     {
                         await TaskScheduler.Default;
                         if (Monitor && RefreshRate > 0)
                         {
-                            var processEx = new ProcessEx();
-                            var devenvTree = processEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                            // we want to persist the old ProcNodes. GetProcessTree will get a new set
+                            var devenvTree = _processEx.GetProcessTree(Process.GetCurrentProcess().Id);
                             var curHash = 0;
-                            processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
+                            var oldNodesToRemove = new HashSet<int>(_dictprocNodesById.Keys);
+                            _processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
                             {
+                                if (_dictprocNodesById.TryGetValue(node.procId, out var oldNode))
+                                {
+                                    oldNode.CopyTo(node);
+                                    node.Refresh();
+                                    _dictprocNodesById[node.procId] = node;
+                                }
+                                else
+                                {
+                                    _dictprocNodesById[node.procId] = node;
+                                    node.InitDevenvConeProcess();
+                                }
+                                oldNodesToRemove.Remove(node.procId);
                                 curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
                                 return true;
                             });
-                            if (curHash != hashLastTree)
+                            foreach (var pid in oldNodesToRemove)
+                            {
+                                _dictprocNodesById.Remove(pid);
+                            }
+                            //                            if (curHash != hashLastTree)
                             {
                                 // get the mem measurements on background thread
-                                processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
-                                {
-                                    _ = node.MemSize.Value; // instantiate lazy
-                                    return true;
-                                });
                                 dtlastTree = DateTime.Now;
                                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                                 childProcTree.Items.Clear();
@@ -238,7 +255,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                                 }
                             }
                         }
-                        //_logger.LogMessage("in loop");
                         await Task.Delay(TimeSpan.FromMilliseconds(RefreshRate), ctsCancelMonitor.Token);
                     }
                 }
@@ -264,7 +280,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 _fManaged = fManaged;
                 if (fManaged)
                 {
-                    _data=new byte[nSizeToEat];
+                    _data = new byte[nSizeToEat];
                 }
                 else
                 {
@@ -333,6 +349,17 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 this.FontFamily = new FontFamily("Consolas");
                 this.FontSize = 10;
             }
+            SolidColorBrush GetColor(int cpuUsage)
+            {
+                var newColor = Color.FromArgb(
+                                            (byte)(0xff), //opaque
+                                            (byte)(0x0), //red
+                                            (byte)(100 + cpuUsage & 0xff),//green
+                                            (byte)(0x0) //blue
+                                            );
+                var brush = new SolidColorBrush(newColor);
+                return brush;
+            }
             public void AddNodes(ItemsControl itemsControl, List<ProcessEx.ProcNode> lstNodes)
             {
                 foreach (var node in lstNodes)
@@ -348,19 +375,30 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                             Background = Brushes.LightBlue
                         };
                         spData.Children.Add(tbThrds);
+
                         var tbMem = new TextBlock()
                         {
-                            Text = $"Mem={node.MemSize.Value,12:n0} " + (node.Is64Bit ? "64" : "32"),
+                            Text = $"Mem={node.MemSize,12:n0} Bits:" + (node.Is64Bit ? "64" : "32"),
                             Margin = new Thickness(3, 0, 0, 0),
                             Background = Brushes.LightSalmon
                         };
                         spData.Children.Add(tbMem);
+
+                        var tbCPU = new TextBlock()
+                        {
+                            Text = $"CPU={node.DeltaCPU,3}",
+                            Margin = new Thickness(3, 0, 0, 0),
+                            Background = Brushes.LightGreen  // GetColor(cpuUsage)
+                        };
+                        spData.Children.Add(tbCPU);
+
                         var tb = new TextBlock()
                         {
-                            Text = $"{node.ProcEntry.th32ProcessID,-5} {node.ProcEntry.szExeFile}",
+                            Text = $"{node.ProcEntry.th32ProcessID,-5} {node.ProcEntry.szExeFile} {node.SerialNo}",
                             Margin = new Thickness(3, 0, 0, 0),
                         };
                         spData.Children.Add(tb);
+
                         var newItem = new TreeViewItem() { Header = spData };
                         newItem.IsExpanded = true;
                         itemsControl.Items.Add(newItem);
@@ -374,8 +412,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
         }
     }
 
-    class ProcessEx
+    public class ProcessEx
     {
+        MyClass _myClass;
+
         //inner enum used only internally
         [Flags]
         private enum SnapshotFlags : uint
@@ -405,46 +445,100 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
             public string szExeFile;
         }
-
+        public ProcessEx(MyClass myClass)
+        {
+            _myClass = myClass;
+        }
+        static int NextSerialNo = 0;
         public class ProcNode
         {
-            public ProcNode(PROCESSENTRY32 procEntry)
-            {
-                this.ProcEntry = procEntry;
-                this.MemSize = new Lazy<long>(() =>
-                {
-                    var memsize = 0L;
-                    try
-                    {
-                        var proc = Process.GetProcessById(procId);
-                        memsize = proc.PrivateMemorySize64;
-                        var IsRunningUnderWow64 = false;
-                        if (IsWow64Process(proc.Handle, ref IsRunningUnderWow64) && IsRunningUnderWow64)
-                        {
-                            this.Is64Bit = false;
-                        }
-                        else
-                        {
-                            this.Is64Bit = true;
-                        }
-                    }
-                    catch (ArgumentException) // process is not running
-                    {
-                    }
-                    catch (InvalidOperationException) // System.InvalidOperationException: Process has exited, so the requested information is not available.
-                    {
-                    }
-                    return memsize;
-                });
-            }
-
+            MyClass _myClass;
+            public Process _process;
             public PROCESSENTRY32 ProcEntry;
-
-            public Lazy<long> MemSize;
+            public long MemSize;
             public bool Is64Bit = false; // must calc MemSize first!!
+            public TimeSpan CurrentTotalProcessorTime;
+            public TimeSpan LastTotalProcessorTime;
+            public DateTime DtLastSample;
+            public DateTime DtCurrentSample;
+            public int DeltaCPU => (int)(100 * ((CurrentTotalProcessorTime - LastTotalProcessorTime).TotalSeconds /
+                                    (DtCurrentSample - DtLastSample).TotalSeconds));
+
             public int procId { get { return ProcEntry.th32ProcessID; } }
             public int ParentProcId { get { return ProcEntry.th32ParentProcessID; } }
+            public int SerialNo = 0;
             public List<ProcNode> Children;
+            public ProcNode(PROCESSENTRY32 procEntry, MyClass myClass)
+            {
+                this.ProcEntry = procEntry;
+                this._myClass = myClass;
+                // we want to minimize what we do in this ctor because we're doing it for all processes on system (before we filter to just devenv cone)
+            }
+
+            public void CopyTo(ProcNode pOther) // selective copy of members to preserve 
+            {
+                pOther.SerialNo = SerialNo;
+                pOther._process = _process;
+                pOther.Is64Bit = Is64Bit;
+                pOther.MemSize = MemSize;
+                pOther.CurrentTotalProcessorTime = CurrentTotalProcessorTime;
+                pOther.LastTotalProcessorTime = LastTotalProcessorTime;
+                pOther.DtLastSample = DtLastSample;
+                pOther.DtCurrentSample = DtCurrentSample;
+            }
+            public void InitDevenvConeProcess()
+            {
+                try
+                {
+                    _process = Process.GetProcessById(procId);
+                    SerialNo = ++NextSerialNo;
+                    CurrentTotalProcessorTime = _process.TotalProcessorTime;
+                    LastTotalProcessorTime = CurrentTotalProcessorTime;
+                    DtLastSample = DtCurrentSample;
+                    DtCurrentSample = DateTime.Now + TimeSpan.FromMilliseconds(1);
+                    var IsRunningUnderWow64 = false;
+                    if (IsWow64Process(_process.Handle, ref IsRunningUnderWow64) && IsRunningUnderWow64)
+                    {
+                        this.Is64Bit = false;
+                    }
+                    else
+                    {
+                        this.Is64Bit = true;
+                    }
+                    Refresh();
+                }
+                catch (ArgumentException) // process is not running
+                {
+                    //                    _myClass._logger.LogMessage($"{ex}");
+                }
+                catch (InvalidOperationException) // System.InvalidOperationException: Process has exited, so the requested information is not available.
+                {
+                    //                    _myClass._logger.LogMessage($"{ex}");
+                }
+                catch (Exception ex)
+                {
+                    _myClass._logger.LogMessage($"{ex}");
+                }
+            }
+
+            public void Refresh()
+            {
+                try
+                {
+                    _process.Refresh();
+                    MemSize = _process.PrivateMemorySize64;
+                    LastTotalProcessorTime = CurrentTotalProcessorTime;
+                    CurrentTotalProcessorTime = _process.TotalProcessorTime;
+
+                    DtLastSample = DtCurrentSample;
+                    DtCurrentSample = DateTime.Now;
+                }
+                catch (Exception)
+                {
+                    //                    _myClass._logger.LogMessage($"{ex}");
+                }
+            }
+
             public override string ToString()
             {
                 return string.Format("{0} {1} {2}", procId, ParentProcId, ProcEntry.szExeFile);
@@ -475,11 +569,12 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
         /// <returns></returns>
         public List<ProcNode> GetProcessTree(int RootPid = 0)
         {
-            var dictprocNodesById = new Dictionary<int, ProcNode>(); // index ProcId
-            GetProcesses(p => { dictprocNodesById[p.th32ProcessID] = new ProcNode(p); return true; });
+            // we'll get all the procs in the system, then filter to just those under devenv
+            var dictAllProcNodesById = new Dictionary<int, ProcNode>(); // index ProcId
+            GetProcesses(p => { dictAllProcNodesById[p.th32ProcessID] = new ProcNode(p, _myClass); return true; });
 
             var lstNodeRoots = new List<ProcNode>();
-            foreach (var proc in dictprocNodesById.Values)
+            foreach (var proc in dictAllProcNodesById.Values)
             {// every node must be added to result as either an orphan (root is parentless, so is an orphan) or a child. Pid=0 is "[System Process] or "Idle"
                 if (proc.ParentProcId == 0) // 'System' with pid typically 4
                 {
@@ -488,7 +583,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 else
                 { // the current node's parent is non-zero: find the parent. Add the cur node as a child to the parent node if found (else orphaned)
                     ProcNode parentNode;
-                    if (!dictprocNodesById.TryGetValue(proc.ParentProcId, out parentNode))
+                    if (!dictAllProcNodesById.TryGetValue(proc.ParentProcId, out parentNode))
                     { // parent proc doesn't exist. Must be orphan (can still have children)
                         lstNodeRoots.Add(proc);
                     }
@@ -506,7 +601,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             {
                 lstNodeRoots.Clear();
                 ProcNode procNode;
-                if (dictprocNodesById.TryGetValue(RootPid, out procNode))
+                if (dictAllProcNodesById.TryGetValue(RootPid, out procNode))
                 {
                     lstNodeRoots.Add(procNode);
                 }
@@ -514,7 +609,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             return lstNodeRoots;
         }
 
-        public static void GetProcesses(Func<PROCESSENTRY32, bool> action)
+        public void GetProcesses(Func<PROCESSENTRY32, bool> action)
         {
             IntPtr handleToSnapshot = IntPtr.Zero;
             try
@@ -542,7 +637,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             }
             catch (Exception ex)
             {
-                throw new ApplicationException("Can't get the process.", ex);
+                _myClass._logger.LogMessage($"Can't get the process. {ex}");
             }
             finally
             {
