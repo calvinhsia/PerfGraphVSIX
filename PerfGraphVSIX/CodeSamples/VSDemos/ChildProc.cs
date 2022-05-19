@@ -136,7 +136,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
 
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" Height=""28"" VerticalAlignment=""Top"" Orientation=""Horizontal"">
             <Label Content=""Refresh Rate""/>
-            <TextBox Text=""{{Binding RefreshRate}}"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child process. UI won't update UI if tree is same. 0 means don't refresh"" />
+            <TextBox Text=""{{Binding RefreshRate}}"" x:Name=""tbxRefreshRate"" Width=""40"" Height=""20"" ToolTip=""mSeconds. Refresh means check child process. UI won't update UI if tree is same. 0 means don't refresh"" />
             <CheckBox Margin=""15,2,0,10"" Content=""EatMem""  IsChecked=""{{Binding EatMem}}"" Name=""chkBoxEatMem"" 
                 ToolTip=""Eat Memory""/>
             <CheckBox Margin=""15,2,0,10"" Content=""Managed""  IsChecked=""{{Binding ManagedEatMem}}"" 
@@ -170,6 +170,12 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
 
             grid.DataContext = this;
             var gridUser = (Grid)grid.FindName("gridUser");
+            var tbxRefreshRate = (TextBox)grid.FindName("tbxRefreshRate");
+            tbxRefreshRate.LostFocus += (_, __) =>
+            {
+                _logger.LogMessage($"LostFocus event RefRate={RefreshRate}");
+                userStore.SetInt(settingspath, settingsTestProperty, RefreshRate);
+            };
 
             var chkEatMem = (CheckBox)grid.FindName("chkBoxEatMem");
             var lstAllocations = new List<MemEater>();
@@ -214,8 +220,6 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                 DoFree();
                 ctsCancelMonitor.Cancel();
                 _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
-                _logger.LogMessage($"close event RefRate={RefreshRate}");
-                userStore.SetInt(settingspath, settingsTestProperty, RefreshRate);
             };
 
             _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
