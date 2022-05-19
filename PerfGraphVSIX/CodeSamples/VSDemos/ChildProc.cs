@@ -10,6 +10,7 @@ using PerfGraphVSIX;
 using Microsoft.Test.Stress;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.Settings;
@@ -30,7 +31,7 @@ using System.ComponentModel;
 
 namespace MyCodeToExecute
 {
-    public class MyClass : MyCodeBaseClass
+    public class MyClass : MyCodeBaseClass, INotifyPropertyChanged
     {
         public static async Task DoMain(object[] args)
         {
@@ -45,6 +46,12 @@ namespace MyCodeToExecute
                 _logger.LogMessage(ex.ToString());
             }
         }
+        public event PropertyChangedEventHandler PropertyChanged;
+        void RaisePropChanged([CallerMemberName] string propName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+        }
+
         public bool EatMem { get; set; } = false;
         public bool ManagedEatMem { get; set; } = false;
         public int AmountToEat { get; set; } = 1024 * 1024;
@@ -53,7 +60,9 @@ namespace MyCodeToExecute
         public int RefreshRate { get; set; } = 1000;
         public bool Monitor { get; set; } = true;
         public bool ShowMemChangestoo { get; set; } = true;
-
+        public int NumSatProcs => _dictprocNodesById.Count;
+        public long TotMem { get; set; }
+        public int TotCPU { get; set; }
         public Dictionary<int, ProcessEx.ProcNode> _dictprocNodesById = new Dictionary<int, ProcessEx.ProcNode>(); // index ProcId
 
         public ProcessEx _processEx;
@@ -82,7 +91,7 @@ namespace MyCodeToExecute
             else
             {
                 RefreshRate = val;
-                _logger.LogMessage($"Rettrieved setting ref = {RefreshRate}");
+                _logger.LogMessage($"Retrieved setting ref = {RefreshRate}");
             }
 
             CloseableTabItem tabItemTabProc = GetTabItem();
@@ -94,6 +103,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         >
         <Grid.RowDefinitions>
+            <RowDefinition Height=""auto""/>
             <RowDefinition Height=""auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
@@ -132,22 +142,30 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             <CheckBox Margin=""15,2,0,10"" Content=""Managed""  IsChecked=""{{Binding ManagedEatMem}}"" 
                 ToolTip=""Eat Managed memory or Native memory (via VirtualAlloc)""/>
             <Label Content=""AmtToEat""/>
-            <TextBox Text=""{{Binding AmountToEat}}"" Width=""140"" Height=""20"" ToolTip=""AmountToEat in Bytes"" />
+            <TextBox Text=""{{Binding AmountToEat}}"" Width=""120"" Height=""20"" ToolTip=""AmountToEat in Bytes"" />
             <Label Content=""NumToEat""/>
             <TextBox Text=""{{Binding NumToEat}}"" Width=""50"" Height=""20"" ToolTip=""Num of times to eat AmtToEat"" />
-
+<!--
             <CheckBox Margin=""15,0,0,10"" Content=""Monitor""  IsChecked=""{{Binding Monitor}}"" Name=""ChkBoxMonitor"" 
                 ToolTip=""Monitor Child Processes""/>
             <CheckBox Margin=""15,0,0,10"" Content=""Show Memory Changes too""  IsChecked=""{{Binding ShowMemChangestoo}}"" 
                 ToolTip=""Update the tree for memory changes. The bouncing ball will be jerky on UI updates""/>
-
+-->
         </StackPanel>
-        <Grid Name=""gridUser"" Grid.Row = ""1""></Grid>
+        <Grid Grid.Row=""1"">
+            <StackPanel Orientation = ""Horizontal"" Margin =""0,-5,0,0"">
+                <Label Content=""# Procs""/>
+                <TextBlock Text = ""{{Binding NumSatProcs}}"" Margin=""10,6,20,0"" />
+                <Label Content=""Tot Memory""/>
+                <TextBlock Text = ""{{Binding TotMem, StringFormat=N0}}"" Margin=""10,6,20,0"" />
+                <Label Content=""Tot CPU""/>
+                <TextBlock Text = ""{{Binding TotCPU}}"" Margin=""0,6,10,0"" />
+            </StackPanel>
+        </Grid>
+        <Grid Name=""gridUser"" Grid.Row = ""2""/>
     </Grid>
 ";
-            var strReader = new System.IO.StringReader(strxaml);
-            var xamlreader = XmlReader.Create(strReader);
-            var grid = (Grid)(XamlReader.Load(xamlreader));
+            var grid = (Grid)(XamlReader.Parse(strxaml));
             tabItemTabProc.Content = grid;
 
             grid.DataContext = this;
@@ -196,7 +214,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                 DoFree();
                 ctsCancelMonitor.Cancel();
                 _perfGraphToolWindowControl.TabControl.SelectedIndex = 0;
-                _logger.LogMessage($"close event Rerfr={RefreshRate}");
+                _logger.LogMessage($"close event RefRate={RefreshRate}");
                 userStore.SetInt(settingspath, settingsTestProperty, RefreshRate);
             };
 
@@ -216,9 +234,14 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                         if (Monitor && RefreshRate > 0)
                         {
                             // we want to persist the old ProcNodes. GetProcessTree will get a new set
-                            var devenvTree = _processEx.GetProcessTree(Process.GetCurrentProcess().Id);
+                            var devenvPid = Process.GetCurrentProcess().Id;
+                            var devenvTree = _processEx.GetProcessTree(devenvPid);
                             var curHash = 0;
                             var oldNodesToRemove = new HashSet<int>(_dictprocNodesById.Keys);
+                            TotMem = 0;
+                            double totalCPU = 0;
+                            var tDelta = TimeSpan.FromMilliseconds(0);
+                            var sumCPU = TimeSpan.FromMilliseconds(0);
                             _processEx.IterateTreeNodes(devenvTree, level: 0, func: (node, level) =>
                             {
                                 if (_dictprocNodesById.TryGetValue(node.procId, out var oldNode))
@@ -233,9 +256,24 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                                     node.InitDevenvConeProcess();
                                 }
                                 oldNodesToRemove.Remove(node.procId);
+                                if (node.procId == devenvPid)
+                                {
+                                    tDelta = node.DtCurrentSample - node.DtLastSample;
+                                }
+                                totalCPU += node.DeltaCPU;
+                                TotMem += node.MemSize;
+                                sumCPU += node.CurrentTotalProcessorTime - node.LastTotalProcessorTime;
                                 curHash += node.ProcEntry.szExeFile.GetHashCode() + node.procId.GetHashCode();
                                 return true;
                             });
+                            RaisePropChanged("NumSatProcs");
+                            RaisePropChanged("TotMem");
+                            if (NumSatProcs > 0 && tDelta.TotalSeconds > 0)
+                            {
+                                //                                TotCPU = (int)(totalCPU /= NumSatProcs);
+                                TotCPU = (int)(100 * sumCPU.TotalSeconds / tDelta.TotalSeconds);
+                            }
+                            RaisePropChanged("TotCPU");
                             foreach (var pid in oldNodesToRemove)
                             {
                                 _dictprocNodesById.Remove(pid);
@@ -386,7 +424,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
 
                         var tbCPU = new TextBlock()
                         {
-                            Text = $"CPU={node.DeltaCPU,3}",
+                            Text = $"CPU={node.DeltaCPU,3:n0}",
                             Margin = new Thickness(3, 0, 0, 0),
                             Background = Brushes.LightGreen  // GetColor(cpuUsage)
                         };
@@ -461,7 +499,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             public TimeSpan LastTotalProcessorTime;
             public DateTime DtLastSample;
             public DateTime DtCurrentSample;
-            public int DeltaCPU => (int)(100 * ((CurrentTotalProcessorTime - LastTotalProcessorTime).TotalSeconds /
+            public double DeltaCPU => (100 * ((CurrentTotalProcessorTime - LastTotalProcessorTime).TotalSeconds /
                                     (DtCurrentSample - DtLastSample).TotalSeconds));
 
             public int procId { get { return ProcEntry.th32ProcessID; } }
@@ -492,6 +530,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                 {
                     _process = Process.GetProcessById(procId);
                     SerialNo = ++NextSerialNo;
+                    MemSize = _process.PrivateMemorySize64;
                     CurrentTotalProcessorTime = _process.TotalProcessorTime;
                     LastTotalProcessorTime = CurrentTotalProcessorTime;
                     DtLastSample = DtCurrentSample;
