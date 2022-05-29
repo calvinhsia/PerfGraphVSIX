@@ -1,4 +1,4 @@
-﻿//Desc: Shows how to Listen to ETW events
+﻿//Desc: Shows how to Listen to ETW events. Listens for GC events and shows in a separate process the most common allocations.
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Include: ..\Util\CloseableTabItem.cs
@@ -31,9 +31,11 @@ using System.Windows.Markup;
 using System.Windows.Interop;
 using System.Windows.Controls;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-
+using System.Collections.ObjectModel;
+using System.Collections.Generic;
 
 namespace MyCodeToExecute
 {
@@ -91,9 +93,7 @@ namespace MyCodeToExecute
                 var pidToMonitor = Process.GetCurrentProcess().Id;
                 var outputLogFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyTestAsm.log");
                 File.Delete(outputLogFile);
-                var args = $@"""{Assembly.GetExecutingAssembly().Location
-                    }"" {nameof(MyEtwMainWindow)} {
-                        nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDir}"" ""{pidToMonitor}"" true";
+                var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDir}"" ""{pidToMonitor}"" true";
                 var pListener = Process.Start(
                     asmEtwListener,
                     args);
@@ -140,7 +140,7 @@ namespace MyCodeToExecute
                         );
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
         }
@@ -202,7 +202,13 @@ namespace MyCodeToExecute
             return asm;
         }
     }
-
+    class GCSampleData
+    {
+        public string TypeName;
+        public int Count;
+        public long Size;
+        public override string ToString() => $"{Count,-11:n0}  {Size,-13:n0} {TypeName} ";
+    }
     class MyUserControl : UserControl, INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -228,6 +234,12 @@ namespace MyCodeToExecute
         GCReason _GCReason;
         public GCReason GCReason { get { return _GCReason; } set { _GCReason = value; RaisePropChanged(); } }
 
+        public int MaxListSize { get; set; } = 100;
+
+        Dictionary<string, GCSampleData> dictSamples = new Dictionary<string, GCSampleData>();
+        private ObservableCollection<GCSampleData> _DataItems = new ObservableCollection<GCSampleData>();
+        public ObservableCollection<GCSampleData> DataItems { get { return _DataItems; } set { _DataItems = value; RaisePropChanged(); } }
+
         private TextBox _txtStatus;
         private Button _btnGo;
         private CancellationTokenSource _cts;
@@ -251,18 +263,21 @@ namespace MyCodeToExecute
 $@"<Grid
 xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
-xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
-                System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
+xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         Margin=""5,5,5,5"">
         <Grid.RowDefinitions>
-            <RowDefinition Height=""auto""/>
+            <RowDefinition Height=""Auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" VerticalAlignment=""Top"" Orientation=""Vertical"">
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""MaxListSize""/>
+                <TextBox Text = ""{{Binding MaxListSize}}""/>
+            </StackPanel>
             <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip="""" HorizontalAlignment = ""Left""/>
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""TypeName""/>
-                <TextBox Text = ""{{Binding TypeName}}"" Width = ""400""/>
+                <TextBox Text = ""{{Binding TypeName}}"" Width = ""600""/>
             </StackPanel>
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""AllocationAmount""/>
@@ -280,11 +295,13 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
                 <Label Content=""GCReason""/>
                 <TextBox Text = ""{{Binding GCReason}}"" Width = ""400""/>
             </StackPanel>
+            <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
+            IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
 
         </StackPanel>
-        <TextBox x:Name=""_txtStatus"" Grid.Row=""1"" FontFamily=""Consolas"" FontSize=""10""
-            ToolTip=""DblClick to open in Notepad"" 
-        IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
+        <Grid Grid.Row=""1"">
+            <ListView ItemsSource=""{{Binding DataItems}}"" FontFamily=""Consolas"" FontSize=""10""/>
+        </Grid>
     </Grid>
 ";
             var strReader = new System.IO.StringReader(strxaml);
@@ -295,6 +312,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             this._txtStatus = (TextBox)grid.FindName("_txtStatus");
             this._btnGo = (Button)grid.FindName("_btnGo");
             this._btnGo.Click += BtnGo_Click;
+            _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _btnGo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }));
         }
         void CleanUp()
         {
@@ -403,18 +424,42 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={
             {
                 if (d.ProcessID == _pidToMonitor)
                 {
+                    // GCAllocationTick occurs roughly every 100k allocations
                     TypeName = d.TypeName;
                     AllocationAmount = d.AllocationAmount;
+                    if (!dictSamples.TryGetValue(TypeName, out var data))
+                    {
+                        dictSamples[TypeName] = new GCSampleData() { TypeName = TypeName, Count = 1, Size = AllocationAmount };
+                    }
+                    else
+                    {
+                        data.Count++;
+                        data.Size += AllocationAmount;
+                    }
+                    _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try
+                        {
+                            var lst = (from item in dictSamples.Values
+                                       orderby item.Size descending
+                                       select item).Take(MaxListSize);
+                            DataItems = new ObservableCollection<GCSampleData>(lst);
+                        }
+                        catch (Exception ex)
+                        {
+                            AddStatusMsg($"Exception.#items = {dictSamples.Count} \r\n{ex}");
+                        }
+                    }));
                 }
             }));
             var gcHeapStatsStream = _userSession.Source.Clr.Observe<GCHeapStatsTraceData>();
             gcHeapStatsStream.Subscribe(new MyObserver<GCHeapStatsTraceData>((d) =>
-            {
-                if (d.ProcessID == _pidToMonitor)
-                {
-                    //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
-                }
-            }));
+                    {
+                        if (d.ProcessID == _pidToMonitor)
+                        {
+                            //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                        }
+                    }));
             var gcStartStream = _userSession.Source.Clr.Observe<GCStartTraceData>();
             gcStartStream.Subscribe(new MyObserver<GCStartTraceData>((d) =>
             {
