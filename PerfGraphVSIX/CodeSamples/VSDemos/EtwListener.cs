@@ -1,7 +1,6 @@
 ﻿//Desc: Shows how to Listen to ETW events. Listens for GC events and shows in a separate process the most common allocations.
 
 //Include: ..\Util\MyCodeBaseClass.cs
-//Include: ..\Util\CloseableTabItem.cs
 //Include: ..\Util\AssemblyCreator.cs
 
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.Diagnostics.Tracing.TraceEvent.dll
@@ -204,9 +203,9 @@ namespace MyCodeToExecute
     }
     class GCSampleData
     {
-        public string TypeName;
-        public int Count;
-        public long Size;
+        public string TypeName { get; set; }
+        public int Count { get; set; }
+        public long Size { get; set; }
         public override string ToString() => $"{Count,-11:n0}  {Size,-13:n0} {TypeName} ";
     }
     class MyUserControl : UserControl, INotifyPropertyChanged
@@ -233,6 +232,7 @@ namespace MyCodeToExecute
 
         GCReason _GCReason;
         public GCReason GCReason { get { return _GCReason; } set { _GCReason = value; RaisePropChanged(); } }
+        public int NumDistinctItems { get { return dictSamples.Count; } set { } }
 
         public int MaxListSize { get; set; } = 100;
 
@@ -281,11 +281,11 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             </StackPanel>
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""AllocationAmount""/>
-                <TextBox Text = ""{{Binding AllocationAmount}}"" Width = ""400""/>
+                <TextBox Text = ""{{Binding AllocationAmount, StringFormat=N0}}"" Width = ""400""/>
             </StackPanel>
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""GCCount""/>
-                <TextBox Text = ""{{Binding GCCount}}"" Width = ""400""/>
+                <TextBox Text = ""{{Binding GCCount, StringFormat=N0}}"" Width = ""400""/>
             </StackPanel>
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""GCType""/>
@@ -295,12 +295,24 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                 <Label Content=""GCReason""/>
                 <TextBox Text = ""{{Binding GCReason}}"" Width = ""400""/>
             </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""NumDistinctItems""/>
+                <TextBox Text = ""{{Binding NumDistinctItems}}"" Width = ""400""/>
+            </StackPanel>
             <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
             IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
 
         </StackPanel>
         <Grid Grid.Row=""1"">
-            <ListView ItemsSource=""{{Binding DataItems}}"" FontFamily=""Consolas"" FontSize=""10""/>
+            <ListView x:Name=""lv"" ItemsSource=""{{Binding DataItems}}"" FontFamily=""Consolas"" FontSize=""10"">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding Count, StringFormat=N0}}"" Header=""Count"" Width = ""80""/>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding Size, StringFormat=N0}}"" Header=""Size"" Width = ""100""/>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding TypeName}}"" Header=""TypeName""/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
         </Grid>
     </Grid>
 ";
@@ -435,6 +447,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     {
                         data.Count++;
                         data.Size += AllocationAmount;
+                        RaisePropChanged(nameof(NumDistinctItems));
                     }
                     _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
                     {
