@@ -1,4 +1,4 @@
-﻿//Desc: Shows how to Listen to ETW events. Listens for GC events and shows in a separate process the most common allocations.
+﻿//Desc: Listens for GC ETW events and shows in a separate process the most common allocations.
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Include: ..\Util\AssemblyCreator.cs
@@ -77,13 +77,15 @@ namespace MyCodeToExecute
                 // run it out of proc so our memory use doesn't affect the numbers
                 // Or we can generate a 64 bit exe and run it
                 var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-                var addDir = Path.Combine(vsRoot, "PublicAssemblies") + ";" + Path.Combine(vsRoot, "PrivateAssemblies");
+                var pathStressDir = Path.GetDirectoryName(typeof(StressUtil).Assembly.Location);
+                var addDir = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{pathStressDir}";
+
                 // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
-                var asmEtwListener = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
-                oopProcName = Path.GetFileNameWithoutExtension(asmEtwListener);
+                var asmGCMonitor = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
+                oopProcName = Path.GetFileNameWithoutExtension(asmGCMonitor);
                 var type = new AssemblyCreator().CreateAssembly
                     (
-                        asmEtwListener,
+                        asmGCMonitor,
                         PortableExecutableKinds.PE32Plus,
                         ImageFileMachine.AMD64,
                         AdditionalAssemblyPaths: addDir, // Microsoft.VisualStudio.Shell.Interop
@@ -94,12 +96,12 @@ namespace MyCodeToExecute
                 File.Delete(outputLogFile);
                 var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDir}"" ""{pidToMonitor}"" true";
                 var pListener = Process.Start(
-                    asmEtwListener,
+                    asmGCMonitor,
                     args);
                 //pListener.WaitForExit(30 * 1000);
-                //File.Delete(asmEtwListener);
+                //File.Delete(asmGCMonitor);
                 //var result = File.ReadAllText(outputLogFile);
-                _logger.LogMessage($"Launched EtwListener {pListener.Id}");
+                _logger.LogMessage($"Launched GCMonitor {pListener.Id}");
 
             }
             catch (OperationCanceledException) { }
@@ -152,7 +154,7 @@ namespace MyCodeToExecute
         internal static async Task MyMainMethod(string outLogFile, string addDirs, int pidToMonitor, bool boolarg)
         {
             _additionalDirs = addDirs;
-            File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}");
+            File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}  AddDirs={addDirs}");
 
             var tcs = new TaskCompletionSource<int>();
             var thread = new Thread((s) =>
@@ -160,12 +162,17 @@ namespace MyCodeToExecute
                 try
                 {
                     AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-                    var procTitle = Process.GetProcessById(pidToMonitor).MainWindowTitle;
+                    var ProcToMonitor = Process.GetProcessById(pidToMonitor);
                     var oWindow = new Window()
                     {
-                        Title = $"MyEtwListenerWindow monitoring {pidToMonitor} {procTitle}"
+                        Title = $"GCMonitor monitoring {pidToMonitor} {ProcToMonitor.MainWindowTitle}",
                     };
-
+                    if (ProcToMonitor.MainWindowHandle != IntPtr.Zero)
+                    {
+                        var interop = new WindowInteropHelper(oWindow);
+                        interop.EnsureHandle();
+                        interop.Owner = ProcToMonitor.MainWindowHandle;
+                    }
                     oWindow.Content = new MyUserControl(null, pidToMonitor);
 
                     oWindow.ShowDialog();
@@ -203,9 +210,9 @@ namespace MyCodeToExecute
     }
     class GCSampleData
     {
-        public string TypeName { get; set; }
         public int Count { get; set; }
         public long Size { get; set; }
+        public string TypeName { get; set; }
         public override string ToString() => $"{Count,-11:n0}  {Size,-13:n0} {TypeName} ";
     }
     class MyUserControl : UserControl, INotifyPropertyChanged
@@ -236,12 +243,17 @@ namespace MyCodeToExecute
 
         public int MaxListSize { get; set; } = 100;
 
-        Dictionary<string, GCSampleData> dictSamples = new Dictionary<string, GCSampleData>();
-        private ObservableCollection<GCSampleData> _DataItems = new ObservableCollection<GCSampleData>();
-        public ObservableCollection<GCSampleData> DataItems { get { return _DataItems; } set { _DataItems = value; RaisePropChanged(); } }
+        public long SizeGen0 { get; set; }
+        public long SizeGen1 { get; set; }
+        public long SizeGen2 { get; set; }
+        public long SizeGen3 { get; set; }
+        public long Total { get; set; }
 
+        Dictionary<string, GCSampleData> dictSamples = new Dictionary<string, GCSampleData>();
+        bool PendingReset = false;
         private TextBox _txtStatus;
         private Button _btnGo;
+        DockPanel _dpData;
         private CancellationTokenSource _cts;
         private bool _isTracing;
         private TraceEventSession _kernelsession;
@@ -269,12 +281,17 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             <RowDefinition Height=""Auto""/>
             <RowDefinition Height=""*""/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width = ""Auto""/>
+            <ColumnDefinition Width = ""*""/>
+        </Grid.ColumnDefinitions>
         <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" VerticalAlignment=""Top"" Orientation=""Vertical"">
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""MaxListSize""/>
-                <TextBox Text = ""{{Binding MaxListSize}}""/>
+                <TextBox Text = ""{{Binding MaxListSize}}"" Width = ""200""/>
             </StackPanel>
-            <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip="""" HorizontalAlignment = ""Left""/>
+            <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip=""Start/Stop monitoring events"" HorizontalAlignment = ""Left""/>
+            <Button x:Name=""_btnReset"" Content=""Reset"" Width=""45"" ToolTip=""Reset history of types collected on next event"" HorizontalAlignment = ""Left""/>
             <StackPanel Orientation=""Horizontal"">
                 <Label Content=""TypeName""/>
                 <TextBox Text = ""{{Binding TypeName}}"" Width = ""600""/>
@@ -301,9 +318,36 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             </StackPanel>
             <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
             IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
-
+        </StackPanel>
+        <StackPanel Grid.Column = ""1"" Orientation= ""Vertical"">
+            <Label Content=""Size of Each Gen (not refreshed until after GC end. Ctrl+Alt+Shift+F12 twice will induce GC in VS)""/>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""Gen0""/>
+                <TextBox Text = ""{{Binding SizeGen0, StringFormat=N0}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""Gen1 ""/>
+                <TextBox Text = ""{{Binding SizeGen1, StringFormat=N0}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""Gen2 ""/>
+                <TextBox Text = ""{{Binding SizeGen2, StringFormat=N0}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""Gen3 ""/>
+                <TextBox Text = ""{{Binding SizeGen3, StringFormat=N0}}"" Width = ""400""/>
+            </StackPanel>
+            <StackPanel Orientation=""Horizontal"">
+                <Label Content=""Total""/>
+                <TextBox Text = ""{{Binding Total, StringFormat=N0}}"" Width = ""400""/>
+            </StackPanel>
         </StackPanel>
         <Grid Grid.Row=""1"">
+            <DockPanel x:Name = ""dpData""/>
+        </Grid>
+    </Grid>
+";
+            /*
             <ListView x:Name=""lv"" ItemsSource=""{{Binding DataItems}}"" FontFamily=""Consolas"" FontSize=""10"">
                 <ListView.View>
                     <GridView>
@@ -313,17 +357,17 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     </GridView>
                 </ListView.View>
             </ListView>
-        </Grid>
-    </Grid>
-";
-            var strReader = new System.IO.StringReader(strxaml);
-            var xamlreader = XmlReader.Create(strReader);
-            var grid = (Grid)(XamlReader.Load(xamlreader));
+             */
+            var grid = (Grid)(XamlReader.Parse(strxaml));
             grid.DataContext = this;
             this.Content = grid;
             this._txtStatus = (TextBox)grid.FindName("_txtStatus");
             this._btnGo = (Button)grid.FindName("_btnGo");
             this._btnGo.Click += BtnGo_Click;
+            var btnRest = (Button)grid.FindName("_btnReset");
+            btnRest.Click += (_, __) => { PendingReset = true; };
+            _dpData = (DockPanel)grid.FindName("dpData");
+
             _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
             {
                 _btnGo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -332,7 +376,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
         void CleanUp()
         {
             _kernelsession?.Dispose();
+            _kernelsession = null;
             _userSession?.Dispose();
+            _userSession = null;
         }
 
         public void AddStatusMsg(string msg, params object[] args)
@@ -415,9 +461,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
 
             if (TraceEventSession.IsElevated() != true)
             {
-                throw new InvalidOperationException("Must run as admin");
+                throw new InvalidOperationException("Must run as zadmin");
             }
-            _userSession = new TraceEventSession($"PerfGraphEtwListener"); // only 1 at a time can exist with this name in entire machine
+            _userSession = new TraceEventSession($"PerfGraphGCMon"); // only 1 at a time can exist with this name in entire machine
 
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common", matchAnyKeywords: 0xFFFFFFDF);
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common");
@@ -439,6 +485,11 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     // GCAllocationTick occurs roughly every 100k allocations
                     TypeName = d.TypeName;
                     AllocationAmount = d.AllocationAmount;
+                    if (PendingReset)
+                    {
+                        dictSamples.Clear();
+                        PendingReset = false;
+                    }
                     if (!dictSamples.TryGetValue(TypeName, out var data))
                     {
                         dictSamples[TypeName] = new GCSampleData() { TypeName = TypeName, Count = 1, Size = AllocationAmount };
@@ -449,14 +500,16 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                         data.Size += AllocationAmount;
                         RaisePropChanged(nameof(NumDistinctItems));
                     }
+                    var lst = (from item in dictSamples.Values
+                               orderby item.Size descending
+                               select item).Take(MaxListSize);
                     _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         try
                         {
-                            var lst = (from item in dictSamples.Values
-                                       orderby item.Size descending
-                                       select item).Take(MaxListSize);
-                            DataItems = new ObservableCollection<GCSampleData>(lst);
+                            var br = new BrowsePanel(lst, colWidths: new[] { 80, 100, 500 });
+                            _dpData.Children.Clear();
+                            _dpData.Children.Add(br);
                         }
                         catch (Exception ex)
                         {
@@ -470,7 +523,17 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     {
                         if (d.ProcessID == _pidToMonitor)
                         {
-                            //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                            SizeGen0 = d.GenerationSize0;
+                            SizeGen1 = d.GenerationSize1;
+                            SizeGen2 = d.GenerationSize2;
+                            SizeGen3 = d.GenerationSize3;
+                            Total = SizeGen0 + SizeGen1 + SizeGen2 + SizeGen3;
+                            RaisePropChanged(nameof(SizeGen0));
+                            RaisePropChanged(nameof(SizeGen1));
+                            RaisePropChanged(nameof(SizeGen2));
+                            RaisePropChanged(nameof(SizeGen3));
+                            RaisePropChanged(nameof(Total));
+                            //AddStatusMsg($"HeapStats {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
                         }
                     }));
             var gcStartStream = _userSession.Source.Clr.Observe<GCStartTraceData>();
@@ -481,7 +544,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     GCReason = d.Reason;
                     GCType = d.Type;
                     GCCount = d.Count;
-                    //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                    //AddStatusMsg($"GCStart");
                 }
             }));
             var gcEndStream = _userSession.Source.Clr.Observe<GCEndTraceData>();
@@ -489,7 +552,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             {
                 if (d.ProcessID == _pidToMonitor)
                 {
-                    //                    AddStatusMsg($"Gen 0 {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                    //AddStatusMsg($"GCEnd");
                 }
             }));
             //_userSession.Source.AllEvents += (e) =>
