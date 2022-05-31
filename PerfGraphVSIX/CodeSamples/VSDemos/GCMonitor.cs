@@ -4,7 +4,8 @@
 //Include: ..\Util\AssemblyCreator.cs
 
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.Diagnostics.Tracing.TraceEvent.dll
-
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\WindowsFormsIntegration.dll
+//Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Windows.Forms.DataVisualization.dll
 /*
  */
 
@@ -35,6 +36,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Windows.Forms.Integration;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace MyCodeToExecute
 {
@@ -154,7 +157,7 @@ namespace MyCodeToExecute
         internal static async Task MyMainMethod(string outLogFile, string addDirs, int pidToMonitor, bool boolarg)
         {
             _additionalDirs = addDirs;
-            File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}  AddDirs={addDirs}");
+            File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}  AddDirs={addDirs}\r\n");
 
             var tcs = new TaskCompletionSource<int>();
             var thread = new Thread((s) =>
@@ -174,7 +177,6 @@ namespace MyCodeToExecute
                         interop.Owner = ProcToMonitor.MainWindowHandle;
                     }
                     oWindow.Content = new MyUserControl(null, pidToMonitor);
-
                     oWindow.ShowDialog();
                 }
                 catch (Exception ex)
@@ -241,15 +243,35 @@ namespace MyCodeToExecute
         public GCReason GCReason { get { return _GCReason; } set { _GCReason = value; RaisePropChanged(); } }
         public int NumDistinctItems { get { return dictSamples.Count; } set { } }
 
-        public int MaxListSize { get; set; } = 100;
-
         public long SizeGen0 { get; set; }
         public long SizeGen1 { get; set; }
         public long SizeGen2 { get; set; }
         public long SizeGen3 { get; set; }
         public long Total { get; set; }
 
-        Dictionary<string, GCSampleData> dictSamples = new Dictionary<string, GCSampleData>();
+        Chart _chartGen0;
+        Chart _chartGen1;
+        Chart _chartGen2;
+        Chart _chartGen3;
+        Chart _chartTot;
+
+        Dictionary<string, GCSampleData> dictSamples = new Dictionary<string, GCSampleData>(); // Type=>GCSampleData
+
+        List<GCSampleData> _LstDataTypes = new List<GCSampleData>();
+        public List<GCSampleData> LstDataTypes { get { return _LstDataTypes; } set { _LstDataTypes = value; RaisePropChanged(); } }
+
+        Dictionary<string, int> dictGCTypes = new Dictionary<string, int>(); // GC Type=>Count
+        List<Tuple<string, int>> _LstGCTypes = new List<Tuple<string, int>>();
+        public List<Tuple<string, int>> LstGCTypes { get { return _LstGCTypes; } set { _LstGCTypes = value; RaisePropChanged(); } }
+
+        Dictionary<string, int> dictGCReasons = new Dictionary<string, int>(); // GC Reason=>Count
+        List<Tuple<string, int>> _LstGCReasons = new List<Tuple<string, int>>();
+        public List<Tuple<string, int>> LstGCReasons { get { return _LstGCReasons; } set { _LstGCReasons = value; RaisePropChanged(); } }
+
+        public int MaxListSize { get; set; } = 20;
+        public int NumDataPoints { get; set; } = 100;
+        public bool UpdateTypeListOnGC { get; set; } = false;
+
         bool PendingReset = false;
         private TextBox _txtStatus;
         private Button _btnGo;
@@ -269,6 +291,7 @@ namespace MyCodeToExecute
                     CleanUp();
                 };
             }
+            var x = new WindowsFormsHost(); //prime the pump
             // xmlns:l="clr-namespace:WpfApp1;assembly=WpfApp1"
             // the C# string requires quotes to be doubled
             var strxaml =
@@ -277,88 +300,125 @@ xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         Margin=""5,5,5,5"">
-        <Grid.RowDefinitions>
-            <RowDefinition Height=""Auto""/>
-            <RowDefinition Height=""*""/>
-        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width = ""Auto""/>
+            <ColumnDefinition Width = ""900""/>
+            <ColumnDefinition Width = ""3""/>
             <ColumnDefinition Width = ""*""/>
         </Grid.ColumnDefinitions>
-        <StackPanel Grid.Row=""0"" HorizontalAlignment=""Left"" VerticalAlignment=""Top"" Orientation=""Vertical"">
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""MaxListSize""/>
-                <TextBox Text = ""{{Binding MaxListSize}}"" Width = ""200""/>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height=""Auto""/>
+                <RowDefinition Height=""*""/>
+            </Grid.RowDefinitions>
+            <StackPanel HorizontalAlignment=""Left"" VerticalAlignment=""Top"" Orientation=""Vertical"">
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""MaxListSize""/>
+                    <TextBox Text = ""{{Binding MaxListSize}}"" Width = ""200"" ToolTip=""# datatypes to keep in history""/>
+                    <Label Content=""NumDataPoints""/>
+                    <TextBox Text = ""{{Binding NumDataPoints}}"" Width = ""200"" ToolTip=""# of points in graphs""/>
+                    <CheckBox Content=""UpdateTypeListOnGC"" IsChecked = ""{{Binding UpdateTypeListOnGC}}"" 
+ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher data) or GC (less CPU hit). Use the ChildProc sample to monitor CPU use""/>
+                    <Button x:Name=""_btnReset"" Content=""Reset"" Width=""45"" ToolTip=""Reset history of types collected on next event"" HorizontalAlignment = ""Left""/>
+                    <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip=""Start/Stop monitoring events"" HorizontalAlignment = ""Left""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""TypeName""/>
+                    <TextBox Text = ""{{Binding TypeName}}"" Width = ""600""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""AllocationAmount""/>
+                    <TextBox Text = ""{{Binding AllocationAmount, StringFormat=N0}}"" Width = ""400""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""GCCount""/>
+                    <TextBox Text = ""{{Binding GCCount, StringFormat=N0}}"" Width = ""400""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""GCType""/>
+                    <TextBox Text = ""{{Binding GCType}}"" Width = ""400""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""GCReason""/>
+                    <TextBox Text = ""{{Binding GCReason}}"" Width = ""400""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""NumDistinctItems""/>
+                    <TextBox Text = ""{{Binding NumDistinctItems}}"" Width = ""400""/>
+                </StackPanel>
+                <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
+                IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
             </StackPanel>
-            <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip=""Start/Stop monitoring events"" HorizontalAlignment = ""Left""/>
-            <Button x:Name=""_btnReset"" Content=""Reset"" Width=""45"" ToolTip=""Reset history of types collected on next event"" HorizontalAlignment = ""Left""/>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""TypeName""/>
-                <TextBox Text = ""{{Binding TypeName}}"" Width = ""600""/>
+            <StackPanel Grid.Row = ""1"" Orientation= ""Vertical"">
+                <Label Content=""Size of Each Gen (not refreshed until after GC end. Ctrl+Alt+Shift+F12 twice will induce GC in VS)""/>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen0""/>
+                    <TextBox Text = ""{{Binding SizeGen0, StringFormat=N0}}"" Width = ""90""/>
+                    <WindowsFormsHost x:Name=""wfhostGen0"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen1 ""/>
+                    <TextBox Text = ""{{Binding SizeGen1, StringFormat=N0}}"" Width = ""90""/>
+                    <WindowsFormsHost x:Name=""wfhostGen1"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen2 ""/>
+                    <TextBox Text = ""{{Binding SizeGen2, StringFormat=N0}}"" Width = ""90""/>
+                    <WindowsFormsHost x:Name=""wfhostGen2"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen3 ""/>
+                    <TextBox Text = ""{{Binding SizeGen3, StringFormat=N0}}"" Width = ""90""/>
+                    <WindowsFormsHost x:Name=""wfhostGen3"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Total""/>
+                    <TextBox Text = ""{{Binding Total, StringFormat=N0}}"" Width = ""90""/>
+                    <WindowsFormsHost x:Name=""wfhostTot"" Height=""200"" Width = ""500""/>
+                </StackPanel>
             </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""AllocationAmount""/>
-                <TextBox Text = ""{{Binding AllocationAmount, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""GCCount""/>
-                <TextBox Text = ""{{Binding GCCount, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""GCType""/>
-                <TextBox Text = ""{{Binding GCType}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""GCReason""/>
-                <TextBox Text = ""{{Binding GCReason}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""NumDistinctItems""/>
-                <TextBox Text = ""{{Binding NumDistinctItems}}"" Width = ""400""/>
-            </StackPanel>
-            <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
-            IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
-        </StackPanel>
-        <StackPanel Grid.Column = ""1"" Orientation= ""Vertical"">
-            <Label Content=""Size of Each Gen (not refreshed until after GC end. Ctrl+Alt+Shift+F12 twice will induce GC in VS)""/>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""Gen0""/>
-                <TextBox Text = ""{{Binding SizeGen0, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""Gen1 ""/>
-                <TextBox Text = ""{{Binding SizeGen1, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""Gen2 ""/>
-                <TextBox Text = ""{{Binding SizeGen2, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""Gen3 ""/>
-                <TextBox Text = ""{{Binding SizeGen3, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-            <StackPanel Orientation=""Horizontal"">
-                <Label Content=""Total""/>
-                <TextBox Text = ""{{Binding Total, StringFormat=N0}}"" Width = ""400""/>
-            </StackPanel>
-        </StackPanel>
-        <Grid Grid.Row=""1"">
-            <DockPanel x:Name = ""dpData""/>
         </Grid>
-    </Grid>
-";
-            /*
-            <ListView x:Name=""lv"" ItemsSource=""{{Binding DataItems}}"" FontFamily=""Consolas"" FontSize=""10"">
+        <GridSplitter Grid.Column = ""1"" HorizontalAlignment=""Center"" VerticalAlignment=""Stretch"" Width = ""3"" Background=""LightBlue""/>
+        <Grid Grid.Column=""2"">
+            <Grid.RowDefinitions>
+                <RowDefinition Height=""100""/>
+                <RowDefinition Height=""3""/>
+                <RowDefinition Height=""100""/>
+                <RowDefinition Height=""3""/>
+                <RowDefinition Height=""200""/>
+            </Grid.RowDefinitions>
+            <ListView ItemsSource=""{{Binding LstGCTypes}}"" FontFamily=""Consolas"" FontSize=""10"">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""GCType"" Width = ""100""/>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            <GridSplitter Grid.Row = ""1"" HorizontalAlignment=""Stretch"" VerticalAlignment=""Center"" Height = ""3"" Background=""LightBlue""/>
+            <ListView Grid.Row=""2"" ItemsSource=""{{Binding LstGCReasons}}"" FontFamily=""Consolas"" FontSize=""10"">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""GCReason"" Width = ""100""/>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            <GridSplitter Grid.Row = ""3"" HorizontalAlignment=""Stretch"" VerticalAlignment=""Center"" Height = ""3"" Background=""LightBlue""/>
+            <ListView Grid.Row=""4"" ItemsSource=""{{Binding LstDataTypes}}"" FontFamily=""Consolas"" FontSize=""10"">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn DisplayMemberBinding=""{{Binding Count, StringFormat=N0}}"" Header=""Count"" Width = ""80""/>
                         <GridViewColumn DisplayMemberBinding=""{{Binding Size, StringFormat=N0}}"" Header=""Size"" Width = ""100""/>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding TypeName}}"" Header=""TypeName""/>
+                        <GridViewColumn DisplayMemberBinding=""{{Binding TypeName}}"" Header=""TypeName"" Width = ""600""/>
                     </GridView>
                 </ListView.View>
             </ListView>
+        </Grid>
+    </Grid>
+";
+            /*
              */
-            var grid = (Grid)(XamlReader.Parse(strxaml));
+            var grid = (System.Windows.Controls.Grid)(XamlReader.Parse(strxaml));
             grid.DataContext = this;
             this.Content = grid;
             this._txtStatus = (TextBox)grid.FindName("_txtStatus");
@@ -367,7 +427,29 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             var btnRest = (Button)grid.FindName("_btnReset");
             btnRest.Click += (_, __) => { PendingReset = true; };
             _dpData = (DockPanel)grid.FindName("dpData");
-
+            _chartGen0 = InitChart("wfhostGen0");
+            _chartGen1 = InitChart("wfhostGen1");
+            _chartGen2 = InitChart("wfhostGen2");
+            _chartGen3 = InitChart("wfhostGen3");
+            _chartTot = InitChart("wfhostTot");
+            Chart InitChart(string wfhostName)
+            {
+                var wfhost = (WindowsFormsHost)grid.FindName(wfhostName);
+                var chart = new Chart();
+                wfhost.Child = chart;
+                var chartArea = new ChartArea();
+                chartArea.AxisY.LabelStyle.Format = "{0:n0}";
+                chartArea.AxisY.LabelStyle.Font = new System.Drawing.Font("Consolas", 12);
+                chartArea.AxisY.IsStartedFromZero = false;
+                chart.ChartAreas.Add(chartArea);
+                var series = new Series
+                {
+                    ChartType = SeriesChartType.Line,
+                    Name = "Total"
+                };
+                chart.Series.Add(series);
+                return chart;
+            }
             _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
             {
                 _btnGo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -478,6 +560,22 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
 
             _userSession.EnableProvider(ClrTraceEventParser.ProviderGuid, TraceEventLevel.Verbose, (ulong)(ClrTraceEventParser.Keywords.Default));
             var gcAllocStream = _userSession.Source.Clr.Observe<GCAllocationTickTraceData>();
+            void UpdateTypeList()
+            {
+                var lst = (from item in dictSamples.Values
+                           orderby item.Size descending
+                           select item).Take(MaxListSize);
+
+                LstDataTypes = new List<GCSampleData>(lst);
+
+                LstGCTypes = (from item in dictGCTypes
+                              orderby item.Key
+                              select Tuple.Create(item.Key, item.Value)).ToList();
+
+                LstGCReasons = (from item in dictGCReasons
+                                orderby item.Key
+                                select Tuple.Create(item.Key, item.Value)).ToList();
+            }
             gcAllocStream.Subscribe(new MyObserver<GCAllocationTickTraceData>((d) =>
             {
                 if (d.ProcessID == _pidToMonitor)
@@ -500,42 +598,78 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                         data.Size += AllocationAmount;
                         RaisePropChanged(nameof(NumDistinctItems));
                     }
-                    var lst = (from item in dictSamples.Values
-                               orderby item.Size descending
-                               select item).Take(MaxListSize);
-                    _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
+                    if (!UpdateTypeListOnGC)
                     {
-                        try
-                        {
-                            var br = new BrowsePanel(lst, colWidths: new[] { 80, 100, 500 });
-                            _dpData.Children.Clear();
-                            _dpData.Children.Add(br);
-                        }
-                        catch (Exception ex)
-                        {
-                            AddStatusMsg($"Exception.#items = {dictSamples.Count} \r\n{ex}");
-                        }
-                    }));
+                        UpdateTypeList();
+                    }
+                    //_txtStatus.Dispatcher.BeginInvoke(new Action(() =>
+                    //{
+                    //    try
+                    //    {
+
+                    //        //    var br = new BrowsePanel(lst, colWidths: new[] { 80, 100, 500 });
+                    //        //    _dpData.Children.Clear();
+                    //        //    _dpData.Children.Add(br);
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        AddStatusMsg($"Exception.#items = {dictSamples.Count} \r\n{ex}");
+                    //    }
+                    //}));
                 }
             }));
             var gcHeapStatsStream = _userSession.Source.Clr.Observe<GCHeapStatsTraceData>();
             gcHeapStatsStream.Subscribe(new MyObserver<GCHeapStatsTraceData>((d) =>
+            {
+                if (d.ProcessID == _pidToMonitor)
+                {
+                    SizeGen0 = d.GenerationSize0;
+                    SizeGen1 = d.GenerationSize1;
+                    SizeGen2 = d.GenerationSize2;
+                    SizeGen3 = d.GenerationSize3;
+                    Total = SizeGen0 + SizeGen1 + SizeGen2 + SizeGen3;
+                    RaisePropChanged(nameof(SizeGen0));
+                    RaisePropChanged(nameof(SizeGen1));
+                    RaisePropChanged(nameof(SizeGen2));
+                    RaisePropChanged(nameof(SizeGen3));
+                    RaisePropChanged(nameof(Total));
+                    _txtStatus.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (d.ProcessID == _pidToMonitor)
+                        try
                         {
-                            SizeGen0 = d.GenerationSize0;
-                            SizeGen1 = d.GenerationSize1;
-                            SizeGen2 = d.GenerationSize2;
-                            SizeGen3 = d.GenerationSize3;
-                            Total = SizeGen0 + SizeGen1 + SizeGen2 + SizeGen3;
-                            RaisePropChanged(nameof(SizeGen0));
-                            RaisePropChanged(nameof(SizeGen1));
-                            RaisePropChanged(nameof(SizeGen2));
-                            RaisePropChanged(nameof(SizeGen3));
-                            RaisePropChanged(nameof(Total));
-                            //AddStatusMsg($"HeapStats {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                            if (UpdateTypeListOnGC)
+                            {
+                                UpdateTypeList();
+                            }
+                            UpdateChart(_chartGen0, SizeGen0);
+                            UpdateChart(_chartGen1, SizeGen1);
+                            UpdateChart(_chartGen2, SizeGen2);
+                            UpdateChart(_chartGen3, SizeGen3);
+                            UpdateChart(_chartTot, Total);
+                            void UpdateChart(Chart chart, long value)
+                            {
+                                var series = chart.Series[0];
+                                if (series.Points.Count() >= NumDataPoints)
+                                {
+                                    series.Points.RemoveAt(0);
+                                    for (int i = 0; i < series.Points.Count(); i++)
+                                    {
+                                        series.Points[i].XValue = i;
+                                    }
+                                }
+                                series.Points.Add(new DataPoint(series.Points.Count(), value));
+                                chart.ChartAreas[0].RecalculateAxesScale();
+                                chart.DataBind();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            AddStatusMsg(ex.ToString());
                         }
                     }));
+                    //AddStatusMsg($"HeapStats {d.GenerationSize0,12:n0}  {d.GenerationSize1,12:n0} {d.GenerationSize2,12:n0} {d.GenerationSize3,12:n0}  {d.GenerationSize4,12:n0}");
+                }
+            }));
             var gcStartStream = _userSession.Source.Clr.Observe<GCStartTraceData>();
             gcStartStream.Subscribe(new MyObserver<GCStartTraceData>((d) =>
             {
@@ -544,7 +678,22 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     GCReason = d.Reason;
                     GCType = d.Type;
                     GCCount = d.Count;
-                    //AddStatusMsg($"GCStart");
+                    if (!dictGCTypes.ContainsKey(GCType.ToString()))
+                    {
+                        dictGCTypes[GCType.ToString()] = 1;
+                    }
+                    else
+                    {
+                        dictGCTypes[GCType.ToString()]++;
+                    }
+                    if (!dictGCReasons.ContainsKey(GCReason.ToString()))
+                    {
+                        dictGCReasons[GCReason.ToString()] = 1;
+                    }
+                    else
+                    {
+                        dictGCReasons[GCReason.ToString()]++;
+                    }
                 }
             }));
             var gcEndStream = _userSession.Source.Clr.Observe<GCEndTraceData>();
