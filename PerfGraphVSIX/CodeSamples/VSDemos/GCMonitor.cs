@@ -153,14 +153,13 @@ namespace MyCodeToExecute
     internal class MyEtwMainWindow
     {
         // arg1 is a file to write our results, arg2 and arg3 show we can pass simple types. e.g. Pass the name of a named pipe.
-        //        [STAThread]
         internal static async Task MyMainMethod(string outLogFile, string addDirs, int pidToMonitor, bool boolarg)
         {
             _additionalDirs = addDirs;
             File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}  AddDirs={addDirs}\r\n");
 
             var tcs = new TaskCompletionSource<int>();
-            var thread = new Thread((s) =>
+            var thread = new Thread((s) => // need to create our own STA thread (can't use threadpool)
             {
                 try
                 {
@@ -313,9 +312,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             <StackPanel HorizontalAlignment=""Left"" VerticalAlignment=""Top"" Orientation=""Vertical"">
                 <StackPanel Orientation=""Horizontal"">
                     <Label Content=""MaxListSize""/>
-                    <TextBox Text = ""{{Binding MaxListSize}}"" Width = ""200"" ToolTip=""# datatypes to keep in history""/>
+                    <TextBox Text = ""{{Binding MaxListSize}}"" Width = ""40"" ToolTip=""# datatypes to keep in history""/>
                     <Label Content=""NumDataPoints""/>
-                    <TextBox Text = ""{{Binding NumDataPoints}}"" Width = ""200"" ToolTip=""# of points in graphs""/>
+                    <TextBox Text = ""{{Binding NumDataPoints}}"" Width = ""40"" ToolTip=""# of points in graphs""/>
                     <CheckBox Content=""UpdateTypeListOnGC"" IsChecked = ""{{Binding UpdateTypeListOnGC}}"" 
 ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher data) or GC (less CPU hit). Use the ChildProc sample to monitor CPU use""/>
                     <Button x:Name=""_btnReset"" Content=""Reset"" Width=""45"" ToolTip=""Reset history of types collected on next event"" HorizontalAlignment = ""Left""/>
@@ -347,72 +346,63 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
                 </StackPanel>
                 <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
                 IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
-            </StackPanel>
-            <StackPanel Grid.Row = ""1"" Orientation= ""Vertical"">
-                <Label Content=""Size of Each Gen (not refreshed until after GC end. Ctrl+Alt+Shift+F12 twice will induce GC in VS)""/>
-                <StackPanel Orientation=""Horizontal"">
-                    <Label Content=""Gen0""/>
-                    <TextBox Text = ""{{Binding SizeGen0, StringFormat=N0}}"" Width = ""90""/>
-                    <WindowsFormsHost x:Name=""wfhostGen0"" Height=""200"" Width = ""500""/>
-                </StackPanel>
-                <StackPanel Orientation=""Horizontal"">
-                    <Label Content=""Gen1 ""/>
-                    <TextBox Text = ""{{Binding SizeGen1, StringFormat=N0}}"" Width = ""90""/>
-                    <WindowsFormsHost x:Name=""wfhostGen1"" Height=""200"" Width = ""500""/>
-                </StackPanel>
-                <StackPanel Orientation=""Horizontal"">
-                    <Label Content=""Gen2 ""/>
-                    <TextBox Text = ""{{Binding SizeGen2, StringFormat=N0}}"" Width = ""90""/>
-                    <WindowsFormsHost x:Name=""wfhostGen2"" Height=""200"" Width = ""500""/>
-                </StackPanel>
-                <StackPanel Orientation=""Horizontal"">
-                    <Label Content=""Gen3 ""/>
-                    <TextBox Text = ""{{Binding SizeGen3, StringFormat=N0}}"" Width = ""90""/>
-                    <WindowsFormsHost x:Name=""wfhostGen3"" Height=""200"" Width = ""500""/>
-                </StackPanel>
-                <StackPanel Orientation=""Horizontal"">
-                    <Label Content=""Total""/>
-                    <TextBox Text = ""{{Binding Total, StringFormat=N0}}"" Width = ""90""/>
-                    <WindowsFormsHost x:Name=""wfhostTot"" Height=""200"" Width = ""500""/>
-                </StackPanel>
+                <ListView ItemsSource=""{{Binding LstGCTypes}}"" FontFamily=""Consolas"" FontSize=""10"" Height = ""100"">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""GCType"" Width = ""100""/>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+                <ListView ItemsSource=""{{Binding LstGCReasons}}"" FontFamily=""Consolas"" FontSize=""10""  Height = ""100"">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""GCReason"" Width = ""100""/>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+                <ListView ItemsSource=""{{Binding LstDataTypes}}"" FontFamily=""Consolas"" FontSize=""10""  Height = ""600"">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Count, StringFormat=N0}}"" Header=""Count"" Width = ""80""/>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Size, StringFormat=N0}}"" Header=""Size"" Width = ""100""/>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding TypeName}}"" Header=""TypeName"" Width = ""600""/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
             </StackPanel>
         </Grid>
         <GridSplitter Grid.Column = ""1"" HorizontalAlignment=""Center"" VerticalAlignment=""Stretch"" Width = ""3"" Background=""LightBlue""/>
         <Grid Grid.Column=""2"">
-            <Grid.RowDefinitions>
-                <RowDefinition Height=""100""/>
-                <RowDefinition Height=""3""/>
-                <RowDefinition Height=""100""/>
-                <RowDefinition Height=""3""/>
-                <RowDefinition Height=""200""/>
-            </Grid.RowDefinitions>
-            <ListView ItemsSource=""{{Binding LstGCTypes}}"" FontFamily=""Consolas"" FontSize=""10"">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""GCType"" Width = ""100""/>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
-            <GridSplitter Grid.Row = ""1"" HorizontalAlignment=""Stretch"" VerticalAlignment=""Center"" Height = ""3"" Background=""LightBlue""/>
-            <ListView Grid.Row=""2"" ItemsSource=""{{Binding LstGCReasons}}"" FontFamily=""Consolas"" FontSize=""10"">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""GCReason"" Width = ""100""/>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
-            <GridSplitter Grid.Row = ""3"" HorizontalAlignment=""Stretch"" VerticalAlignment=""Center"" Height = ""3"" Background=""LightBlue""/>
-            <ListView Grid.Row=""4"" ItemsSource=""{{Binding LstDataTypes}}"" FontFamily=""Consolas"" FontSize=""10"">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding Count, StringFormat=N0}}"" Header=""Count"" Width = ""80""/>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding Size, StringFormat=N0}}"" Header=""Size"" Width = ""100""/>
-                        <GridViewColumn DisplayMemberBinding=""{{Binding TypeName}}"" Header=""TypeName"" Width = ""600""/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
+            <StackPanel Grid.Row = ""1"" Orientation= ""Vertical"">
+                <Label Content=""Size of Each Gen (not refreshed until after GC end. Ctrl+Alt+Shift+F12 twice will induce GC in VS)""/>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen0""/>
+                    <TextBlock Text = ""{{Binding SizeGen0, StringFormat=N0}}"" Width = ""90"" Margin=""0,5,0,0""/>
+                    <WindowsFormsHost x:Name=""wfhostGen0"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen1 ""/>
+                    <TextBlock Text = ""{{Binding SizeGen1, StringFormat=N0}}"" Width = ""90"" Margin=""0,5,0,0""/>
+                    <WindowsFormsHost x:Name=""wfhostGen1"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen2 ""/>
+                    <TextBlock Text = ""{{Binding SizeGen2, StringFormat=N0}}"" Width = ""90"" Margin=""0,5,0,0""/>
+                    <WindowsFormsHost x:Name=""wfhostGen2"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Gen3 ""/>
+                    <TextBlock Text = ""{{Binding SizeGen3, StringFormat=N0}}"" Width = ""90"" Margin=""0,5,0,0""/>
+                    <WindowsFormsHost x:Name=""wfhostGen3"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+                <StackPanel Orientation=""Horizontal"">
+                    <Label Content=""Total""/>
+                    <TextBlock Text = ""{{Binding Total, StringFormat=N0}}"" Width = ""90"" Margin=""0,5,0,0""/>
+                    <WindowsFormsHost x:Name=""wfhostTot"" Height=""200"" Width = ""500""/>
+                </StackPanel>
+            </StackPanel>
         </Grid>
     </Grid>
 ";
@@ -547,11 +537,14 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
             }
             _userSession = new TraceEventSession($"PerfGraphGCMon"); // only 1 at a time can exist with this name in entire machine
 
+            var gguid = TraceEventProviders.GetEventSourceGuidFromName("Microsoft-VisualStudio-Threading");
+            AddStatusMsg($"Got guid {gguid}");
+
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common", matchAnyKeywords: 0xFFFFFFDF);
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common");
             //            _userSession.EnableProvider(new Guid("25c93eda-40a3-596d-950d-998ab963f367"));
             // Microsoft-VisualStudio-Common {25c93eda-40a3-596d-950d-998ab963f367}
-
+            //< Provider Name = "589491ba-4f15-53fe-c376-db7f020f5204" /> < !--Microsoft-VisualStudio-Threading-- >
             //_userSession.EnableProvider(new Guid("EE328C6F-4C94-45F7-ACAF-640C6A447654")); // Retail Asserts
             //_userSession.EnableProvider(new Guid("143A31DB-0372-40B6-B8F1-B4B16ADB5F54"), TraceEventLevel.Verbose, ulong.MaxValue); //MeasurementBlock
             //_userSession.EnableProvider(new Guid("641D7F6C-481C-42E8-AB7E-D18DC5E5CB9E"), TraceEventLevel.Verbose, ulong.MaxValue); // Codemarker
@@ -711,37 +704,40 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
             //        //                     AddStatusMsg($"{e.EventName}");
             //    }
             //};
-            _kernelsession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
-            _kernelsession.EnableKernelProvider(
-                KernelTraceEventParser.Keywords.ImageLoad |
-                KernelTraceEventParser.Keywords.Process |
-                KernelTraceEventParser.Keywords.FileIO |
-                KernelTraceEventParser.Keywords.NetworkTCPIP
-                );
-            _kernelsession.Source.Kernel.ImageLoad += (d) =>
+            //            _kernelsession = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
+            if (_kernelsession != null)
             {
+                _kernelsession.EnableKernelProvider(
+                    KernelTraceEventParser.Keywords.ImageLoad |
+                    KernelTraceEventParser.Keywords.Process |
+                    KernelTraceEventParser.Keywords.FileIO |
+                    KernelTraceEventParser.Keywords.NetworkTCPIP
+                    );
+                _kernelsession.Source.Kernel.ImageLoad += (d) =>
+                {
 
-            };
-            _kernelsession.Source.Kernel.ProcessStart += (d) =>
-            {
+                };
+                _kernelsession.Source.Kernel.ProcessStart += (d) =>
+                {
 
-            };
-            _kernelsession.Source.Kernel.ProcessStop += (d) =>
-            {
+                };
+                _kernelsession.Source.Kernel.ProcessStop += (d) =>
+                {
 
-            };
-            _kernelsession.Source.Kernel.TcpIpConnect += (d) =>
-            {
+                };
+                _kernelsession.Source.Kernel.TcpIpConnect += (d) =>
+                {
 
-            };
-            _kernelsession.Source.Kernel.FileIORead += (d) =>
-            {
+                };
+                _kernelsession.Source.Kernel.FileIORead += (d) =>
+                {
 
-            };
-            _kernelsession.Source.Kernel.FileIOCreate += (d) =>
-            {
+                };
+                _kernelsession.Source.Kernel.FileIOCreate += (d) =>
+                {
 
-            };
+                };
+            }
             _ = Task.Run(() =>
             {
                 _kernelsession.Source.Process();
