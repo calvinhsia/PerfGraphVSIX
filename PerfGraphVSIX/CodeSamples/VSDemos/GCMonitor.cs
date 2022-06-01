@@ -80,8 +80,7 @@ namespace MyCodeToExecute
                 // run it out of proc so our memory use doesn't affect the numbers
                 // Or we can generate a 64 bit exe and run it
                 var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-                var pathStressDir = Path.GetDirectoryName(typeof(StressUtil).Assembly.Location);
-                var addDir = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{pathStressDir}";
+                var addDirs = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{Path.GetDirectoryName(typeof(StressUtil).Assembly.Location)}";
 
                 // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
                 var asmGCMonitor = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
@@ -91,13 +90,13 @@ namespace MyCodeToExecute
                         asmGCMonitor,
                         PortableExecutableKinds.PE32Plus,
                         ImageFileMachine.AMD64,
-                        AdditionalAssemblyPaths: addDir, // Microsoft.VisualStudio.Shell.Interop
+                        AdditionalAssemblyPaths: addDirs, // Microsoft.VisualStudio.Shell.Interop
                         logOutput: false // for diagnostics
                     );
                 var pidToMonitor = Process.GetCurrentProcess().Id;
                 var outputLogFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyTestAsm.log");
                 File.Delete(outputLogFile);
-                var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDir}"" ""{pidToMonitor}"" true";
+                var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDirs}"" ""{pidToMonitor}"" true";
                 var pListener = Process.Start(
                     asmGCMonitor,
                     args);
@@ -274,7 +273,6 @@ namespace MyCodeToExecute
         bool PendingReset = false;
         private TextBox _txtStatus;
         private Button _btnGo;
-        DockPanel _dpData;
         private CancellationTokenSource _cts;
         private bool _isTracing;
         private TraceEventSession _kernelsession;
@@ -416,7 +414,7 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
             this._btnGo.Click += BtnGo_Click;
             var btnRest = (Button)grid.FindName("_btnReset");
             btnRest.Click += (_, __) => { PendingReset = true; };
-            _dpData = (DockPanel)grid.FindName("dpData");
+            var _dpData = (DockPanel)grid.FindName("dpData");
             _chartGen0 = InitChart("wfhostGen0");
             _chartGen1 = InitChart("wfhostGen1");
             _chartGen2 = InitChart("wfhostGen2");
@@ -533,7 +531,7 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
 
             if (TraceEventSession.IsElevated() != true)
             {
-                throw new InvalidOperationException("Must run as zadmin");
+                throw new InvalidOperationException("Must run as admin");
             }
             _userSession = new TraceEventSession($"PerfGraphGCMon"); // only 1 at a time can exist with this name in entire machine
 
