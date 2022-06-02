@@ -553,19 +553,26 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
             var gcAllocStream = _userSession.Source.Clr.Observe<GCAllocationTickTraceData>();
             void UpdateTypeList()
             {
-                var lst = (from item in dictSamples.Values
-                           orderby item.Size descending
-                           select item).Take(MaxListSize);
+                lock (dictSamples)
+                {
+                    var lst = (from item in dictSamples.Values
+                               orderby item.Size descending
+                               select item).Take(MaxListSize);
 
-                LstDataTypes = new List<GCSampleData>(lst);
-
-                LstGCTypes = (from item in dictGCTypes
-                              orderby item.Key
-                              select Tuple.Create(item.Key, item.Value)).ToList();
-
-                LstGCReasons = (from item in dictGCReasons
-                                orderby item.Key
-                                select Tuple.Create(item.Key, item.Value)).ToList();
+                    LstDataTypes = new List<GCSampleData>(lst);
+                }
+                lock (dictGCTypes)
+                {
+                    LstGCTypes = (from item in dictGCTypes
+                                  orderby item.Key
+                                  select Tuple.Create(item.Key, item.Value)).ToList();
+                }
+                lock (dictGCReasons)
+                {
+                    LstGCReasons = (from item in dictGCReasons
+                                    orderby item.Key
+                                    select Tuple.Create(item.Key, item.Value)).ToList();
+                }
             }
             gcAllocStream.Subscribe(new MyObserver<GCAllocationTickTraceData>((d) =>
             {
@@ -574,20 +581,23 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
                     // GCAllocationTick occurs roughly every 100k allocations
                     TypeName = d.TypeName;
                     AllocationAmount = d.AllocationAmount;
-                    if (PendingReset)
+                    lock (dictSamples)
                     {
-                        dictSamples.Clear();
-                        PendingReset = false;
-                    }
-                    if (!dictSamples.TryGetValue(TypeName, out var data))
-                    {
-                        dictSamples[TypeName] = new GCSampleData() { TypeName = TypeName, Count = 1, Size = AllocationAmount };
-                    }
-                    else
-                    {
-                        data.Count++;
-                        data.Size += AllocationAmount;
-                        RaisePropChanged(nameof(NumDistinctItems));
+                        if (PendingReset)
+                        {
+                            dictSamples.Clear();
+                            PendingReset = false;
+                        }
+                        if (!dictSamples.TryGetValue(TypeName, out var data))
+                        {
+                            dictSamples[TypeName] = new GCSampleData() { TypeName = TypeName, Count = 1, Size = AllocationAmount };
+                        }
+                        else
+                        {
+                            data.Count++;
+                            data.Size += AllocationAmount;
+                            RaisePropChanged(nameof(NumDistinctItems));
+                        }
                     }
                     if (!UpdateTypeListOnGC)
                     {
@@ -669,21 +679,27 @@ ToolTip=""Update the list of types on each AllocationTick (more CPU hit, fresher
                     GCReason = d.Reason;
                     GCType = d.Type;
                     GCCount = d.Count;
-                    if (!dictGCTypes.ContainsKey(GCType.ToString()))
+                    lock (dictGCTypes)
                     {
-                        dictGCTypes[GCType.ToString()] = 1;
+                        if (!dictGCTypes.ContainsKey(GCType.ToString()))
+                        {
+                            dictGCTypes[GCType.ToString()] = 1;
+                        }
+                        else
+                        {
+                            dictGCTypes[GCType.ToString()]++;
+                        }
                     }
-                    else
+                    lock (dictGCReasons)
                     {
-                        dictGCTypes[GCType.ToString()]++;
-                    }
-                    if (!dictGCReasons.ContainsKey(GCReason.ToString()))
-                    {
-                        dictGCReasons[GCReason.ToString()] = 1;
-                    }
-                    else
-                    {
-                        dictGCReasons[GCReason.ToString()]++;
+                        if (!dictGCReasons.ContainsKey(GCReason.ToString()))
+                        {
+                            dictGCReasons[GCReason.ToString()] = 1;
+                        }
+                        else
+                        {
+                            dictGCReasons[GCReason.ToString()]++;
+                        }
                     }
                 }
             }));

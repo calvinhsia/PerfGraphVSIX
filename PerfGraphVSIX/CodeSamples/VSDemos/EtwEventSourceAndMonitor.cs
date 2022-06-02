@@ -1,4 +1,4 @@
-﻿//Desc: Listens for JointableTaskFactory ETW events and shows in a separate process.
+﻿//Desc: Listens for GC ETW events and shows in a separate process the most common allocations.
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Include: ..\Util\AssemblyCreator.cs
@@ -40,6 +40,7 @@ using System.Collections.Generic;
 using System.Windows.Forms.Integration;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Text.RegularExpressions;
+using System.Diagnostics.Tracing;
 
 namespace MyCodeToExecute
 {
@@ -57,27 +58,56 @@ namespace MyCodeToExecute
             try
             {
                 await Task.Yield();
-                var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-                var addDirs = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{Path.GetDirectoryName(typeof(StressUtil).Assembly.Location)}";
+                var ProcToMonitor = Process.GetCurrentProcess();
+                var useExternalProcess = true;
+                if (!useExternalProcess)
+                {
+                    var oWindow = new Window()
+                    {
+                        Title = $"MyEventSourceMonitor monitoring {ProcToMonitor.Id} {ProcToMonitor.MainWindowTitle}",
+                    };
+                    oWindow.Content = new MyUserControl(ProcToMonitor.Id);
+                    oWindow.Show();
+                }
+                else
+                {
+                    var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+                    var addDirs = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{Path.GetDirectoryName(typeof(StressUtil).Assembly.Location)}";
 
-                // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
-                var asmGCMonitor = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
-                var type = new AssemblyCreator().CreateAssembly
-                    (
+                    // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
+                    var asmGCMonitor = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
+                    var type = new AssemblyCreator().CreateAssembly
+                        (
+                            asmGCMonitor,
+                            PortableExecutableKinds.PE32Plus,
+                            ImageFileMachine.AMD64,
+                            AdditionalAssemblyPaths: addDirs, // Microsoft.VisualStudio.Shell.Interop
+                            logOutput: false // for diagnostics
+                        );
+                    var outputLogFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyTestAsm.log");
+                    File.Delete(outputLogFile);
+                    var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDirs}"" ""{ProcToMonitor.Id}"" true";
+                    var pListener = Process.Start(
                         asmGCMonitor,
-                        PortableExecutableKinds.PE32Plus,
-                        ImageFileMachine.AMD64,
-                        AdditionalAssemblyPaths: addDirs, // Microsoft.VisualStudio.Shell.Interop
-                        logOutput: false // for diagnostics
-                    );
-                var pidToMonitor = Process.GetCurrentProcess().Id;
-                var outputLogFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyTestAsm.log");
-                File.Delete(outputLogFile);
-                var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDirs}"" ""{pidToMonitor}"" true";
-                var pListener = Process.Start(
-                    asmGCMonitor,
-                    args);
-                _logger.LogMessage($"Launched JoinableTaskFactoryMonitor {pListener.Id}");
+                        args);
+                    _logger.LogMessage($"Launched EtwEventSourceMonitor {pListener.Id}");
+                }
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), _CancellationTokenExecuteCode);
+                    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
+                    {
+                        _logger.LogMessage($"Raising Event ");
+                        MyEventSource.Log.SomeEvent("event msg");
+                        MyEventSource.Log.SomeEvent2("event msg2");
+
+                        await Task.Delay(TimeSpan.FromSeconds(2), _CancellationTokenExecuteCode);
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                }
+                _logger.LogMessage($"Done Raising Events");
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -85,6 +115,15 @@ namespace MyCodeToExecute
                 _logger.LogMessage($"Exception {ex.ToString()}");
             }
         }
+    }
+    [EventSource(Name = "MyEtwEventSource")] // =='MyEtwEventSource'== 'b912a57c-5711-5bbd-1440-05e64115baa3'
+    class MyEventSource : EventSource
+    {
+        public static MyEventSource Log = new MyEventSource();
+        [Event(1, Message = "somemsg{0}", Level = EventLevel.Informational)]
+        public void SomeEvent(string eventMsg) { WriteEvent(1, eventMsg); }
+        [Event(2, Message = "somemsg2")]
+        public void SomeEvent2(string eventMsg) { WriteEvent(2, eventMsg); }
     }
 
     internal class MyEtwMainWindow
@@ -104,7 +143,7 @@ namespace MyCodeToExecute
                     var ProcToMonitor = Process.GetProcessById(pidToMonitor);
                     var oWindow = new Window()
                     {
-                        Title = $"JoinableTaskFactoryMonitor monitoring {pidToMonitor} {ProcToMonitor.MainWindowTitle}",
+                        Title = $"MyEventSourceMonitor monitoring {pidToMonitor} {ProcToMonitor.MainWindowTitle}",
                     };
                     if (ProcToMonitor.MainWindowHandle != IntPtr.Zero)
                     {
@@ -199,7 +238,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     <Button x:Name=""_btnReset"" Content=""Reset"" Width=""45"" ToolTip=""Reset history of JTF events collected on next update"" HorizontalAlignment = ""Left""/>
                     <Button x:Name=""_btnGo"" Content=""_Go"" Width=""45"" ToolTip=""Start/Stop monitoring events"" HorizontalAlignment = ""Left""/>
                 </StackPanel>
-                <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10""
+                <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10"" MaxHeight=""400""
                 IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
                 <ListView ItemsSource=""{{Binding LstJTFEvents}}"" FontFamily=""Consolas"" FontSize=""10"" Height = ""800"">
                     <ListView.View>
@@ -239,10 +278,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
         void InitDictJTF()
         {
             dictJTFEvents.Clear();
-            foreach (var val in Enum.GetValues(typeof(JoinableTaskFactoryEventParser.EventIds)))
-            {
-                dictJTFEvents[val.ToString()] = 0;
-            }
+            dictJTFEvents["EventID(1)"] = 0;
+            dictJTFEvents["EventID(2)"] = 0;
         }
         public void AddStatusMsg(string msg, params object[] args)
         {
@@ -288,14 +325,11 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                         while (_isTracing && !_cts.IsCancellationRequested)
                         {
                             await Task.Delay(TimeSpan.FromSeconds(UpdateIntervalSecs), _cts.Token);
-                            lock (dictJTFEvents)
-                            {
-                                var data = (from kvp in dictJTFEvents
-                                            select Tuple.Create(kvp.Key, kvp.Value)).ToList();
-                                LstJTFEvents = new List<Tuple<string, int>>(data);
-                            }
+                            var data = (from kvp in dictJTFEvents
+                                        select Tuple.Create(kvp.Key, kvp.Value)).ToList();
+                            LstJTFEvents = new List<Tuple<string, int>>(data);
                         }
-//                        await taskTracing;
+                        //                        await taskTracing;
                     }
                     catch (TaskCanceledException)
                     {
@@ -343,9 +377,9 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             {
                 throw new InvalidOperationException("Must run as admin");
             }
-            _userSession = new TraceEventSession($"PerfGraphJTFMon"); // only 1 at a time can exist with this name in entire machine
+            _userSession = new TraceEventSession($"PerfGraphMyEventSourceMonitor"); // only 1 at a time can exist with this name in entire machine
 
-            var gguid = TraceEventProviders.GetEventSourceGuidFromName("Microsoft-VisualStudio-Threading");
+            var gguid = TraceEventProviders.GetEventSourceGuidFromName("MyEtwEventSource");
             AddStatusMsg($"Got guid {gguid}");
 
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common", matchAnyKeywords: 0xFFFFFFDF);
@@ -357,38 +391,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             //_userSession.EnableProvider(new Guid("143A31DB-0372-40B6-B8F1-B4B16ADB5F54"), TraceEventLevel.Verbose, ulong.MaxValue); //MeasurementBlock
             //_userSession.EnableProvider(new Guid("641D7F6C-481C-42E8-AB7E-D18DC5E5CB9E"), TraceEventLevel.Verbose, ulong.MaxValue); // Codemarker
             //_userSession.EnableProvider(new Guid("BF965E67-C7FB-5C5B-D98F-CDF68F8154C2"), TraceEventLevel.Verbose, ulong.MaxValue); // // RoslynEventSource
-            _userSession.EnableProvider(JoinableTaskFactoryEventParser.ProviderGuid, TraceEventLevel.Verbose, ulong.MaxValue);
-
-
-            //var gcAllocStream = _userSession.Source.Clr.Observe<GCAllocationTickTraceData>();
-            //gcAllocStream.Subscribe(new MyObserver<GCAllocationTickTraceData>((d) =>
-            //{
-            //    if (d.ProcessID == _pidToMonitor)
-            //    {
-            //        // GCAllocationTick occurs roughly every 100k allocations
-            //        TypeName = d.TypeName;
-            //        AllocationAmount = d.AllocationAmount;
-            //        if (PendingReset)
-            //        {
-            //            dictSamples.Clear();
-            //            PendingReset = false;
-            //        }
-            //        if (!dictSamples.TryGetValue(TypeName, out var data))
-            //        {
-            //            dictSamples[TypeName] = new GCSampleData() { TypeName = TypeName, Count = 1, Size = AllocationAmount };
-            //        }
-            //        else
-            //        {
-            //            data.Count++;
-            //            data.Size += AllocationAmount;
-            //            RaisePropChanged(nameof(NumDistinctItems));
-            //        }
-            //        if (!UpdateTypeListOnGC)
-            //        {
-            //            UpdateTypeList();
-            //        }
-            //    }
-            //}));
+            _userSession.EnableProvider("MyEtwEventSource", TraceEventLevel.Verbose, ulong.MaxValue);
             _userSession.Source.AllEvents += (e) =>
             {
                 try
@@ -397,32 +400,56 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                     {
                         /*
 
-    <Event MSec=  "3565.4141" PID="48436" PName=  "devenv" TID="52720" EventName="PostExecution/Start"
-      TimeStamp="06/01/22 12:02:34.163047" ID="15" Version="0" Keywords="0x0000F00000000000" TimeStampQPC="6,937,294,464,097" QPCTime="0.100us"
-      Level="Verbose" ProviderName="Microsoft-VisualStudio-Threading" ProviderGuid="589491ba-4f15-53fe-c376-db7f020f5204" ClassicProvider="False" ProcessorNumber="6"
-      Opcode="1" Task="65519" Channel="0" PointerSize="8"
-      CPU="6" EventIndex="89539" TemplateType="DynamicTraceEventData">
-      <PrettyPrint>
-        <Event MSec=  "3565.4141" PID="48436" PName=  "devenv" TID="52720" EventName="PostExecution/Start" ProviderName="Microsoft-VisualStudio-Threading" requestId="52,530,826" mainThreadAffinitized="True"/>
-      </PrettyPrint>
-      <Payload Length="8">
-           0:  8a 8e 21  3  1  0  0  0 |                           ..!..... 
-      </Payload>
-    </Event>    
-    HasStack="True" ThreadID="52,720" ProcessorNumber="6" requestId="52,530,826" mainThreadAffinitized="True" 
-
-                         */
+        /*
+<Event MSec=  "3577.5348" PID="21332" PName=  "devenv" TID="13408" EventName="SomeEvent"
+  TimeStamp="06/01/22 18:02:49.443018" ID="1" Version="0" Keywords="0x0000F00000000000" TimeStampQPC="7,153,447,263,803" QPCTime="0.100us"
+  Level="Informational" ProviderName="MyEtwEventSource" ProviderGuid="b912a57c-5711-5bbd-1440-05e64115baa3" ClassicProvider="False" ProcessorNumber="3"
+  Opcode="0" Task="65533" Channel="0" PointerSize="8"
+  CPU="3" EventIndex="95580" TemplateType="DynamicTraceEventData">
+  <PrettyPrint>
+    <Event MSec=  "3577.5348" PID="21332" PName=  "devenv" TID="13408" EventName="SomeEvent" ProviderName="MyEtwEventSource" FormattedMessage="somemsg" eventMsg="event msg"/>
+  </PrettyPrint>
+  <Payload Length="20">
+       0:  65  0 76  0 65  0 6e  0 | 74  0 20  0 6d  0 73  0   e.v.e.n. t. .m.s.
+      10:  67  0  0  0             |                           g...
+  </Payload>
+</Event>
+Name
++ Process64 devenv (21332) Args:  
+ + Thread (13408) CPU=3048ms (VS Main)
+  + ntdll!?
+   + kernel32!?
+    + devenv!?
+     + msenv!?
+      + user32!?
+       + clr!UMThunkStub
+        + windowsbase.ni!?
+         + mscorlib.ni!?
+          + windowsbase.ni!?
+           + microsoft.visualstudio.threading.ni!?
+            + mscorlib.ni!?
+             + ManagedModule!MyCodeToExecute.MyClass+<DoItAsync>d__2.MoveNext()
+              + ManagedModule!MyEventSource.SomeEvent
+               + mscorlib.ni!?
+                + ntdll!?
+                 + Event MyEtwEventSource/SomeEvent
+        */
                         var eventName = e.EventName;
                         var eventNdx = 0;
                         var match = Regex.Match(eventName, @"EventID\((\d+)\)");
                         if (match.Success)
                         {
                             eventNdx = int.Parse(match.Groups[1].Value);
-                            eventName = ((JoinableTaskFactoryEventParser.EventIds)eventNdx).ToString();
+                            //                            eventName = ((JoinableTaskFactoryEventParser.EventIds)eventNdx).ToString();
                         }
                         var parm1 = 0;
                         var parm2 = 0;
                         var byts = e.EventData();
+                        if (eventName == "EventID(1)")
+                        {// ReadUnicodeString
+                            var str = UnicodeEncoding.Unicode.GetString(byts);
+                            AddStatusMsg($"Got str '{str}'   {e.FormattedMessage}");
+                        }
                         if (byts.Length >= 4)
                         {
                             parm1 = BitConverter.ToInt32(byts, 0);
@@ -435,17 +462,14 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                         {
                             InitDictJTF();
                         }
-                        lock (dictJTFEvents)
+                        if (!dictJTFEvents.ContainsKey(eventName))
                         {
-                            if (!dictJTFEvents.ContainsKey(eventName))
-                            {
-                                AddStatusMsg($"Key not found {eventName}");
-                            }
-                            else
-                            {
-                                dictJTFEvents[eventName]++;
-                                //                            AddStatusMsg($"NDx {eventNdx}  {eventName} {dictJTFEvents[eventName]}");
-                            }
+                            AddStatusMsg($"Key not found {eventName}");
+                        }
+                        else
+                        {
+                            dictJTFEvents[eventName]++;
+                            //                            AddStatusMsg($"NDx {eventNdx}  {eventName} {dictJTFEvents[eventName]}");
                         }
                     }
                 }
@@ -462,162 +486,5 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                 AddStatusMsg($"Done Source.Process");
             });
         }
-    }
-    internal class JoinableTaskFactoryEventParser : TraceEventParser
-    {
-        public static readonly string ProviderName = "Microsoft-VisualStudio-Threading";
-        public static readonly Guid ProviderGuid = new Guid("589491ba-4f15-53fe-c376-db7f020f5204");
-        static private volatile TraceEvent[] s_templates;
-        protected override string GetProviderName() { return ProviderName; }
-
-        public enum EventIds
-        {
-            /// <summary>
-            /// The event ID for the <see cref="ReaderWriterLockIssued(int, AsyncReaderWriterLock.LockKind, int, int)"/> event.
-            /// </summary>
-            ReaderWriterLockIssuedLockCountsEvent = 1,
-
-            /// <summary>
-            /// The event ID for the <see cref="WaitReaderWriterLockStart(int, AsyncReaderWriterLock.LockKind, int, int, int)"/> event.
-            /// </summary>
-            WaitReaderWriterLockStartEvent = 2,
-
-            /// <summary>
-            /// The event ID for the <see cref="WaitReaderWriterLockStop(int, AsyncReaderWriterLock.LockKind)"/> event.
-            /// </summary>
-            WaitReaderWriterLockStopEvent = 3,
-
-            /// <summary>
-            /// The event ID for the <see cref="CompleteOnCurrentThreadStart(int, bool)"/>.
-            /// </summary>
-            CompleteOnCurrentThreadStartEvent = 11,
-
-            /// <summary>
-            /// The event ID for the <see cref="CompleteOnCurrentThreadStop(int)"/>.
-            /// </summary>
-            CompleteOnCurrentThreadStopEvent = 12,
-
-            /// <summary>
-            /// The event ID for the <see cref="WaitSynchronouslyStart()"/>.
-            /// </summary>
-            WaitSynchronouslyStartEvent = 13,
-
-            /// <summary>
-            /// The event ID for the <see cref="WaitSynchronouslyStop()"/>.
-            /// </summary>
-            WaitSynchronouslyStopEvent = 14,
-
-            /// <summary>
-            /// The event ID for the <see cref="PostExecutionStart(int, bool)"/>.
-            /// </summary>
-            PostExecutionStartEvent = 15,
-
-            /// <summary>
-            /// The event ID for the <see cref="PostExecutionStop(int)"/>.
-            /// </summary>
-            PostExecutionStopEvent = 16,
-
-            /// <summary>
-            /// The event ID for the <see cref="CircularJoinableTaskDependencyDetected(int, int)"/>.
-            /// </summary>
-            CircularJoinableTaskDependencyDetectedEvent = 17,
-
-        }
-        public JoinableTaskFactoryEventParser(TraceEventSource source) : base(source)
-        {
-
-            //// Subscribe to the GCBulkType events and remember the TypeID -> TypeName mapping. 
-            //ClrTraceEventParserState state = State;
-            //AddCallbackForEvents<GCBulkTypeTraceData>(delegate (GCBulkTypeTraceData data)
-            //{
-            //    for (int i = 0; i < data.Count; i++)
-            //    {
-            //        GCBulkTypeValues value = data.Values(i);
-            //        string typeName = value.TypeName;
-            //        // The GCBulkType events are logged after the event that needed it.  It really
-            //        // should be before, but we compensate by setting the startTime to 0
-            //        // Ideally the CLR logs the types before they are used.  
-            //        state.SetTypeIDToName(data.ProcessID, value.TypeID, 0, typeName);
-            //    }
-            //});
-
-        }
-
-        protected override void EnumerateTemplates(Func<string, string, EventFilterResponse> eventsToObserve, Action<TraceEvent> callback)
-        {
-            if (s_templates == null)
-            {
-                var templates = new TraceEvent[1];
-                //                templates[0] = new GCStartTraceData(null, 1, 1, "GC", GCTaskGuid, 1, "Start", ProviderGuid, ProviderName);
-
-            }
-        }
-    }
-    public sealed class GCEndTraceData : TraceEvent
-    {
-        public int Count { get { return GetInt32At(0); } }
-        public int Depth { get { if (Version >= 1) { return GetInt32At(4); } return GetInt16At(4); } }
-        public int ClrInstanceID { get { if (Version >= 1) { return GetInt16At(8); } return 0; } }
-
-        internal GCEndTraceData(Action<GCEndTraceData> action, int eventID, int task, string taskName, Guid taskGuid, int opcode, string opcodeName, Guid providerGuid, string providerName)
-            : base(eventID, task, taskName, taskGuid, opcode, opcodeName, providerGuid, providerName)
-        {
-            Action = action;
-        }
-        protected override void Dispatch()
-        {
-            Action(this);
-        }
-        protected override Delegate Target
-        {
-            get { return Action; }
-            set { Action = (Action<GCEndTraceData>)value; }
-        }
-        protected override void Validate()
-        {
-            //Debug.Assert(!(Version == 0 && EventDataLength < 6));           // HAND_MODIFIED <
-            //Debug.Assert(!(Version == 1 && EventDataLength != 10));
-            //Debug.Assert(!(Version > 1 && EventDataLength < 10));
-        }
-        public override StringBuilder ToXml(StringBuilder sb)
-        {
-            Prefix(sb);
-            XmlAttrib(sb, "Count", Count);
-            XmlAttrib(sb, "Depth", Depth);
-            XmlAttrib(sb, "ClrInstanceID", ClrInstanceID);
-            sb.Append("/>");
-            return sb;
-        }
-
-        public override string[] PayloadNames
-        {
-            get
-            {
-                if (payloadNames == null)
-                {
-                    payloadNames = new string[] { "Count", "Depth", "ClrInstanceID" };
-                }
-
-                return payloadNames;
-            }
-        }
-
-        public override object PayloadValue(int index)
-        {
-            switch (index)
-            {
-                case 0:
-                    return Count;
-                case 1:
-                    return Depth;
-                case 2:
-                    return ClrInstanceID;
-                default:
-                    Debug.Assert(false, "Bad field index");
-                    return null;
-            }
-        }
-
-        private event Action<GCEndTraceData> Action;
     }
 }

@@ -1,5 +1,4 @@
 ﻿//Desc: Cause High CPU to be used, monitor telemetry
-//Desc: doesn't require a separate process like TelemetryMonitor
 
 //Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Microsoft.VisualStudio.Telemetry.dll
 //Include: ..\Util\MyCodeBaseClass.cs
