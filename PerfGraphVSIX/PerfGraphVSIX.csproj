@@ -77,11 +77,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="CodeSamples\VSDemos\MapFileDict.dll">
+    <Content Include="CodeSamples\Util\Microsoft.Internal.Performance.CodeMarkers.DesignTime.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="CodeSamples\VSDemos\MapFileDict.pdb">
+    <Content Include="CodeSamples\Util\MapFileDict.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
@@ -363,7 +362,12 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="CodeSamples\VSDemos\EtwEventSourceAndMonitor.cs">
+    <Content Include="CodeSamples\VSDemos\EtwEventSource.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="CodeSamples\VSDemos\CodeMarkerMonitor.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

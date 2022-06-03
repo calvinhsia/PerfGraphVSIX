@@ -1,4 +1,4 @@
-﻿//Desc: Listens for GC ETW events and shows in a separate process the most common allocations.
+﻿//Desc: Creates ETW Events and Listens for them, perhaps in a separate process
 
 //Include: ..\Util\MyCodeBaseClass.cs
 //Include: ..\Util\AssemblyCreator.cs

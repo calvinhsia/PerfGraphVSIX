@@ -199,6 +199,10 @@ namespace PerfGraphVSIX
                                         {
                                             refAsm = refAsm.Replace("\"", string.Empty);
                                         }
+                                        if (refAsm.StartsWith("."))
+                                        {
+                                            refAsm = new FileInfo(Path.Combine(Path.GetDirectoryName(pathFileToExecute), refAsm)).FullName;
+                                        }
                                         if (refAsm.Contains(progfiles86))// C:\Program Files (x86)\
                                         {
                                             var pfiles = Environment.GetEnvironmentVariable("ProgramFiles" + (IntPtr.Size == 8 ? "(x86)" : string.Empty));
