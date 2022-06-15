@@ -7,6 +7,8 @@
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\WindowsFormsIntegration.dll
 //Ref: C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Windows.Forms.DataVisualization.dll
 //Ref: ..\Util\Microsoft.Internal.Performance.CodeMarkers.DesignTime.dll
+//Ref: %VSRoot%\Common7\IDE\PrivateAssemblies\Newtonsoft.Json.13.0.1.0\Newtonsoft.Json.dll
+
 
 using System;
 using System.Threading;
@@ -41,6 +43,8 @@ using System.Windows.Forms.DataVisualization.Charting;
 using System.Text.RegularExpressions;
 using System.Diagnostics.Tracing;
 using Microsoft.Internal.Performance;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace MyCodeToExecute
 {
@@ -64,7 +68,7 @@ namespace MyCodeToExecute
                 {
                     var oWindow = new Window()
                     {
-                        Title = $"MyEventSourceMonitor monitoring {ProcToMonitor.Id} {ProcToMonitor.MainWindowTitle}",
+                        Title = $"MyCodeMarkerMonitor monitoring {ProcToMonitor.Id} {ProcToMonitor.MainWindowTitle}",
                     };
                     oWindow.Content = new MyUserControl(ProcToMonitor.Id);
                     oWindow.Show();
@@ -72,8 +76,10 @@ namespace MyCodeToExecute
                 else
                 {
                     var vsRoot = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-                    var addDirs = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{Path.GetDirectoryName(typeof(StressUtil).Assembly.Location)}";
+                    var utildir = Path.GetDirectoryName(typeof(CodeMarkerEvent).Assembly.Location);
+                    var jsondir = Path.GetDirectoryName(typeof(JsonConvert).Assembly.Location);
 
+                    var addDirs = $"{(Path.Combine(vsRoot, "PublicAssemblies"))};{(Path.Combine(vsRoot, "PrivateAssemblies"))};{Path.GetDirectoryName(typeof(StressUtil).Assembly.Location)};{utildir};{jsondir}";
                     // now we create an assembly, load it in a 64 bit process which will invoke the same method using reflection
                     var asmGCMonitor = Path.ChangeExtension(Path.GetTempFileName(), ".exe");
                     var type = new AssemblyCreator().CreateAssembly
@@ -86,34 +92,12 @@ namespace MyCodeToExecute
                         );
                     var outputLogFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MyTestAsm.log");
                     File.Delete(outputLogFile);
-                    var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyEtwMainWindow)} {nameof(MyEtwMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDirs}"" ""{ProcToMonitor.Id}"" true";
+                    var args = $@"""{Assembly.GetExecutingAssembly().Location}"" {nameof(MyMainWindow)} {nameof(MyMainWindow.MyMainMethod)} ""{outputLogFile}"" ""{addDirs}"" ""{ProcToMonitor.Id}"" true";
                     var pListener = Process.Start(
                         asmGCMonitor,
                         args);
-                    for (var mrkr = 1; mrkr < 100; mrkr++)
-                    {
-                        _logger.LogMessage($"Marker {mrkr} = {CodeMarkerEvent.GetName(mrkr)}");
-                    }
-
-
-                    _logger.LogMessage($"Launched EtwEventSourceMonitor {pListener.Id}");
+                    _logger.LogMessage($"Launched CodeMarkerMonitor {pListener.Id}");
                 }
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5), _CancellationTokenExecuteCode);
-                    while (!_CancellationTokenExecuteCode.IsCancellationRequested)
-                    {
-                        _logger.LogMessage($"Raising Event ");
-                        MyEventSource.Log.SomeEvent("event msg");
-                        MyEventSource.Log.SomeEvent2("event msg2");
-
-                        await Task.Delay(TimeSpan.FromSeconds(2), _CancellationTokenExecuteCode);
-                    }
-                }
-                catch (TaskCanceledException)
-                {
-                }
-                _logger.LogMessage($"Done Raising Events");
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -122,23 +106,14 @@ namespace MyCodeToExecute
             }
         }
     }
-    [EventSource(Name = "MyEtwEventSource")] // =='MyEtwEventSource'== 'b912a57c-5711-5bbd-1440-05e64115baa3'
-    class MyEventSource : EventSource
-    {
-        public static MyEventSource Log = new MyEventSource();
-        [Event(1, Message = "somemsg{0}", Level = EventLevel.Informational)]
-        public void SomeEvent(string eventMsg) { WriteEvent(1, eventMsg); }
-        [Event(2, Message = "somemsg2")]
-        public void SomeEvent2(string eventMsg) { WriteEvent(2, eventMsg); }
-    }
 
-    internal class MyEtwMainWindow
+    internal class MyMainWindow
     {
         // arg1 is a file to write our results, arg2 and arg3 show we can pass simple types. e.g. Pass the name of a named pipe.
         internal static async Task MyMainMethod(string outLogFile, string addDirs, int pidToMonitor, bool boolarg)
         {
             _additionalDirs = addDirs;
-            File.AppendAllText(outLogFile, $"Starting {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}  AddDirs={addDirs}\r\n");
+            File.AppendAllText(outLogFile, $"Starting {nameof(MyMainWindow)}  {Process.GetCurrentProcess().Id}  AddDirs={addDirs}\r\n");
 
             var tcs = new TaskCompletionSource<int>();
             var thread = new Thread((s) => // need to create our own STA thread (can't use threadpool)
@@ -162,7 +137,7 @@ namespace MyCodeToExecute
                 }
                 catch (Exception ex)
                 {
-                    File.AppendAllText(outLogFile, $"Exception {nameof(MyEtwMainWindow)}  {Process.GetCurrentProcess().Id}   {ex.ToString()}");
+                    File.AppendAllText(outLogFile, $"Exception {nameof(MyMainWindow)}  {Process.GetCurrentProcess().Id}   {ex.ToString()}");
                 }
                 tcs.SetResult(0);
             });
@@ -202,9 +177,9 @@ namespace MyCodeToExecute
             }
         }
 
-        Dictionary<string, int> dictJTFEvents = new Dictionary<string, int>();
-        List<Tuple<string, int>> _LstJTFEvents = new List<Tuple<string, int>>();
-        public List<Tuple<string, int>> LstJTFEvents { get { return _LstJTFEvents; } set { _LstJTFEvents = value; RaisePropChanged(); } }
+        Dictionary<string, int> dictEvents = new Dictionary<string, int>();
+        List<Tuple<string, int>> _LstEvents = new List<Tuple<string, int>>();
+        public List<Tuple<string, int>> LstEvents { get { return _LstEvents; } set { _LstEvents = value; RaisePropChanged(); } }
         public int UpdateIntervalSecs { get; set; } = 1;
         int _pidToMonitor;
         private TextBox _txtStatus;
@@ -228,7 +203,7 @@ xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml""
 xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location)}"" 
         Margin=""5,5,5,5"">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width = ""900""/>
+            <ColumnDefinition Width = ""1200""/>
             <ColumnDefinition Width = ""3""/>
             <ColumnDefinition Width = ""*""/>
         </Grid.ColumnDefinitions>
@@ -246,10 +221,10 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                 </StackPanel>
                 <TextBox x:Name=""_txtStatus"" FontFamily=""Consolas"" FontSize=""10"" MaxHeight=""400""
                 IsReadOnly=""True"" VerticalScrollBarVisibility=""Auto"" HorizontalScrollBarVisibility=""Auto"" IsUndoEnabled=""False"" VerticalAlignment=""Top""/>
-                <ListView ItemsSource=""{{Binding LstJTFEvents}}"" FontFamily=""Consolas"" FontSize=""10"" Height = ""800"">
+                <ListView ItemsSource=""{{Binding LstEvents}}"" FontFamily=""Consolas"" FontSize=""10"" Height = ""800"">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""Event"" Width = ""250""/>
+                            <GridViewColumn DisplayMemberBinding=""{{Binding Item1, StringFormat=N0}}"" Header=""Event"" Width = ""350""/>
                             <GridViewColumn DisplayMemberBinding=""{{Binding Item2, StringFormat=N0}}"" Header=""Count"" Width = ""100""/>
                         </GridView>
                     </ListView.View>
@@ -283,9 +258,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
         }
         void InitDictJTF()
         {
-            dictJTFEvents.Clear();
-            dictJTFEvents["EventID(1)"] = 0;
-            dictJTFEvents["EventID(2)"] = 0;
+            dictEvents.Clear();
         }
         public void AddStatusMsg(string msg, params object[] args)
         {
@@ -331,11 +304,14 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
                         while (_isTracing && !_cts.IsCancellationRequested)
                         {
                             await Task.Delay(TimeSpan.FromSeconds(UpdateIntervalSecs), _cts.Token);
-                            var data = (from kvp in dictJTFEvents
-                                        select Tuple.Create(kvp.Key, kvp.Value)).ToList();
-                            LstJTFEvents = new List<Tuple<string, int>>(data);
+                            lock (dictEvents)
+                            {
+                                var data = (from kvp in dictEvents
+                                            select Tuple.Create(kvp.Key, kvp.Value)).ToList();
+                                LstEvents = new List<Tuple<string, int>>(data);
+                            }
                         }
-                        //                        await taskTracing;
+                        await taskTracing;
                     }
                     catch (TaskCanceledException)
                     {
@@ -383,10 +359,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             {
                 throw new InvalidOperationException("Must run as admin");
             }
-            _userSession = new TraceEventSession($"PerfGraphMyEventSourceMonitor"); // only 1 at a time can exist with this name in entire machine
-
-            var gguid = TraceEventProviders.GetEventSourceGuidFromName("MyEtwEventSource");
-            AddStatusMsg($"Got guid {gguid}");
+            _userSession = new TraceEventSession($"PerfGraphMyCodeMarkerMonitor"); // only 1 at a time can exist with this name in entire machine
 
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common", matchAnyKeywords: 0xFFFFFFDF);
             //            _userSession.EnableProvider("*Microsoft-VisualStudio-Common");
@@ -397,7 +370,12 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             //_userSession.EnableProvider(new Guid("143A31DB-0372-40B6-B8F1-B4B16ADB5F54"), TraceEventLevel.Verbose, ulong.MaxValue); //MeasurementBlock
             //_userSession.EnableProvider(new Guid("641D7F6C-481C-42E8-AB7E-D18DC5E5CB9E"), TraceEventLevel.Verbose, ulong.MaxValue); // Codemarker
             //_userSession.EnableProvider(new Guid("BF965E67-C7FB-5C5B-D98F-CDF68F8154C2"), TraceEventLevel.Verbose, ulong.MaxValue); // // RoslynEventSource
-            _userSession.EnableProvider("MyEtwEventSource", TraceEventLevel.Verbose, ulong.MaxValue);
+            var codemarkerProvider = new Guid("641D7F6C-481C-42E8-AB7E-D18DC5E5CB9E");
+            _userSession.EnableProvider(codemarkerProvider, TraceEventLevel.Verbose, ulong.MaxValue);
+
+            var vsCommonProvider = new Guid("25c93eda-40a3-596d-950d-998ab963f367");
+            _userSession.EnableProvider(vsCommonProvider, TraceEventLevel.Verbose, ulong.MaxValue);
+
             _userSession.Source.AllEvents += (e) =>
             {
                 try
@@ -440,42 +418,41 @@ Name
                 + ntdll!?
                  + Event MyEtwEventSource/SomeEvent
         */
-                        var eventName = e.EventName;
-                        var eventNdx = 0;
-                        var match = Regex.Match(eventName, @"EventID\((\d+)\)");
-                        if (match.Success)
+                        foreach (var xx in _userSession.Source.Dynamic.DynamicProviders)
                         {
-                            eventNdx = int.Parse(match.Groups[1].Value);
-                            //                            eventName = ((JoinableTaskFactoryEventParser.EventIds)eventNdx).ToString();
+                            AddStatusMsg($"DynPro = {xx.Name}");
                         }
-                        var parm1 = 0;
-                        var parm2 = 0;
-                        var byts = e.EventData();
-                        if (eventName == "EventID(1)")
-                        {// ReadUnicodeString
-                            var str = UnicodeEncoding.Unicode.GetString(byts);
-                            AddStatusMsg($"Got str '{str}'   {e.FormattedMessage}");
-                        }
-                        if (byts.Length >= 4)
+                        if (e.ProviderGuid == codemarkerProvider)
                         {
-                            parm1 = BitConverter.ToInt32(byts, 0);
-                        }
-                        if (byts.Length >= 8)
-                        {
-                            parm2 = BitConverter.ToInt32(byts, 4);
-                        }
-                        if (PendingReset)
-                        {
-                            InitDictJTF();
-                        }
-                        if (!dictJTFEvents.ContainsKey(eventName))
-                        {
-                            AddStatusMsg($"Key not found {eventName}");
+                            var codemarkerName = CodeMarkerEvent.GetName((int)e.ID);
+//                            AddStatusMsg($" {codemarkerName}");
+                            lock (dictEvents)
+                            {
+                                if (!dictEvents.ContainsKey(codemarkerName))
+                                {
+                                    dictEvents[codemarkerName] = 1;
+                                }
+                                else
+                                {
+                                    dictEvents[codemarkerName]++;
+                                }
+                            }
                         }
                         else
                         {
-                            dictJTFEvents[eventName]++;
-                            //                            AddStatusMsg($"NDx {eventNdx}  {eventName} {dictJTFEvents[eventName]}");
+                            var dict = VSCommonTraceEventParser.GetVSTelemetryPropertiesToDictionary(e);
+                            var sb = new StringBuilder();
+                            foreach (var kvp in dict)
+                            {
+                                sb.Append($" {kvp.Key}={kvp.Value}");
+                            }
+                            sb.Append(e.Dump());
+//                            if (eventName == "EventID(1)")
+                            {// ReadUnicodeString
+//                                AddStatusMsg($"Got str '{str}'   {e.FormattedMessage}");
+                            }
+//                            var str = UnicodeEncoding.Unicode.GetString(byts);
+                            AddStatusMsg($" {e.EventName} {sb}");
                         }
                     }
                 }
@@ -491,6 +468,134 @@ Name
                 _userSession.Source.Process();
                 AddStatusMsg($"Done Source.Process");
             });
+        }
+    }
+    public sealed class VSCommonTraceEventParser : TraceEventParser
+    {
+        public static Guid ProviderGuid = new Guid("{25c93eda-40a3-596d-950d-998ab963f367}"); //ProviderName="Microsoft-VisualStudio-Common"
+
+        public enum LoadPackageReasonPrivate
+        {
+            Unknown = -1,   // Direct call to IVsShell::LoadPackage
+            Preload = -2,   // Pre-load mechanism as used by vslog (obfuscated and undocumented)
+            Autload = -3,   // Autoload through a UI context activation
+            QS = -4,   // IServiceProvider::QueryService
+            EditFct = -5,   // Creating an editor
+            PrjFcty = -6,   // Creating a project system
+            TlWnd = -7,   // Creating a tool window
+            ExecCmd = -8,   // IOleCommandTarget::ExecCmd
+            ExtPnt = -9,   // In order to find an extension point (export)
+            UIFcty = -10,  // UI factory
+            DtSrcFc = -11,  // Datasource factory
+            Toolbox = -12,  // Toolbox
+            Autmton = -13,  // Automation (GetAutomationObject)
+            HlpAbt = -14,  // Help/About information
+            StddPrvr = -15,  // AddStandardPreviewer (browser) support
+            CmpntPk = -16,  // Component picker (IVsComponentSelectorProvider)
+            SlnPrst = -17,  // IVsSolutionProps
+            FntClr = -18,  // QueryService call for IVsTextMarkerTypeProvider.
+            CmdLnSw = -19,  // DemandLoad specified on AppCommandLoad
+            DatConv = -20,  // UIDataConverter
+            TlsOpt = -21,  // A page in Tools/Options
+            ImpExpS = -22,  // Import/Export settings
+        }
+
+        public VSCommonTraceEventParser(TraceEventSource source, bool dontRegister = false) : base(source, dontRegister)
+        {
+        }
+
+        protected override void EnumerateTemplates(Func<string, string, EventFilterResponse> eventsToObserve, Action<TraceEvent> callback) => throw new NotImplementedException();
+
+        protected override string GetProviderName() => "Microsoft-VisualStudio-Common";
+
+        public static Dictionary<string, object> GetVSTelemetryUserData(TraceEvent traceEvent)
+        {
+            var userData = traceEvent.PayloadByName("UserData").ToString();
+            var dictProps = JsonConvert.DeserializeObject<Dictionary<string, object>>(userData);
+            return dictProps;
+        }
+
+        /// <summary>
+        /// UserData="{ Duration:51882, Properties:[  ] }" Session="{ Version:"15.0.26801.4003", AppName:"devenv" }" RelatedActivityID="04022ab4-17b8-4412-ac06-ca3a71d4516d" 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="traceEvent"></param>
+        /// <param name="userdataName"></param>
+        /// <returns></returns>
+        public static T GetVSTelemetryNonProperty<T>(TraceEvent traceEvent, string userdataName)
+        {
+            var result = default(T);
+            var dictProps = GetVSTelemetryUserData(traceEvent);
+            if (dictProps.TryGetValue(userdataName, out var tempRes))
+            {
+                result = (T)tempRes;
+            }
+            return result;
+        }
+
+
+        public static T GetVSTelemetryProperty<T>(TraceEvent traceEvent, string propName)
+        {
+            var dictProps = GetVSTelemetryUserData(traceEvent);
+            var props = (JArray)dictProps["Properties"];
+            var x = props.Where(p => p["Key"]?.ToString() == propName)?.FirstOrDefault();
+            var result = default(T);
+            if (x != null)
+            {
+                var xxx = x["Value"].ToObject<T>();
+                result = xxx;
+            }
+            //T result2 = (T)props.Where(p => p["Key"]?.ToString() == propName)?.FirstOrDefault()?["Value"]?.ToObject(typeof(T));
+            return result;
+        }
+        /// <summary>
+        /// UserData="{ Properties:[ { Key:"2dc9daa9-7f2d-11d2-9bfc-00c04f9901d1_inc", Value:"312.4911" }, { Key:"2dc9daa9-7f2d-11d2-9bfc-00c04f9901d1_exc", Value:"312.4911" }, { Key:"2dc9daa9-7f2d-11d2-9bfc-00c04f9901d1_top", Value:"0" }, { Key:"b466091b-94ad-416f-bb8a-42534d423a67_inc", Value:"484.4333" }, { Key:"b466091b-94ad-416f-bb8a-42534d423a67_exc", Value:"171.9422" }, { Key:"b466091b-94ad-416f-bb8a-42534d423a67_top", Value:"484.4333" }, { Key:"efaef2d3-8bdb-4d78-b3eb-b55e44203e80_inc", Value:"125.0091" }, { Key:"efaef2d3-8bdb-4d78-b3eb-b55e44203e80_exc", Value:"125.0091" }, { Key:"efaef2d3-8bdb-4d78-b3eb-b55e44203e80_top", Value:"125.0091" }, { Key:"7f679d93-2eb6-47c9-85eb-f6ad16902662_inc", Value:"1096.0173" }, { Key:"7f679d93-2eb6-47c9-85eb-f6ad16902662_exc", Value:"1059.8442" }, { Key:"7f679d93-2eb6-47c9-85eb-f6ad16902662_top", Value:"49.1362" }, { Key:"6e87cfad-6c05-4adf-9cd7-3b7943875b7c_inc", Value:"1640.5495" }, { Key:"6e87cfad-6c05-4adf-9cd7-3b7943875b7c_exc", Value:"1640.5495" }, { Key:"6e87cfad-6c05-4adf-9cd7-3b7943875b7c_top", Value:"0" }, { Key:"0b93ccc5-bc52-40e9-91a3-7b8b58c4526b_inc", Value:"15156.3384" }, { Key:"0b93ccc5-bc52-40e9-91a3-7b8b58c4526b_exc", Value:"12468.9078" }, { Key:"0b93ccc5-bc52-40e9-91a3-7b8b58c4526b_top", Value:"46.9446" }, { Key:"b80b010d-188c-4b19-b483-6c20d52071ae_inc", Value:"16249.9913" }, { Key:"b80b010d-188c-4b19-b483-6c20d52071ae_exc", Value:"1140.5975" }, { Key:"b80b010d-188c-4b19-b483-6c20d52071ae_top", Value:"0" }, { Key:"d7bb9305-5804-4f92-9cfe-119f4cb0563b_inc", Value:"726.9083" }, { Key:"d7bb9305-5804-4f92-9cfe-119f4cb0563b_exc", Value:"726.9083" }, { Key:"d7bb9305-5804-4f92-9cfe-119f4cb0563b_top", Value:"0" }, { Key:"7fe30a77-37f9-4cf2-83dd-96b207028e1b_inc", Value:"22663.8343" }, { Key:"7fe30a77-37f9-4cf2-83dd-96b207028e1b_exc", Value:"5686.9347" }, { Key:"7fe30a77-37f9-4cf2-83dd-96b207028e1b_top", Value:"212.2958" }, { Key:"53544c4d-e3f8-4aa0-8195-8a8d16019423_inc", Value:"22451.5385" }, { Key:"53544c4d-e3f8-4aa0-8195-8a8d16019423_exc", Value:"0" }, { Key:"53544c4d-e3f8-4aa0-8195-8a8d16019423_top", Value:"22451.5385" }, { Key:"c194969a-a5b1-4af2-a9df-ecf7ce982a05_inc", Value:"279.4837" }, { Key:"c194969a-a5b1-4af2-a9df-ecf7ce982a05_exc", Value:"279.4837" }, { Key:"c194969a-a5b1-4af2-a9df-ecf7ce982a05_top", Value:"279.4837" }, { Key:"TotalExclusiveCost", Value:"23680.142" } ] }" Session="{ Version:"15.0.26801.4003", AppName:"devenv" }" 
+        /// </summary>
+        /// <param name="traceEvent"></param>
+        /// <returns></returns>
+        public static Dictionary<string, string> GetVSTelemetryPropertiesToDictionary(TraceEvent traceEvent)
+        {
+            var dict = new Dictionary<string, string>();
+            var result = new StringBuilder();
+            var userData = traceEvent.PayloadByName("UserData");
+            if (userData != null)
+            {
+                try
+                {
+                    if (traceEvent.EventName == "FileWatcher.Logging")// rather than throwing an exception for each of these numerous events
+                    {
+                        dict["VsEtwLogging"] = userData.ToString();
+                    }
+                    else
+                    {
+                        var dictProps = JsonConvert.DeserializeObject<Dictionary<string, object>>(userData.ToString());
+                        if (dictProps != null)
+                        {
+                            if (dictProps.TryGetValue("Properties", out var props))
+                            {
+                                foreach (var p in (JArray)props)
+                                {
+                                    result.AppendLine($"{p["Key"]}={p["Value"]}");
+                                    dict[(p["Key"]).ToString()] = p["Value"].ToString();
+                                }
+                            }
+                            else
+                            {
+                                foreach (var entry in dictProps)
+                                {
+                                    dict[entry.Key] = entry.Value.ToString();
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Newtonsoft.Json.JsonReaderException)
+                {
+                    // FileWatcher.Logging, Shell_CostDiagnostics, etc use VsEtwLogging without using telemetry
+                    dict["VsEtwLogging"] = userData.ToString();
+                }
+            }
+            return dict;
         }
     }
 }

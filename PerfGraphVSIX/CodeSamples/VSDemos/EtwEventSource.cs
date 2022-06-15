@@ -391,6 +391,8 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             //_userSession.EnableProvider(new Guid("143A31DB-0372-40B6-B8F1-B4B16ADB5F54"), TraceEventLevel.Verbose, ulong.MaxValue); //MeasurementBlock
             //_userSession.EnableProvider(new Guid("641D7F6C-481C-42E8-AB7E-D18DC5E5CB9E"), TraceEventLevel.Verbose, ulong.MaxValue); // Codemarker
             //_userSession.EnableProvider(new Guid("BF965E67-C7FB-5C5B-D98F-CDF68F8154C2"), TraceEventLevel.Verbose, ulong.MaxValue); // // RoslynEventSource
+            //var codemarkerProvider = new Guid("641D7F6C-481C-42E8-AB7E-D18DC5E5CB9E");
+            //_userSession.EnableProvider(codemarkerProvider, TraceEventLevel.Verbose, ulong.MaxValue);
             _userSession.EnableProvider("MyEtwEventSource", TraceEventLevel.Verbose, ulong.MaxValue);
             _userSession.Source.AllEvents += (e) =>
             {

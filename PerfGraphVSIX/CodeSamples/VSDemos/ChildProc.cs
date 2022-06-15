@@ -53,7 +53,7 @@ namespace MyCodeToExecute
         }
 
         public bool EatMem { get; set; } = false;
-        public bool ManagedEatMem { get; set; } = false;
+        public bool ManagedEatMem { get; set; } = true;
         public int AmountToEat { get; set; } = 1024 * 1024;
         public int NumToEat { get; set; } = 1;
 
@@ -142,7 +142,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             <CheckBox Margin=""15,2,0,10"" Content=""Managed""  IsChecked=""{{Binding ManagedEatMem}}"" 
                 ToolTip=""Eat Managed memory or Native memory (via VirtualAlloc)""/>
             <Label Content=""AmtToEat""/>
-            <TextBox Text=""{{Binding AmountToEat}}"" Width=""120"" Height=""20"" ToolTip=""AmountToEat in Bytes"" />
+            <TextBox Text=""{{Binding AmountToEat,StringFormat=N0}}"" Width=""120"" Height=""20"" ToolTip=""AmountToEat in Bytes"" />
             <Label Content=""NumToEat""/>
             <TextBox Text=""{{Binding NumToEat}}"" Width=""50"" Height=""20"" ToolTip=""Num of times to eat AmtToEat"" />
 <!--
@@ -428,7 +428,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
 
                         var tbCPU = new TextBlock()
                         {
-                            Text = $"CPU={node.DeltaCPU,3:n0}",
+                            Text = $"CPU={node.DeltaCPU,3:n1}",
                             Margin = new Thickness(3, 0, 0, 0),
                             Background = Brushes.LightGreen  // GetColor(cpuUsage)
                         };
@@ -504,7 +504,7 @@ xmlns:l=""clr-namespace:{this.GetType().Namespace};assembly={System.IO.Path.GetF
             public DateTime DtLastSample;
             public DateTime DtCurrentSample;
             public double DeltaCPU => (100 * ((CurrentTotalProcessorTime - LastTotalProcessorTime).TotalSeconds /
-                                    (DtCurrentSample - DtLastSample).TotalSeconds));
+                                    (DtCurrentSample - DtLastSample).TotalSeconds)) / Environment.ProcessorCount;
 
             public int procId { get { return ProcEntry.th32ProcessID; } }
             public int ParentProcId { get { return ProcEntry.th32ParentProcessID; } }
