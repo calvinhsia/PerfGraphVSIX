@@ -24,9 +24,6 @@ Tools->Options:
 
 
 
-Note: If UpdateInterval is non-zero, this will cause significant delay every UpdateInterval because it does Full GC and tracking of newly referenced objects
-
-
 
 
 To update ClrObjExplorer:
@@ -48,21 +45,22 @@ xcopy /dy c:\Users\calvinh\Source\repos\PerfGraphVSIX\PerfGraphVSIX\bin\release\
 When PR build succeeds, wait for rolling build, 
 The build def: https://dev.azure.com/devdiv/Engineering/_build?definitionId=12376
 
-then check https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json with feedname="VS"
- (create a new Wpf sln, use Sln->Manage NugetPackages for solution, choose the VS feed, the new version should show up)
+Verify the new stress version:
+	https://devdiv.visualstudio.com/DevDiv/_artifacts/feed/VS
+	https://devdiv.visualstudio.com/DevDiv/_packaging?_a=feed&feed=Engineering%40Local   the "VS"" feed, filter to "Stress"
 
-(no longer DevDiv Artifacts-> Engineering feed since feeds moved upstream for security vulnerabililty) filter to "stress" to get version # like "1.1.185"
-	https://devdiv.visualstudio.com/DevDiv/_packaging?_a=feed&feed=Engineering%40Local
-	https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json
+Or create a new Wpf sln, use Sln->Manage NugetPackages for solution, choose the VS feed, the new version should show up)
 
 
 Ensure the version is a public release: the # does not have a hyphenated git commit suffix.
 
 https://github.com/dotnet/Nerdbank.GitVersioning/blob/master/doc/public_vs_stable.md
 
-To change VS repo: change .corext\Configs\default.config
+To change VS repo to update stress lib: change .corext\Configs\default.config
 
     <package id="Microsoft.Test.Stress" version="1.1.30" link="src\ExternalAPIs\Microsoft.Test.Stress" tags="exapis" />
+	similarly /src/ConfigData/Packages/TestSupport.props
+	see https://devdiv.visualstudio.com/DevDiv/_git/VS/pullrequest/384299
 
 
 

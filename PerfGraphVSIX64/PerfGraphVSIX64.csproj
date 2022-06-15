@@ -91,16 +91,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="..\PerfGraphVSIX\CodeSamples\VSDemos\MapFileDict.dll">
-      <Link>CodeSamples\VSDemos\MapFileDict.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
-    <Content Include="..\PerfGraphVSIX\CodeSamples\VSDemos\MapFileDict.pdb">
-      <Link>CodeSamples\VSDemos\MapFileDict.pdb</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
     <Content Include="..\PerfGraphVSIX\Resources\PerfGraphToolWindowCommand.png">
       <Link>Resources\PerfGraphToolWindowCommand.png</Link>
     </Content>
@@ -338,6 +328,13 @@
     </Content>
     <Content Include="..\PerfGraphVSIX\CodeSamples\VSLeakTests\Typing.cs">
       <Link>CodeSamples\VSLeakTests\Typing.cs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\PerfGraphVSIX\CodeSamples\VSDemos\MemoryMapped.cs">
+      <Link>CodeSamples\VSDemos\MemoryMapped.cs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

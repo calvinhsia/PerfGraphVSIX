@@ -14,7 +14,7 @@
     <tags>engineering</tags>
   </metadata>
   <files>
-      <file src="bin\$Configuration$\*.dll" target="lib\net461" />
-      <file src="bin\$Configuration$\Microsoft.Test.Stress.xml" target="lib\net461" />
+      <file src="bin\$Configuration$\*.dll" target="lib\net472" />
+      <file src="bin\$Configuration$\Microsoft.Test.Stress.xml" target="lib\net472" />
   </files>
 </package>

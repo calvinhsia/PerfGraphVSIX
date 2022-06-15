@@ -29,6 +29,10 @@ namespace MyCodeToExecute
         MyClass(object[] args) : base(args) { }
         async Task DoItAsync()
         {
+            /*
+             this shows how to send a TelemetryEvent.
+            You can use the TelemetryMonitor.cs code sample with a filter to your event to monitor the event sent
+             */
             while (!_CancellationTokenExecuteCode.IsCancellationRequested)
             {
                 var ev = new TelemetryEvent("PerfGraphVSIX/Telemetry/EventFromCodeSample");

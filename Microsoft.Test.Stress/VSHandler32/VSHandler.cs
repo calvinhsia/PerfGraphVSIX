@@ -173,6 +173,40 @@ namespace Microsoft.Test.Stress
             }
             return sb.ToString();
         }
+        public string GetVSFromCurDirCone()
+        {
+            var testPath = Environment.CurrentDirectory;
+            var pathTopOfCone = testPath;// from "C:\Users\calvinh\source\repos\Stress\Tests\bin\Debug", get "C:\Users"
+            var vsTarget = "";
+            while (!string.IsNullOrEmpty(testPath)
+                && testPath.IndexOf(Path.DirectorySeparatorChar) >= 0
+                && !testPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                pathTopOfCone = testPath;
+                testPath = Path.GetDirectoryName(testPath);
+            }
+            //LogMessage($"pathTopOfCone= {pathTopOfCone}");
+            // look for a folder called VisualStudio*
+            try
+            {
+                foreach (var vsfolder in Directory.EnumerateDirectories(pathTopOfCone, "VisualStudio*", SearchOption.AllDirectories))
+                {
+                    if (vsfolder != null)
+                    {
+                        var testVSExe = Path.Combine(vsfolder, "Common7", "IDE", "devenv.exe");
+                        if (File.Exists(testVSExe))
+                        {
+                            vsTarget = testVSExe;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            return vsTarget;
+        }
 
         /// <summary>
         /// Find the location of the latest VS instance. Return the full path of Devenv.exe
@@ -181,6 +215,20 @@ namespace Microsoft.Test.Stress
         public string GetVSFullPath()
         {
             var vsPath = string.Empty;
+            var testvspath = GetVSFromCurDirCone();
+            if (!string.IsNullOrEmpty(testvspath))
+            {
+                logger.LogMessage($"Found VS in path cone {testvspath}");
+                return testvspath;
+            }
+
+            /*
+
+CurDir = 'C:\Test\Results\Deploy_TestUser 2022-05-11 06_25_47\Out'
+C:\Test\VisualStudio\Common7\IDE\devenv.exe
+            */
+
+
             var lstFileInfos = new List<FileInfo>();
             // get VS Path, like @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe";
             var lstProgFileDirs = new List<string>();

@@ -281,6 +281,7 @@ namespace Microsoft.Test.Stress
             }
             var val = methGetContext.Invoke(test, null);
             testContext = new TestContextWrapper(val);
+            testContext = new TestContextWrapper(val);
 
             if (testContext.Properties[StressUtil.PropNameRecursionPrevention] != null)
             {
@@ -354,6 +355,20 @@ namespace Microsoft.Test.Stress
                                         TestResultsDirectory='{testContext.TestResultsDirectory}' 
                                         TestRunResultsDirectory='{testContext.TestRunResultsDirectory}'
                 ");
+            void DumpDir(string dir)
+            {
+                logger.LogMessage($"   Dumping folder contents {dir}");
+                foreach (var file in Directory.EnumerateFiles(dir, "System.Runtime.CompilerServices.Unsafe.*", SearchOption.AllDirectories))
+                {
+                    var finfo = new FileInfo(file);
+                    var verinfo = FileVersionInfo.GetVersionInfo(file);
+                    logger.LogMessage($"  {finfo.Length,20:n0} {verinfo.FileVersion, 35}    {file} ");  
+                }
+            }
+            DumpDir(Environment.CurrentDirectory);
+            DumpDir(testContext.TestRunDirectory);
+            DumpDir(testContext.TestResultsDirectory);
+            DumpDir(testContext.TestRunResultsDirectory);
 
             if ((PerfCounterOverrideSettings != null) && (PerfCounterOverrideSettings.Count > 0))
             {

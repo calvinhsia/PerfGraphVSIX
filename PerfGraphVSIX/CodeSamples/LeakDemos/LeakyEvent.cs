@@ -18,18 +18,29 @@ namespace MyCodeToExecute
 {
     class EditorClass
     {
+        MyClass myClass;
         byte[] arr = new byte[1024 * 1024 * 10]; // big array to make class size bigger and leak more noticeable
         public EditorClass(MyClass myClass)
         {   //Subscribing to event means adding self to event's invocationlist. Can be a lambda or method (leaks differently)
             /* 
             myClass.OptionsChanged += OnOptionsChanged; // leaks entire class
             /*/
-            myClass.OptionsChanged += (o, e) =>
-            {
-                myClass._logger.LogMessage($"In OptionsChanged"); // without a ref to a class member, the closure has no class ref so leak is smaller
-                var y = arr; // ref the arr so the closure has a ref to the class, so will leak the entire class
-            };
+            myClass.OptionsChanged += OnOptionsChanged;
+            this.myClass = myClass;
             //*/
+        }
+        public void DoIt()
+        {
+            myClass.OptionsChanged += OnOptionsChanged;
+        }
+        public void UnDoit()
+        {
+            myClass.OptionsChanged -= OnOptionsChanged;
+        }
+        void OnOptionsChanged(object sender, EventArgs args)
+        {
+            myClass._logger.LogMessage("optchanged");
+            var y = arr; // ref the arr so the closure has a ref to the class, so will leak the entire class
         }
         //void OnOptionsChanged(object sender, EventArgs e)
         //{
@@ -55,6 +66,9 @@ namespace MyCodeToExecute
                 for (int i = 0; i < 1; i++)    // Another way to magnify the leak
                 {
                     var x = new EditorClass(this); // life time is very short.
+                    this.OptionsChanged = null;
+                    x.UnDoit();
+                    x.DoIt();
                     OptionsChanged?.Invoke(this, null); // when raising event, all leaked event handlers get fired too!
                 }
             });

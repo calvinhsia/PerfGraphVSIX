@@ -112,5 +112,15 @@ namespace PerfGraphVSIX
             await TaskScheduler.Default;
             _ = DumperViewerMain.SendTelemetryAsync($"{Process.GetCurrentProcess().MainModule.FileVersionInfo.FileVersion}");
         }
+
+        protected override int QueryClose(out bool canClose)
+        {
+            canClose = false;
+            if (PerfGraphToolWindowControl.g_PerfGraphToolWindowControl.QueryClose())
+            {
+                canClose = true;
+            }
+            return VSConstants.S_OK;
+        }
     }
 }

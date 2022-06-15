@@ -101,6 +101,23 @@ Language:         Language Neutral
             }
             catch (Exception ex)
             {
+                if (ex is FileNotFoundException)
+                {
+                    stressUtilOptions.testContext.WriteLine($"{ex}");
+                    void DumpDir(string dir)
+                    {
+                        stressUtilOptions.testContext.WriteLine($"   Dumping folder contents {dir}");
+                        foreach (var file in Directory.EnumerateFiles(dir, "Microsoft.Test.Stress.Definitions.*", SearchOption.AllDirectories))
+                        {
+                            var finfo = new FileInfo(file);
+                            var verinfo = FileVersionInfo.GetVersionInfo(file);
+                            stressUtilOptions.testContext.WriteLine($"  {finfo.Length,20:n0} {verinfo.FileVersion,30}    {file} ");
+                        }
+                    }
+                    DumpDir(Environment.CurrentDirectory);
+
+                    // Microsoft.Test.Stress.Definitions
+                }
                 DoIterationsFinished(measurementHolder, ex);
                 throw;
             }

@@ -1,7 +1,7 @@
 ﻿//Include: ..\Util\LeakBaseClass.cs
 //Desc: Demonstrate using a file on disk or system page file for backing store for an IDictionary<K,V> or IList<T>
 // 
-//Ref: MapFileDict.dll
+//Ref: ..\Util\MapFileDict.dll
 
 using System;
 using System.Threading;
